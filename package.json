@@ -1,0 +1,23 @@
+{
+  "name": "proxy-switch",
+  "version": "1.0.0",
+  "description": "Chrome extension (Manifest V3) that switches the browser proxy between system, direct, manual HTTP/SOCKS and PAC modes.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test \"tests/**/*.test.mjs\"",
+    "preview": "node tools/build-previews.mjs",
+    "package": "node tools/package.mjs"
+  },
+  "keywords": [
+    "chrome-extension",
+    "manifest-v3",
+    "proxy",
+    "socks5",
+    "pac"
+  ]
+}

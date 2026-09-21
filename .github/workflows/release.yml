@@ -1,0 +1,44 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Package and publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run the unit tests
+        run: npm test
+
+      - name: Check that the tag matches the manifest version
+        run: |
+          version=$(node -p "require('./manifest.json').version")
+          if [ "v$version" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} does not match manifest version v$version"
+            exit 1
+          fi
+
+      - name: Build the Web Store package
+        run: npm run package
+
+      - name: Publish the release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+          generate_release_notes: true
+          body: |
+            Upload `proxy-switch-v${{ github.ref_name }}.zip` in the Chrome Web Store developer
+            dashboard, or load the unzipped folder via `chrome://extensions` → **Load unpacked**.

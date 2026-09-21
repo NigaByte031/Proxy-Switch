@@ -1,0 +1,20 @@
+# Build output
+dist/
+*.zip
+
+# Local agent/tooling state
+.freebuff/
+
+# Editors
+.idea/
+.vscode/
+*.swp
+
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Node (there are no dependencies, but keep the door closed)
+node_modules/
+npm-debug.log*

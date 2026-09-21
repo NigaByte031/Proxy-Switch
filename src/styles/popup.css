@@ -1,0 +1,59 @@
+/* Popup-specific layout. */
+
+body.popup {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 368px;
+  max-height: 580px;
+  padding: 12px;
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-titles {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-titles h1 {
+  font-size: 15px;
+}
+
+.app-titles p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-card {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+#profileForm.card {
+  padding: 12px;
+}
+
+.app-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-block-start: 2px;
+  border-block-start: 1px solid var(--border);
+  padding-block: 8px 2px;
+  font-size: 12px;
+}

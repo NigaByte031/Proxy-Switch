@@ -1,0 +1,82 @@
+name: Bug report
+description: Something in the extension does not work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report! Please describe what happened and what you expected instead.
+  - type: input
+    id: chrome
+    attributes:
+      label: Chrome version
+      description: From `chrome://version` (the first line)
+      placeholder: '140.0.7339.81'
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Proxy mode
+      options:
+        - System
+        - Direct
+        - Manual (a saved server)
+        - PAC script
+        - Not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - ChromeOS
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: badge
+    attributes:
+      label: What does the toolbar badge show?
+      placeholder: SYS / ON / PAC / OFF / ERR
+    validations:
+      required: false
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Add a SOCKS5 server ...
+        2. Click the server ...
+        3. The status card shows ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console output
+      description: |
+        Service worker logs: `chrome://extensions` → Details → **service worker** → Console.
+        Page logs: right-click the popup → **Inspect**.
+      render: shell
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched the existing issues
+          required: true
+        - label: No other extension (for example another proxy switcher) is also controlling the proxy
+          required: false

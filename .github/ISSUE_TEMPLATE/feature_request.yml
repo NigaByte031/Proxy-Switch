@@ -1,0 +1,40 @@
+name: Feature request
+description: Suggest an improvement for the extension
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the situation where the extension falls short today.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: How would you like it to work? Sketches of the UI are welcome.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Popup
+        - Settings page
+        - Proxy modes
+        - Servers / authentication
+        - Bypass list
+        - Bilingual UI
+        - Import / export
+        - Packaging & tooling
+    validations:
+      required: true
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Project constraints
+      options:
+        - label: The idea can be implemented without dependencies or network requests
+          required: false
