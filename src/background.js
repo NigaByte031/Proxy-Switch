@@ -8,7 +8,7 @@
 
 import { findProfile } from './lib/model.js';
 import { ensureState, loadState, saveState, subscribe } from './lib/storage.js';
-import { applyProxy } from './lib/proxy.js';
+import { applyProxy, describeBadge } from './lib/proxy.js';
 import { resolveLang, t } from './lib/i18n.js';
 
 const BADGE_COLORS = {
@@ -43,29 +43,14 @@ async function showError(error) {
   }
 }
 
-function badgeFor(state) {
-  if (!state.settings.enabled) return { text: 'OFF', color: BADGE_COLORS.off, tone: 'off' };
-  switch (state.settings.mode) {
-    case 'fixed_servers':
-      return { text: 'ON', color: BADGE_COLORS.manual, tone: 'manual' };
-    case 'pac_script':
-      return { text: 'PAC', color: BADGE_COLORS.pac, tone: 'pac' };
-    case 'direct':
-      return { text: 'OFF', color: BADGE_COLORS.off, tone: 'off' };
-    case 'system':
-    default:
-      return { text: 'SYS', color: BADGE_COLORS.system, tone: 'system' };
-  }
-}
-
 async function updateBadge(state) {
   if (!chrome.action) return;
-  const badge = badgeFor(state);
+  const badge = describeBadge(state);
   const lang = resolveLang(state.settings.language, typeof navigator !== 'undefined' ? navigator.language : 'en');
   const profile = findProfile(state, state.settings.activeProfileId);
   const title = profile ? `Proxy Switch — ${profile.name}` : t('app.name', lang);
   await chrome.action.setBadgeText({ text: badge.text });
-  await chrome.action.setBadgeBackgroundColor({ color: badge.color });
+  await chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS[badge.tone] ?? BADGE_COLORS.system });
   await chrome.action.setTitle({ title });
 }
 
@@ -193,6 +178,25 @@ chrome.webRequest?.onAuthRequired.addListener(
 
 chrome.proxy?.onProxyError?.addListener((details) => {
   showError(details?.error ? new Error(details.error) : new Error('proxy error'));
+});
+
+/* ------------------------------------------------------------------ *
+ * Keyboard shortcuts (chrome://extensions/shortcuts)
+ * ------------------------------------------------------------------ */
+
+chrome.commands?.onCommand.addListener(async (command) => {
+  if (command !== 'toggle-proxy' && command !== 'go-direct') return;
+  const state = await loadState();
+  const draft = structuredClone(state);
+
+  if (command === 'toggle-proxy') {
+    draft.settings.enabled = !draft.settings.enabled;
+  } else {
+    draft.settings.enabled = true;
+    draft.settings.mode = 'direct';
+  }
+
+  await saveState(draft);
 });
 
 /* ------------------------------------------------------------------ *

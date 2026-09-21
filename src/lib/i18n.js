@@ -37,6 +37,7 @@ export const MESSAGES = {
     'app.name': 'Proxy Switch',
     'app.tagline': 'One-click proxy control for Chrome',
     'action.settings': 'Settings',
+    'action.masterToggle': 'Turn the proxy on or off',
     'lang.switch': 'Switch language',
 
     'mode.title': 'Mode',
@@ -64,6 +65,16 @@ export const MESSAGES = {
     'status.warnPac.title': 'PAC URL is empty',
     'status.warnPac.detail': 'Add a PAC URL — until then traffic stays direct.',
 
+    'popup.shortcuts': 'Alt+Shift+P on/off · Alt+Shift+D direct',
+
+    'health.action': 'Test connection',
+    'health.running': 'Testing…',
+    'health.ok.title': 'Connection works',
+    'health.ok.detail': '{host} answered in {ms}',
+    'health.fail.title': 'No connection',
+    'health.fail.detail':
+      'Nothing answered through the current mode — check the server or your network.',
+
     'profiles.title': 'Servers',
     'profiles.add': 'Add server',
     'profiles.new': 'New server',
@@ -79,6 +90,8 @@ export const MESSAGES = {
     'field.port': 'Port',
     'field.host': 'Host',
     'field.hostPlaceholder': '127.0.0.1 or proxy.example.com',
+    'field.pasteHint':
+      'Paste a whole proxy URL — socks5://user:pass@127.0.0.1:1080 — and the fields fill themselves.',
     'field.username': 'Username',
     'field.password': 'Password',
     'field.authNote': 'Credentials stay on this device only and are never synced.',
@@ -141,6 +154,8 @@ export const MESSAGES = {
     'options.perm.webRequest':
       'webRequest — answer proxy authentication prompts with your saved credentials',
     'options.perm.host': 'all sites — required to route traffic and authenticate the proxy',
+    'options.shortcuts':
+      'Shortcuts: Alt+Shift+P turns the proxy on or off, Alt+Shift+D goes direct. Change them on chrome://extensions/shortcuts.',
 
     'menu.root': 'Proxy Switch',
     'menu.direct': 'Direct (no proxy)',
@@ -152,6 +167,7 @@ export const MESSAGES = {
     'app.name': 'پروکسی سوئیچ',
     'app.tagline': 'کنترل پروکسی کروم با یک کلیک',
     'action.settings': 'تنظیمات',
+    'action.masterToggle': 'روشن یا خاموش کردن پروکسی',
     'lang.switch': 'تغییر زبان',
 
     'mode.title': 'حالت',
@@ -179,6 +195,15 @@ export const MESSAGES = {
     'status.warnPac.title': 'نشانی PAC خالی است',
     'status.warnPac.detail': 'نشانی PAC را وارد کنید؛ تا آن زمان ترافیک مستقیم است.',
 
+    'popup.shortcuts': 'Alt+Shift+P روشن/خاموش · Alt+Shift+D مستقیم',
+
+    'health.action': 'تست اتصال',
+    'health.running': 'در حال تست…',
+    'health.ok.title': 'اتصال برقرار است',
+    'health.ok.detail': '{host} در {ms} پاسخ داد',
+    'health.fail.title': 'اتصال برقرار نشد',
+    'health.fail.detail': 'در حالت فعلی پاسخی نرسید — سرور یا شبکه را بررسی کنید.',
+
     'profiles.title': 'سرورها',
     'profiles.add': 'افزودن سرور',
     'profiles.new': 'سرور جدید',
@@ -200,6 +225,8 @@ export const MESSAGES = {
     'field.pacUrl': 'نشانی اسکریپت PAC',
     'field.pacPlaceholder': 'https://example.com/proxy.pac',
     'field.pacHint': 'کروم این فایل PAC را دانلود میکند و طبق آن عمل میکند.',
+    'field.pasteHint':
+      'یک نشانی کامل پروکسی را جای‌گذاری کنید — مثل socks5://user:pass@127.0.0.1:1080 — تا فیلدها خودکار پر شوند.',
     'field.bypass': 'فهرست عبور',
     'field.bypassPlaceholder': '<local>\nlocalhost\n127.0.0.1\n*.internal.example.com',
     'field.bypassSummary': '{count} قاعدهٔ عبور',
@@ -254,6 +281,8 @@ export const MESSAGES = {
     'options.perm.storage': 'storage — نگهداشتن سرورها و تنظیمات روی همین دستگاه',
     'options.perm.webRequest': 'webRequest — پاسخ به درخواست احراز هویت پروکسی با اطلاعات ذخیرهشده',
     'options.perm.host': 'دسترسی به همهٔ سایتها — برای مسیردهی ترافیک و احراز هویت پروکسی',
+    'options.shortcuts':
+      'میان‌برهای صفحه‌کلید: Alt+Shift+P پروکسی را روشن/خاموش می‌کند و Alt+Shift+D اتصال را مستقیم می‌کند. تغییر آن‌ها در chrome://extensions/shortcuts.',
 
     'menu.root': 'پروکسی سوئیچ',
     'menu.direct': 'مستقیم (بدون پروکسی)',

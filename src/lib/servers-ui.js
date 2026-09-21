@@ -4,7 +4,7 @@
  * lives here once.
  */
 
-import { formatProfileAddress, uniqueProfileName, validateProfile } from './model.js';
+import { formatProfileAddress, parseProxyUrl, uniqueProfileName, validateProfile } from './model.js';
 import { t } from './i18n.js';
 
 /**
@@ -137,6 +137,35 @@ export function createServersUi({
       }
     });
   }
+
+  /**
+   * Fills the form from a pasted proxy URL. Returns false when the text is not
+   * recognisable, so the caller can let the normal paste happen.
+   */
+  function applyPastedProxy(text, state, lang) {
+    const parsed = parseProxyUrl(text);
+    if (!parsed) return false;
+
+    if (parsed.scheme) fields.scheme.value = parsed.scheme;
+    fields.host.value = parsed.host;
+    if (parsed.port) fields.port.value = parsed.port;
+    // Credentials are only replaced when the pasted URL actually carries them.
+    if (parsed.username) fields.username.value = parsed.username;
+    if (parsed.password) fields.password.value = parsed.password;
+
+    errorKey = null;
+    renderForm(state, lang);
+    return true;
+  }
+
+  // `socks5://user:pass@127.0.0.1:1080` and `127.0.0.1:8080` are both handled;
+  // a plain hostname keeps the ordinary paste behaviour.
+  fields.host?.addEventListener('paste', (event) => {
+    const text = event.clipboardData?.getData('text') ?? '';
+    if (!/[@:/]/.test(text)) return;
+    if (!applyPastedProxy(text, getState(), getLang())) return;
+    event.preventDefault();
+  });
 
   addBtn?.addEventListener('click', () => openForm(getState(), getLang()));
   cancelBtn?.addEventListener('click', () => closeForm(getState(), getLang()));

@@ -6,20 +6,28 @@
 
 import { applyDocumentLang, applyStaticText, LANG_LABELS, otherLang, resolveLang, t } from './lib/i18n.js';
 import { loadState, subscribe, updateState } from './lib/storage.js';
-import { describeStatus } from './lib/proxy.js';
+import { describeBadge, describeStatus } from './lib/proxy.js';
 import { createModeUi } from './lib/mode-ui.js';
 import { createServersUi } from './lib/servers-ui.js';
+import { createHealthUi } from './lib/health-ui.js';
 
 const el = (id) => document.getElementById(id);
+
+const version =
+  typeof chrome !== 'undefined' ? chrome.runtime?.getManifest?.().version ?? '' : '';
 
 const els = {
   langBtn: el('langBtn'),
   optionsBtn: el('optionsBtn'),
   statusDot: el('statusDot'),
+  statePill: el('statePill'),
+  footerMeta: el('footerMeta'),
   statusTitle: el('statusTitle'),
   statusDetail: el('statusDetail'),
   masterToggle: el('masterToggle'),
   warning: el('warning'),
+  testBtn: el('testBtn'),
+  testResult: el('testResult'),
   bypassInfo: el('bypassInfo'),
   editBypass: el('editBypass'),
 };
@@ -43,6 +51,12 @@ const modeUi = createModeUi({
     if (message) flashWarning(message);
     else transientWarning = null;
   },
+});
+
+const healthUi = createHealthUi({
+  buttonEl: el('testBtn'),
+  resultEl: el('testResult'),
+  getLang: () => lang,
 });
 
 const serversUi = createServersUi({
@@ -77,6 +91,15 @@ function render() {
   els.langBtn.textContent = LANG_LABELS[otherLang(lang)];
   els.langBtn.title = t('lang.switch', lang);
 
+  // The pill repeats what the toolbar badge shows, so the popup explains the icon.
+  const badge = describeBadge(state);
+  els.statePill.textContent = badge.text;
+  els.statePill.dataset.tone = badge.tone;
+
+  els.footerMeta.textContent = version
+    ? `${t('popup.shortcuts', lang)} · v${version}`
+    : t('popup.shortcuts', lang);
+
   const status = describeStatus(state);
   els.statusTitle.textContent = t(status.title.key, lang, status.title.params);
   els.statusDetail.textContent = t(status.detail.key, lang, status.detail.params);
@@ -93,6 +116,7 @@ function render() {
 
   modeUi.render(state, lang);
   serversUi.render(state, lang);
+  healthUi.render(lang);
 }
 
 function wire() {

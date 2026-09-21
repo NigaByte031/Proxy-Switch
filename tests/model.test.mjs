@@ -20,6 +20,7 @@ import {
   normalizeHost,
   parseBypassList,
   parseImport,
+  parseProxyUrl,
   sanitizeState,
   serializeState,
   splitHostPort,
@@ -250,5 +251,56 @@ test('missingRequirement points at what the current mode still needs', () => {
     const state = createDefaultState();
     state.settings.mode = mode;
     assert.equal(missingRequirement(state), needsSomething[mode] ?? null, `mode ${mode}`);
+  }
+});
+
+test('parseProxyUrl reads proxy strings the way people paste them', () => {
+  assert.deepEqual(parseProxyUrl('socks5://user:pass@127.0.0.1:1080'), {
+    scheme: 'socks5',
+    host: '127.0.0.1',
+    port: '1080',
+    username: 'user',
+    password: 'pass',
+  });
+  assert.deepEqual(parseProxyUrl('http://proxy.example.com:3128'), {
+    scheme: 'http',
+    host: 'proxy.example.com',
+    port: '3128',
+    username: '',
+    password: '',
+  });
+  assert.deepEqual(parseProxyUrl('127.0.0.1:8080'), {
+    scheme: null,
+    host: '127.0.0.1',
+    port: '8080',
+    username: '',
+    password: '',
+  });
+  assert.deepEqual(parseProxyUrl('proxy.example.com'), {
+    scheme: null,
+    host: 'proxy.example.com',
+    port: '',
+    username: '',
+    password: '',
+  });
+
+  // an unknown scheme is dropped but the host survives
+  assert.equal(parseProxyUrl('ftp://host:21').scheme, null);
+  assert.equal(parseProxyUrl('ftp://host:21').host, 'host');
+  // socks:// is the short spelling of socks5
+  assert.equal(parseProxyUrl('socks://host:1').scheme, 'socks5');
+  // paths, queries and fragments are ignored and credentials are decoded
+  assert.deepEqual(parseProxyUrl('https://u%40ser:p%3Ass@h.example:443/path?x=1#frag'), {
+    scheme: 'https',
+    host: 'h.example',
+    port: '443',
+    username: 'u@ser',
+    password: 'p:ss',
+  });
+  // a bare IPv6 literal is bracketed for chrome.proxy
+  assert.equal(parseProxyUrl('::1').host, '[::1]');
+
+  for (const junk of ['', '   ', null, undefined]) {
+    assert.equal(parseProxyUrl(junk), null, `junk: ${junk}`);
   }
 });

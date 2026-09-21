@@ -52,6 +52,28 @@ export function buildProxyConfig(state) {
 }
 
 /**
+ * What the toolbar icon shows: the four characters plus a tone the caller turns
+ * into a colour. Shared with the popup so the badge and the "state pill" in the
+ * status card can never disagree.
+ * @returns {{text: 'SYS'|'ON'|'PAC'|'OFF', tone: 'system'|'manual'|'pac'|'off'}}
+ */
+export function describeBadge(state) {
+  if (!state?.settings?.enabled) return { text: 'OFF', tone: 'off' };
+
+  switch (state.settings.mode) {
+    case 'fixed_servers':
+      return { text: 'ON', tone: 'manual' };
+    case 'pac_script':
+      return { text: 'PAC', tone: 'pac' };
+    case 'direct':
+      return { text: 'OFF', tone: 'off' };
+    case 'system':
+    default:
+      return { text: 'SYS', tone: 'system' };
+  }
+}
+
+/**
  * Status card content. Returns i18n keys + params instead of translated text so
  * that the caller (and the tests) can translate for any language.
  * @returns {{tone: 'ok'|'idle'|'warn', title: {key: string, params?: object}, detail: {key: string, params?: object}}}

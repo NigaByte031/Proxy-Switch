@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { createDefaultState, sanitizeState } from '../src/lib/model.js';
-import { buildProxyConfig, describeStatus } from '../src/lib/proxy.js';
+import { buildProxyConfig, describeBadge, describeStatus } from '../src/lib/proxy.js';
 import { MESSAGES, t } from '../src/lib/i18n.js';
 
 const withProfile = (over = {}) =>
@@ -116,4 +116,25 @@ test('every status a user can reach has English and Persian text', () => {
       }
     }
   }
+});
+
+test('describeBadge mirrors the toolbar icon for every mode', () => {
+  const cases = [
+    ['system', undefined, 'SYS', 'system'],
+    ['direct', undefined, 'OFF', 'off'],
+    ['fixed_servers', 'p1', 'ON', 'manual'],
+    ['pac_script', undefined, 'PAC', 'pac'],
+  ];
+
+  for (const [mode, activeProfileId, text, tone] of cases) {
+    const state = withProfile({ settings: { mode, activeProfileId } });
+    assert.deepEqual(describeBadge(state), { text, tone }, mode);
+  }
+
+  // the master switch wins over the mode, and a missing state is "off" too
+  assert.deepEqual(describeBadge(withProfile({ settings: { enabled: false } })), {
+    text: 'OFF',
+    tone: 'off',
+  });
+  assert.deepEqual(describeBadge(undefined), { text: 'OFF', tone: 'off' });
 });

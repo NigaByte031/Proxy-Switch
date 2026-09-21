@@ -15,6 +15,7 @@ import {
 } from './lib/model.js';
 import { createModeUi } from './lib/mode-ui.js';
 import { createServersUi } from './lib/servers-ui.js';
+import { createHealthUi } from './lib/health-ui.js';
 
 const el = (id) => document.getElementById(id);
 
@@ -26,6 +27,8 @@ const els = {
   authToggle: el('authToggle'),
   bypassInput: el('bypassInput'),
   bypassSave: el('bypassSave'),
+  testBtn: el('testBtn'),
+  testResult: el('testResult'),
   exportBtn: el('exportBtn'),
   importBtn: el('importBtn'),
   importInput: el('importInput'),
@@ -51,6 +54,12 @@ const modeUi = createModeUi({
   onError: (text) => {
     if (text) flash(text);
   },
+});
+
+const healthUi = createHealthUi({
+  buttonEl: el('testBtn'),
+  resultEl: el('testResult'),
+  getLang: () => lang,
 });
 
 const serversUi = createServersUi({
@@ -91,6 +100,7 @@ function render() {
 
   modeUi.render(state, lang);
   serversUi.render(state, lang);
+  healthUi.render(lang);
 }
 
 function downloadExport() {

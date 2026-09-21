@@ -47,13 +47,45 @@ body.popup {
   padding: 12px;
 }
 
+/* The header and the footer stay put while a long server list scrolls. */
+.app-header,
 .app-footer {
+  position: sticky;
+  z-index: 2;
+  background: var(--bg);
+}
+
+.app-header {
+  inset-block-start: -12px;
+  padding-block: 12px 8px;
+}
+
+.app-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  inset-block-end: -12px;
+  padding-block: 8px 12px;
+  border-block-start: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.footer-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding-block-start: 2px;
-  border-block-start: 1px solid var(--border);
-  padding-block: 8px 2px;
-  font-size: 12px;
+}
+
+.footer-meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  unicode-bidi: plaintext;
+}
+
+.status-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }

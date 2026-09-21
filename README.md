@@ -14,13 +14,18 @@ bilingual — English and Persian (فارسی) with full RTL support — and eve
 
 - **Four modes in one click** — system proxy, direct (no proxy), a saved server, or a PAC script.
 - **Saved servers** — name, scheme (HTTP/HTTPS/SOCKS4/SOCKS5), host, port, optional credentials.
-  Pasting `https://user:pass@host:8080/path` fills the fields for you.
+  Paste a whole proxy URL (`socks5://user:pass@127.0.0.1:1080`, or just `host:8080`) into the Host
+  field and scheme, host, port and credentials fill themselves.
 - **Proxy authentication** — optional automatic answers to proxy login prompts, only for the
   server you are actually using.
 - **Bypass list** — one rule per line (`<local>`, `localhost`, `*.internal.example.com`, …).
 - **Master switch** — instantly go direct without losing the mode you configured.
 - **Context menu** — right-click the toolbar icon to switch mode or server.
-- **Live badge** — the toolbar icon shows `SYS`, `ON`, `PAC`, `OFF` or `ERR`.
+- **Live badge** — the toolbar icon shows `SYS`, `ON`, `PAC`, `OFF` or `ERR`, and the popup repeats
+  it as a pill next to the status text.
+- **Connection test** — one click tells you whether traffic really flows, through which host and
+  how many milliseconds it took.
+- **Keyboard shortcuts** — `Alt+Shift+P` turns the proxy on or off, `Alt+Shift+D` goes direct.
 - **Bilingual UI** — switch language from the popup; Persian is rendered RTL.
 - **Backup & restore** — export/import the whole configuration as JSON.
 - **No analytics, no network calls, no remote code.** See [PRIVACY.md](PRIVACY.md).
@@ -37,9 +42,9 @@ bilingual — English and Persian (فارسی) with full RTL support — and eve
 ### From source
 
 ```bash
-git clone https://github.com/your-username/proxy-switch.git
-cd proxy-switch
-npm run package     # writes dist/proxy-switch-v1.0.0.zip (optional)
+git clone https://github.com/mohammadyazdani031/ProxyControler.git
+cd ProxyControler
+npm run package     # writes dist/proxy-switch-v1.1.0.zip (optional)
 ```
 
 Then load the repository folder itself with **Load unpacked** — the manifest points at `src/`, so
@@ -68,11 +73,24 @@ npm run preview -- --check   # verify they are in sync
 1. Open the popup from the toolbar.
 2. Pick a mode, or add a server and click it — clicking a server switches to it immediately.
 3. Flip the master switch off to go direct temporarily; your mode is remembered.
-4. The ⚙ button (or `chrome://extensions` → Details → Extension options) opens the settings page,
+4. Press **Test connection** when you want proof: it sends one tiny request through the mode that is
+   currently applied and reports the host that answered and the round-trip time. Hover the result to
+   see the raw reason when it fails.
+5. The ⚙ button (or `chrome://extensions` → Details → Extension options) opens the settings page,
    where you manage servers, the bypass list, the language and JSON backups.
 
 If a mode has nothing to work with (no server selected, empty PAC URL) the extension **fails open**:
 traffic goes direct and the popup shows a warning instead of leaving you without a connection.
+
+### Keyboard shortcuts
+
+| Shortcut | Action |
+| --- | --- |
+| `Alt+Shift+P` | Turn the proxy on or off (the master switch). |
+| `Alt+Shift+D` | Go direct without forgetting the configured mode. |
+
+Chrome may report a shortcut as unassigned if another extension already owns it; you can always
+rebind both on `chrome://extensions/shortcuts`.
 
 ## Permissions
 
@@ -109,6 +127,8 @@ src/
   lib/
     model.js                state shape, validation, import/export (pure, tested)
     proxy.js                builds the chrome.proxy config + status text (pure, tested)
+    health.js               connection probe: timing and verdict (pure, tested)
+    health-ui.js            the shared "Test connection" control
     storage.js              chrome.storage.local wrapper
     i18n.js                 English/Persian dictionaries, RTL helpers (pure, tested)
     mode-ui.js              shared mode chips + PAC row
@@ -127,21 +147,20 @@ Design decisions worth knowing:
 - **Pure logic is separated** from the Chrome APIs (`lib/model.js`, `lib/proxy.js`, `lib/i18n.js`)
   so it can be unit tested in plain Node.
 
-## Before you publish
+## Publishing
 
-This template ships with placeholders that you should replace:
-
-- [ ] `your-username` in `manifest.json` (`homepage_url`) and in this README's clone URL.
-- [ ] The copyright holder in [LICENSE](LICENSE).
-- [ ] `npm run package`, then upload `dist/proxy-switch-v1.0.0.zip` in the Chrome Web Store
+- [ ] `npm run package`, then upload `dist/proxy-switch-v1.1.0.zip` from the Chrome Web Store
       developer dashboard (a 128×128 icon is already included; screenshots can be taken from the
       preview pages).
+- [ ] Tag the release — `git tag v1.1.0 && git push origin v1.1.0`. The
+      [release workflow](.github/workflows/release.yml) refuses a tag that does not match
+      `manifest.json`, runs the tests and attaches the ZIP to the GitHub release.
 - [ ] Add real screenshots to `docs/` if you want them in this README.
 
 ## Roadmap ideas
 
-- Proxy health check ("test this server") straight from the popup.
 - Rules per domain, so one site uses one server and everything else another.
+- Automatic failover: try the next saved server when the active one stops answering.
 - Import from common formats (`SwitchyOmega` backups).
 - Firefox build (WebExtensions `browser.proxy` has the same shape).
 

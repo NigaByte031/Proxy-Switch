@@ -10,7 +10,7 @@
 (function installChromeStub() {
   if (globalThis.chrome?.storage) return; // a real extension context: do nothing
 
-  var VERSION = '1.0.0'; // kept in sync with manifest.json by tests/manifest.test.mjs
+  var VERSION = '1.1.0'; // kept in sync with manifest.json by tests/manifest.test.mjs
   var DATA_KEY = 'proxySwitch.preview.data';
   var PROXY_KEY = 'proxySwitch.preview.proxy';
 
@@ -151,33 +151,18 @@
     i18n: { getMessage: function (key) { return key; } },
   };
 
-  function mountRibbon() {
-    if (!document.body) return;
-    var ribbon = document.createElement('div');
-    ribbon.textContent = 'PREVIEW MODE';
-    ribbon.title =
-      'Offline preview: the chrome.* APIs are mocked and data is kept in localStorage.';
-    ribbon.setAttribute('aria-hidden', 'true');
-    ribbon.style.cssText = [
-      'position:fixed',
-      'inset-block-end:8px',
-      'inset-inline-end:8px',
-      'z-index:99',
-      'padding:4px 9px',
-      'border-radius:999px',
-      'font:600 10px/1.4 system-ui,sans-serif',
-      'letter-spacing:.06em',
-      'color:#4f46e5',
-      'background:rgba(79,70,229,.12)',
-      'border:1px solid rgba(79,70,229,.35)',
-      'pointer-events:none',
-    ].join(';');
-    document.body.append(ribbon);
-  }
+  /*
+   * The "Test connection" button really calls fetch(), which a file:// preview
+   * cannot do cross-origin — so the preview answers with a simulated result.
+   * `src/lib/health.js` prefers this hook over the real fetch when it exists.
+   */
+  var SIMULATED_LATENCY_MS = 180;
+  globalThis.__proxySwitchProbeFetch = function () {
+    return new Promise(function (resolve) {
+      setTimeout(function () {
+        resolve({ status: 204, ok: true, type: 'basic' });
+      }, SIMULATED_LATENCY_MS);
+    });
+  };
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', mountRibbon);
-  } else {
-    mountRibbon();
-  }
 })();

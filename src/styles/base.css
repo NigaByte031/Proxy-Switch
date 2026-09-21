@@ -12,6 +12,8 @@
   --accent: #4f46e5;
   --accent-contrast: #ffffff;
   --accent-soft: #eceafd;
+  --pac: #0d9488;
+  --pac-soft: #dff3f0;
   --danger: #d92d20;
   --danger-soft: #fdecea;
   --ok: #16a34a;
@@ -34,6 +36,8 @@
     --accent: #8b85ff;
     --accent-contrast: #12131a;
     --accent-soft: #272b46;
+    --pac: #2dd4bf;
+    --pac-soft: #14312e;
     --danger: #f4776c;
     --danger-soft: #3a2020;
     --ok: #4ade80;
@@ -141,6 +145,41 @@ section > h2,
 .app-logo {
   flex: 0 0 auto;
   border-radius: var(--radius-sm);
+}
+
+/* The four characters of the toolbar badge, repeated inside the UI. */
+.pill {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.pill:empty {
+  display: none;
+}
+
+.pill[data-tone="manual"] {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.pill[data-tone="pac"] {
+  border-color: color-mix(in srgb, var(--pac) 40%, transparent);
+  background: var(--pac-soft);
+  color: var(--pac);
+}
+
+.pill[data-tone="system"],
+.pill[data-tone="off"] {
+  background: var(--surface-2);
+  color: var(--muted);
 }
 
 /* ---------------------------------------------------------------- *
@@ -439,6 +478,35 @@ label {
   border-radius: var(--radius-sm);
   background: var(--danger-soft);
   font-size: 12px;
+}
+
+.health-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block-start: 10px;
+}
+
+.health-row .ghost-btn {
+  padding: 6px 10px;
+  font-size: 12.5px;
+}
+
+.health-result {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  unicode-bidi: plaintext;
+  overflow-wrap: anywhere;
+}
+
+.health-result.is-ok {
+  color: var(--ok);
+}
+
+.health-result.is-warn {
+  color: var(--warn);
 }
 
 .profile-list {

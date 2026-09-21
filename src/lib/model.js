@@ -144,6 +144,60 @@ export function isValidPacUrl(url) {
 }
 
 /* ------------------------------------------------------------------ *
+ * Pasted proxy URLs
+ * ------------------------------------------------------------------ */
+
+function decodeComponent(value) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+/**
+ * Reads a proxy the way people paste them, so a whole
+ * `socks5://user:pass@host:1080` line can fill the form in one go. Every part is
+ * optional: `host:8080` and a bare `host` work too.
+ *
+ * @returns {{scheme: string|null, host: string, port: string, username: string, password: string}|null}
+ */
+export function parseProxyUrl(raw) {
+  let rest = String(raw ?? '').trim();
+  if (!rest) return null;
+
+  let scheme = null;
+  const schemeMatch = rest.match(/^([a-z][a-z0-9+.-]*):\/\//i);
+  if (schemeMatch) {
+    const candidate = schemeMatch[1].toLowerCase();
+    if (PROXY_SCHEMES.includes(candidate)) scheme = candidate;
+    else if (candidate === 'socks') scheme = 'socks5';
+    rest = rest.slice(schemeMatch[0].length);
+  }
+
+  let username = '';
+  let password = '';
+  const at = rest.lastIndexOf('@');
+  if (at > -1) {
+    const userinfo = rest.slice(0, at);
+    rest = rest.slice(at + 1);
+    const colon = userinfo.indexOf(':');
+    if (colon > -1) {
+      username = decodeComponent(userinfo.slice(0, colon));
+      password = decodeComponent(userinfo.slice(colon + 1));
+    } else {
+      username = decodeComponent(userinfo);
+    }
+  }
+
+  rest = rest.split('/')[0].split('?')[0].split('#')[0];
+  const { host, port } = splitHostPort(rest, '');
+  if (!host) return null;
+
+  return { scheme, host, port, username, password };
+}
+
+/* ------------------------------------------------------------------ *
  * Profiles
  * ------------------------------------------------------------------ */
 

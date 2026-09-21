@@ -41,6 +41,19 @@ test('the extension requests a minimal, documented permission set', () => {
   assert.equal(manifest.externally_connectable, undefined);
 });
 
+test('the keyboard shortcuts are declared in a Chrome-valid shape', () => {
+  const commands = manifest.commands;
+  assert.ok(commands, 'the commands block is missing');
+  assert.ok(commands['toggle-proxy'], 'the toggle shortcut is missing');
+  assert.ok(commands['go-direct'], 'the direct shortcut is missing');
+
+  for (const [name, command] of Object.entries(commands)) {
+    assert.ok(command.description, `${name} has no description`);
+    const key = command.suggested_key?.default;
+    assert.match(key ?? '', /^(Ctrl|Alt|Command|MacCtrl)(\+(Shift|Alt|Ctrl))?\+[A-Z0-9]$/, `${name}: ${key}`);
+  }
+});
+
 test('every file the manifest points at exists', () => {
   const referenced = [
     manifest.action.default_popup,
