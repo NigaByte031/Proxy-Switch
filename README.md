@@ -27,6 +27,8 @@ bilingual — English and Persian (فارسی) with full RTL support — and eve
   how many milliseconds it took.
 - **Keyboard shortcuts** — `Alt+Shift+P` turns the proxy on or off, `Alt+Shift+D` goes direct.
 - **Bilingual UI** — switch language from the popup; Persian is rendered RTL.
+- **Theme** — automatic (follows your operating system), light or dark. Set it on the settings
+  page, or click the ◐ button in the popup to cycle through the three options without leaving it.
 - **Backup & restore** — export/import the whole configuration as JSON.
 - **No analytics, no network calls, no remote code.** See [PRIVACY.md](PRIVACY.md).
 
@@ -44,7 +46,7 @@ bilingual — English and Persian (فارسی) with full RTL support — and eve
 ```bash
 git clone https://github.com/mohammadyazdani031/ProxyControler.git
 cd ProxyControler
-npm run package     # writes dist/proxy-switch-v1.1.0.zip (optional)
+npm run package     # writes dist/proxy-switch-v1.2.0.zip (optional)
 ```
 
 Then load the repository folder itself with **Load unpacked** — the manifest points at `src/`, so
@@ -76,8 +78,9 @@ npm run preview -- --check   # verify they are in sync
 4. Press **Test connection** when you want proof: it sends one tiny request through the mode that is
    currently applied and reports the host that answered and the round-trip time. Hover the result to
    see the raw reason when it fails.
-5. The ⚙ button (or `chrome://extensions` → Details → Extension options) opens the settings page,
-   where you manage servers, the bypass list, the language and JSON backups.
+5. The ◐ button switches between the automatic, light and dark themes; the ⚙ button (or
+   `chrome://extensions` → Details → Extension options) opens the settings page, where you manage
+   servers, the bypass list, the language, the theme and JSON backups.
 
 If a mode has nothing to work with (no server selected, empty PAC URL) the extension **fails open**:
 traffic goes direct and the popup shows a warning instead of leaving you without a connection.
@@ -146,13 +149,18 @@ Design decisions worth knowing:
 - **Credentials never sync.** Everything lives in `chrome.storage.local`, never `chrome.storage.sync`.
 - **Pure logic is separated** from the Chrome APIs (`lib/model.js`, `lib/proxy.js`, `lib/i18n.js`)
   so it can be unit tested in plain Node.
+- **Theming is one file.** Every colour, radius and shadow is a custom property in
+  `src/styles/base.css` — the light palette on `:root`, the dark one on `:root[data-theme='dark']`,
+  both chosen by `lib/theme.js` — so the themes and the per-mode accents (emerald for a saved
+  server, indigo for PAC, slate for the system proxy, amber when something is missing) can be
+  re-tuned without touching any other stylesheet.
 
 ## Publishing
 
-- [ ] `npm run package`, then upload `dist/proxy-switch-v1.1.0.zip` from the Chrome Web Store
+- [ ] `npm run package`, then upload `dist/proxy-switch-v1.2.0.zip` from the Chrome Web Store
       developer dashboard (a 128×128 icon is already included; screenshots can be taken from the
       preview pages).
-- [ ] Tag the release — `git tag v1.1.0 && git push origin v1.1.0`. The
+- [ ] Tag the release — `git tag v1.2.0 && git push origin v1.2.0`. The
       [release workflow](.github/workflows/release.yml) refuses a tag that does not match
       `manifest.json`, runs the tests and attaches the ZIP to the GitHub release.
 - [ ] Add real screenshots to `docs/` if you want them in this README.

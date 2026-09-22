@@ -23,6 +23,9 @@ export const PROXY_SCHEMES = ['http', 'https', 'socks4', 'socks5'];
 /** Accepted values of the language setting ("auto" follows the browser). */
 export const LANGUAGES = ['auto', 'en', 'fa'];
 
+/** Accepted values of the theme setting ("auto" follows the operating system). */
+export const THEMES = ['auto', 'light', 'dark'];
+
 /** Hosts that skip the proxy out of the box. */
 export const DEFAULT_BYPASS_LIST = ['<local>', 'localhost', '[::1]'];
 
@@ -43,6 +46,7 @@ export function createDefaultState() {
       bypassList: [...DEFAULT_BYPASS_LIST],
       autoAuth: true,
       language: 'auto',
+      theme: 'auto',
     },
     profiles: [],
   };
@@ -361,6 +365,7 @@ export function sanitizeState(raw) {
       bypassList,
       autoAuth: typeof settings.autoAuth === 'boolean' ? settings.autoAuth : base.settings.autoAuth,
       language: LANGUAGES.includes(settings.language) ? settings.language : base.settings.language,
+      theme: THEMES.includes(settings.theme) ? settings.theme : base.settings.theme,
     },
     profiles,
   };

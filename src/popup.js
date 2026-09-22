@@ -5,6 +5,7 @@
  */
 
 import { applyDocumentLang, applyStaticText, LANG_LABELS, otherLang, resolveLang, t } from './lib/i18n.js';
+import { applyTheme, nextTheme, themeIcon, themeKey, watchSystemTheme } from './lib/theme.js';
 import { loadState, subscribe, updateState } from './lib/storage.js';
 import { describeBadge, describeStatus } from './lib/proxy.js';
 import { createModeUi } from './lib/mode-ui.js';
@@ -18,7 +19,10 @@ const version =
 
 const els = {
   langBtn: el('langBtn'),
+  themeBtn: el('themeBtn'),
   optionsBtn: el('optionsBtn'),
+  header: document.querySelector('.app-header'),
+  statusCard: el('statusCard'),
   statusDot: el('statusDot'),
   statePill: el('statePill'),
   footerMeta: el('footerMeta'),
@@ -91,6 +95,15 @@ function render() {
   els.langBtn.textContent = LANG_LABELS[otherLang(lang)];
   els.langBtn.title = t('lang.switch', lang);
 
+  // The button shows the theme that is showing and names it, so a click never
+  // lands on a theme the user did not expect (see nextTheme).
+  els.themeBtn.textContent = themeIcon(state.settings.theme);
+  els.themeBtn.title = `${t('theme.switch', lang)} · ${t(themeKey(state.settings.theme), lang)}`;
+  els.themeBtn.setAttribute('aria-label', els.themeBtn.title);
+
+  // The theme is written onto <html>, where src/styles/base.css picks it up.
+  applyTheme(state.settings.theme);
+
   // The pill repeats what the toolbar badge shows, so the popup explains the icon.
   const badge = describeBadge(state);
   els.statePill.textContent = badge.text;
@@ -104,6 +117,11 @@ function render() {
   els.statusTitle.textContent = t(status.title.key, lang, status.title.params);
   els.statusDetail.textContent = t(status.detail.key, lang, status.detail.params);
   els.statusDot.className = `dot is-${status.tone}`;
+
+  // The card wears the colour of the active mode (emerald for a server, indigo
+  // for PAC, slate for the system proxy) and turns amber when something is
+  // missing, so the popup can be read at a glance.
+  els.statusCard.dataset.tone = status.tone === 'warn' ? 'warn' : badge.tone;
   els.masterToggle.checked = state.settings.enabled;
 
   els.warning.textContent = transientWarning ?? '';
@@ -127,10 +145,30 @@ function wire() {
     });
   });
 
+  // The frosted header only draws its hairline once content slides under it.
+  // Scroll events do not bubble, so the listener sits on `document` in the
+  // capture phase: that catches the viewport as well as any inner scroller.
+  const header = els.header;
+  if (header) {
+    const sync = () => {
+      const top = window.scrollY || document.scrollingElement?.scrollTop || 0;
+      header.classList.toggle('is-scrolled', top > 2);
+    };
+    document.addEventListener('scroll', sync, { passive: true, capture: true });
+    sync();
+  }
+
   els.langBtn.addEventListener('click', () => {
     const next = otherLang(lang);
     commit((draft) => {
       draft.settings.language = next;
+    });
+  });
+
+  els.themeBtn.addEventListener('click', () => {
+    const theme = nextTheme(state.settings.theme);
+    commit((draft) => {
+      draft.settings.theme = theme;
     });
   });
 
@@ -148,6 +186,11 @@ async function init() {
   subscribe((next) => {
     state = next;
     render();
+  });
+
+  // A popup can stay open for a while; an "auto" theme keeps following the OS.
+  watchSystemTheme(() => {
+    if (state) applyTheme(state.settings.theme);
   });
 }
 

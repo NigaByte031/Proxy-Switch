@@ -4,6 +4,36 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.2.0] — 2026-09-22
+
+You can now pick the theme instead of living with whatever the system says, and the interface was
+re-painted around a single palette.
+
+### Added
+
+- **Theme setting** — *automatic*, *light* or *dark*. Choose it on the settings page next to the
+  language, or click the new ◐ button in the popup to cycle through the three options without
+  leaving the popup. *Automatic* follows your operating system and keeps following it while a page
+  stays open.
+- `src/lib/theme.js` — pure theme resolution (`resolveTheme`, `nextTheme`, `applyTheme`) and the
+  system-preference watcher, plus `tests/theme.test.mjs`, which also pins the light and dark palettes
+  in `base.css` to each other.
+
+### Changed
+
+- The dark palette is now selected by `data-theme` on `<html>` instead of a `prefers-color-scheme`
+  media query, so an explicit choice always beats the system and both pages can never disagree
+  about which theme is showing. `color-scheme` keeps the native controls in step.
+- The whole interface was re-painted around one emerald → teal palette: the popup's status card
+  wears the colour of the active mode and turns amber when something is missing, each server row
+  carries a badge for its scheme (HTTP / SOCKS5 / …), and the header and footer freeze while a long
+  server list scrolls underneath them.
+- The PAC field moved directly under the mode chips in the popup, so it is never off-screen; the
+  settings page grew a hero header and reports saves through a floating toast.
+- Both READMEs document the theme setting, and version references now read `1.2.0`.
+
+[1.2.0]: ../../releases/tag/v1.2.0
+
 ## [1.1.0] — 2026-09-21
 
 You can now trust the current setting at a glance instead of guessing.

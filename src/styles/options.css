@@ -2,6 +2,32 @@
 
 body.options {
   padding: 32px 20px 64px;
+  animation: fade-in 0.25s ease;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 560px) {
+  body.options {
+    padding: 16px 12px 48px;
+  }
+
+  .page-header h1 {
+    font-size: 17px;
+  }
+
+  .page .card {
+    padding: 14px;
+  }
 }
 
 .page {
@@ -12,29 +38,99 @@ body.options {
   margin: 0 auto;
 }
 
+/* ---------------------------------------------------------------- *
+ * Hero header
+ * ---------------------------------------------------------------- */
+
 .page-header {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 14px;
+  padding: 18px 20px;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  border-radius: var(--radius-lg);
+  background-color: var(--surface);
+  background-image:
+    radial-gradient(
+      120% 170% at 104% -40%,
+      color-mix(in srgb, var(--accent) 17%, transparent),
+      transparent 62%
+    ),
+    linear-gradient(150deg, color-mix(in srgb, var(--accent) 5%, var(--surface)), var(--surface) 68%);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.page-header::after {
+  content: "";
+  position: absolute;
+  inset-inline: 22px;
+  inset-block-end: 0;
+  height: 2px;
+  border-radius: 999px 999px 0 0;
+  background: var(--gradient-brand);
+  opacity: 0.7;
+}
+
+.page-header .app-logo {
+  transition: transform 0.25s var(--ease);
+}
+
+.page-header:hover .app-logo {
+  transform: scale(1.06) rotate(-2deg);
 }
 
 .page-header h1 {
   font-size: 20px;
+  letter-spacing: -0.015em;
 }
 
 .page-header p {
   margin: 2px 0 0;
 }
 
+/* ---------------------------------------------------------------- *
+ * Cards
+ * ---------------------------------------------------------------- */
+
 .page .card {
   padding: 18px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.18s var(--ease);
 }
 
 .page .card:hover {
-  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+  box-shadow: var(--shadow);
 }
 
 #profileForm {
   margin-block-start: 4px;
   background: var(--surface-2);
+}
+
+/* ---------------------------------------------------------------- *
+ * Data message: a floating toast at the bottom of the window
+ * ---------------------------------------------------------------- */
+
+#dataMessage {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 20px;
+  border: 1px solid color-mix(in srgb, var(--ok) 45%, var(--border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ok) 10%, var(--surface));
+  color: var(--accent-strong);
+  font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  animation: toast-in 0.3s var(--ease);
+  white-space: nowrap;
+}
+
+/* Reset button danger confirmation micro-interaction */
+#resetBtn:active {
+  transform: translateY(1px) scale(0.97);
 }

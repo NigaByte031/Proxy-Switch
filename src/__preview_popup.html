@@ -16,10 +16,11 @@
         <p data-i18n="app.tagline"></p>
       </div>
       <button id="langBtn" class="icon-btn" type="button" data-i18n-title="lang.switch" data-i18n-aria-label="lang.switch">فا</button>
+      <button id="themeBtn" class="icon-btn" type="button" data-i18n-title="theme.switch" data-i18n-aria-label="theme.switch">◐</button>
       <button id="optionsBtn" class="icon-btn" type="button" data-i18n-title="action.settings" data-i18n-aria-label="action.settings">⚙</button>
     </header>
 
-    <section class="status-card">
+    <section id="statusCard" class="status-card">
       <div class="status-row">
         <span id="statusDot" class="dot"></span>
         <div class="status-text">
@@ -54,6 +55,16 @@
         <button class="chip" type="button" data-mode="pac_script" data-i18n="mode.pac"></button>
       </div>
       <p id="modeHint" class="status-detail"></p>
+    </section>
+
+    <!-- Sits right under the mode chips, so the PAC URL is never off-screen. -->
+    <section id="pacPanel" class="hidden">
+      <label for="pacUrl" data-i18n="field.pacUrl"></label>
+      <input id="pacUrl" type="url" spellcheck="false" data-i18n-placeholder="field.pacPlaceholder" />
+      <p class="form-note" data-i18n="field.pacHint"></p>
+      <div class="form-actions">
+        <button id="pacSave" class="btn" type="button" data-i18n="btn.save"></button>
+      </div>
     </section>
 
     <section id="manualPanel">
@@ -107,15 +118,6 @@
           <button class="btn" type="submit" data-i18n="btn.save"></button>
         </div>
       </form>
-    </section>
-
-    <section id="pacPanel" class="hidden">
-      <label for="pacUrl" data-i18n="field.pacUrl"></label>
-      <input id="pacUrl" type="url" spellcheck="false" data-i18n-placeholder="field.pacPlaceholder" />
-      <p class="form-note" data-i18n="field.pacHint"></p>
-      <div class="form-actions">
-        <button id="pacSave" class="btn" type="button" data-i18n="btn.save"></button>
-      </div>
     </section>
 
     <footer class="app-footer">

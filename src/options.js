@@ -1,10 +1,11 @@
 /**
- * Settings page controller: language, auto-auth, proxy mode, servers,
+ * Settings page controller: language, theme, auto-auth, proxy mode, servers,
  * bypass list, and JSON backup/restore.
  * Like the popup it only writes state; the service worker applies it.
  */
 
 import { applyDocumentLang, applyStaticText, resolveLang, t } from './lib/i18n.js';
+import { applyTheme, watchSystemTheme } from './lib/theme.js';
 import { loadState, saveState, subscribe, updateState } from './lib/storage.js';
 import {
   createDefaultState,
@@ -23,6 +24,7 @@ const els = {
   versionBadge: el('versionBadge'),
   version: el('version'),
   langSelect: el('langSelect'),
+  themeSelect: el('themeSelect'),
   enabledToggle: el('enabledToggle'),
   authToggle: el('authToggle'),
   bypassInput: el('bypassInput'),
@@ -87,7 +89,11 @@ function render() {
   applyDocumentLang(lang);
   applyStaticText(document, lang);
 
+  // The theme is written onto <html>, where src/styles/base.css picks it up.
+  applyTheme(state.settings.theme);
+
   if (document.activeElement !== els.langSelect) els.langSelect.value = state.settings.language;
+  if (document.activeElement !== els.themeSelect) els.themeSelect.value = state.settings.theme;
   els.enabledToggle.checked = state.settings.enabled;
   els.authToggle.checked = state.settings.autoAuth;
 
@@ -122,6 +128,13 @@ function wire() {
     const value = els.langSelect.value;
     commit((draft) => {
       draft.settings.language = value;
+    });
+  });
+
+  els.themeSelect.addEventListener('change', () => {
+    const theme = els.themeSelect.value;
+    commit((draft) => {
+      draft.settings.theme = theme;
     });
   });
 
@@ -183,6 +196,12 @@ async function init() {
   state = await loadState();
   wire();
   render();
+
+  // An "auto" theme follows the operating system while the page stays open.
+  watchSystemTheme(() => {
+    if (state) applyTheme(state.settings.theme);
+  });
+
   subscribe((next) => {
     state = next;
     render();

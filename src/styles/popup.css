@@ -4,17 +4,71 @@ body.popup {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  width: 368px;
-  max-height: 580px;
+  width: 380px;
+  max-width: 100%;
+  margin: 0 auto;
+  max-height: 100dvh;
   padding: 12px;
   overflow-y: auto;
-  background: var(--bg);
+  background-color: var(--bg);
 }
+
+@media (max-width: 400px) {
+  body.popup {
+    width: 100%;
+    padding: 10px;
+    gap: 12px;
+  }
+
+  .app-header {
+    gap: 8px;
+    inset-block-start: -10px;
+    padding-block: 10px 8px;
+  }
+
+  .app-titles h1 {
+    font-size: 14px;
+  }
+
+  .status-card {
+    padding: 12px;
+  }
+
+  .chips {
+    gap: 3px;
+  }
+
+  .chip {
+    padding: 6px 6px;
+    font-size: 12px;
+  }
+
+  .app-footer {
+    inset-block-end: -10px;
+  }
+}
+
+/* ---------------------------------------------------------------- *
+ * Header: stays put and frosts whatever scrolls under it.
+ * ---------------------------------------------------------------- */
 
 .app-header {
   display: flex;
   align-items: center;
   gap: 10px;
+  position: sticky;
+  z-index: 2;
+  inset-block-start: -12px;
+  padding-block: 12px 10px;
+  background: var(--veil);
+  backdrop-filter: blur(10px) saturate(1.4);
+  border-block-end: 1px solid transparent;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.app-header.is-scrolled {
+  border-block-end-color: var(--border);
+  box-shadow: 0 8px 16px -18px rgba(11, 28, 22, 0.7);
 }
 
 .app-titles {
@@ -24,6 +78,7 @@ body.popup {
 
 .app-titles h1 {
   font-size: 15px;
+  letter-spacing: -0.01em;
 }
 
 .app-titles p {
@@ -35,37 +90,96 @@ body.popup {
   text-overflow: ellipsis;
 }
 
+/* The theme glyphs (◐ ☀ ☾) are drawn far lighter than the ⚙ next to them. */
+#themeBtn {
+  font-size: 16px;
+}
+
+/* ---------------------------------------------------------------- *
+ * Status card: the whole card takes the colour of the current mode.
+ * ---------------------------------------------------------------- */
+
 .status-card {
-  padding: 12px;
-  border: 1px solid var(--border);
+  --tone: var(--accent);
+  --tone-soft: var(--accent-soft);
+  position: relative;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--tone) 28%, var(--border));
   border-radius: var(--radius);
-  background: var(--surface);
+  background-image:
+    radial-gradient(
+      130% 110% at 104% -10%,
+      color-mix(in srgb, var(--tone) 13%, transparent),
+      transparent 68%
+    ),
+    linear-gradient(165deg, var(--surface) 52%, color-mix(in srgb, var(--tone) 7%, var(--surface)));
+  background-color: var(--surface);
   box-shadow: var(--shadow);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.status-card[data-tone="pac"] {
+  --tone: var(--pac);
+  --tone-soft: var(--pac-soft);
+}
+
+.status-card[data-tone="system"] {
+  --tone: var(--sys);
+  --tone-soft: var(--sys-soft);
+}
+
+.status-card[data-tone="off"] {
+  --tone: var(--muted);
+  --tone-soft: var(--surface-2);
+}
+
+.status-card[data-tone="warn"] {
+  --tone: var(--warn);
+  --tone-soft: var(--warn-soft);
+}
+
+.status-card:hover {
+  border-color: color-mix(in srgb, var(--tone) 50%, var(--border));
+  box-shadow: var(--shadow), 0 0 26px -6px color-mix(in srgb, var(--tone) 22%, transparent);
+}
+
+/* Inside the status card the dot follows the card's tone. */
+.status-card .dot.is-ok {
+  background: var(--tone);
+  color: var(--tone);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone) 22%, transparent);
+}
+
+.status-card .dot.is-idle {
+  background: var(--muted);
+  color: var(--muted);
 }
 
 #profileForm.card {
   padding: 12px;
 }
 
-/* The header and the footer stay put while a long server list scrolls. */
-.app-header,
-.app-footer {
-  position: sticky;
-  z-index: 2;
-  background: var(--bg);
+/* On submit, briefly flash the save button green */
+#profileForm .btn.is-saving {
+  background: var(--ok);
+  border-color: var(--ok);
+  pointer-events: none;
 }
 
-.app-header {
-  inset-block-start: -12px;
-  padding-block: 12px 8px;
-}
+/* ---------------------------------------------------------------- *
+ * Footer
+ * ---------------------------------------------------------------- */
 
 .app-footer {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  position: sticky;
+  z-index: 2;
   inset-block-end: -12px;
   padding-block: 8px 12px;
+  background: var(--veil);
+  backdrop-filter: blur(10px) saturate(1.4);
   border-block-start: 1px solid var(--border);
   font-size: 12px;
 }
@@ -88,4 +202,13 @@ body.popup {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.app-footer a {
+  font-weight: 500;
+  transition: opacity 0.15s ease;
+}
+
+.app-footer a:hover {
+  opacity: 0.8;
 }

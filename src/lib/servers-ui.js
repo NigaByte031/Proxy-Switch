@@ -49,6 +49,8 @@ export function createServersUi({
       item.className = 'profile-item';
       if (active) item.classList.add('is-active');
       item.dataset.id = profile.id;
+      // Drawn as the little scheme badge in front of the row (styles/base.css).
+      item.dataset.scheme = String(profile.scheme).toUpperCase();
 
       const main = document.createElement('button');
       main.type = 'button';

@@ -1,50 +1,112 @@
-/* Design tokens, shared components and RTL rules. */
+/*
+ * Design tokens, shared components and RTL rules.
+ *
+ * Every colour in the extension comes from the token block below, so the whole
+ * product can be re-themed (or handed a new palette) from this one place. Both
+ * palettes live here: the light one on `:root`, the dark one on
+ * `:root[data-theme='dark']`. src/lib/theme.js resolves the user's setting
+ * ("auto" follows the operating system) and writes the result onto <html>,
+ * while `color-scheme` keeps the native controls in step.
+ */
 
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 
-  --bg: #f5f6fb;
+  /* ---- Surfaces ---------------------------------------------------- */
+  --bg: #f1f6f4;
+  --glow-1: rgba(14, 159, 110, 0.1);
+  --glow-2: rgba(13, 148, 136, 0.09);
   --surface: #ffffff;
-  --surface-2: #f0f1f7;
-  --text: #1b1f2e;
-  --muted: #6b7185;
-  --border: #e3e5ef;
-  --accent: #4f46e5;
-  --accent-contrast: #ffffff;
-  --accent-soft: #eceafd;
-  --pac: #0d9488;
-  --pac-soft: #dff3f0;
-  --danger: #d92d20;
-  --danger-soft: #fdecea;
-  --ok: #16a34a;
-  --warn: #b45309;
-  --warn-soft: #fff4e5;
+  --surface-2: #ebf2ef;
+  --surface-3: #dfe9e5;
+  --track: var(--surface-2);
+  --track-active: #ffffff;
+  --veil: rgba(241, 246, 244, 0.82);
 
-  --radius: 12px;
-  --radius-sm: 8px;
-  --shadow: 0 1px 2px rgba(17, 22, 45, 0.06), 0 10px 26px -18px rgba(17, 22, 45, 0.35);
+  /* ---- Text -------------------------------------------------------- */
+  --text: #0f1a17;
+  --muted: #5d6f6a;
+
+  /* ---- Lines ------------------------------------------------------- */
+  --border: #d6e2dd;
+  --border-strong: #c1d1cb;
+
+  /* ---- Brand: emerald -> teal -------------------------------------- */
+  --accent: #0e9f6e;
+  --accent-2: #0d9488;
+  --accent-strong: #096b4c;
+  --accent-soft: #dcf7ec;
+  --brand-1: #0a8055;
+  --brand-2: #0b7a72;
+  --brand-contrast: #ffffff;
+  --gradient-brand: linear-gradient(135deg, var(--brand-1), var(--brand-2));
+
+  /* ---- One hue per proxy mode (the popup tints itself with these) --- */
+  --pac: #5b5bd6;
+  --pac-soft: #ecedff;
+  --sys: #556c80;
+  --sys-soft: #e8eef3;
+
+  /* ---- Feedback ---------------------------------------------------- */
+  --ok: #0e9f6e;
+  --warn: #a25c00;
+  --warn-soft: #fdf2df;
+  --danger: #d3383f;
+  --danger-soft: #fdeceb;
+
+  /* ---- Shape and depth --------------------------------------------- */
+  --radius-lg: 18px;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --ring: color-mix(in srgb, var(--accent) 38%, transparent);
+  --shadow-sm: 0 1px 2px rgba(11, 28, 22, 0.06);
+  --shadow: 0 1px 2px rgba(11, 28, 22, 0.05), 0 14px 30px -22px rgba(11, 28, 22, 0.5);
+  --shadow-lg: 0 2px 4px rgba(11, 28, 22, 0.05), 0 26px 50px -30px rgba(11, 28, 22, 0.55);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #13151b;
-    --surface: #1b1e26;
-    --surface-2: #232733;
-    --text: #edf0f7;
-    --muted: #98a0b3;
-    --border: #2c313d;
-    --accent: #8b85ff;
-    --accent-contrast: #12131a;
-    --accent-soft: #272b46;
-    --pac: #2dd4bf;
-    --pac-soft: #14312e;
-    --danger: #f4776c;
-    --danger-soft: #3a2020;
-    --ok: #4ade80;
-    --warn: #fbbf24;
-    --warn-soft: #3a2f16;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 30px -20px rgba(0, 0, 0, 0.8);
-  }
+/* The dark palette only overrides colours; shape and easing are shared above. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #0b1113;
+  --glow-1: rgba(52, 211, 153, 0.1);
+  --glow-2: rgba(45, 212, 191, 0.08);
+  --surface: #141c1f;
+  --surface-2: #1b2529;
+  --surface-3: #233034;
+  --track: #0f1719;
+  --track-active: #23313a;
+  --veil: rgba(11, 17, 19, 0.8);
+
+  --text: #e9f1f1;
+  --muted: #8fa1a9;
+
+  --border: #26343a;
+  --border-strong: #3a4c54;
+
+  --accent: #34d399;
+  --accent-2: #2dd4bf;
+  --accent-strong: #6ee7b7;
+  --accent-soft: #12362b;
+  --brand-1: #10b981;
+  --brand-2: #0d9488;
+  --brand-contrast: #04241b;
+
+  --pac: #a5b4fc;
+  --pac-soft: #1e2547;
+  --sys: #a7bcc8;
+  --sys-soft: #1b272d;
+
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --warn-soft: #3a2d12;
+  --danger: #f87171;
+  --danger-soft: #3a1d1f;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 16px 34px -24px rgba(0, 0, 0, 0.9);
+  --shadow-lg: 0 2px 4px rgba(0, 0, 0, 0.45), 0 28px 54px -30px rgba(0, 0, 0, 0.95);
 }
 
 * {
@@ -53,9 +115,14 @@
 
 body {
   margin: 0;
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(1080px 420px at 108% -12%, var(--glow-1), transparent 62%),
+    radial-gradient(900px 380px at -12% 112%, var(--glow-2), transparent 58%);
+  background-attachment: fixed;
   color: var(--text);
   font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 h1,
@@ -63,15 +130,21 @@ h2,
 h3 {
   margin: 0;
   font-weight: 650;
+  letter-spacing: -0.01em;
 }
 
 a {
-  color: var(--accent);
+  color: var(--accent-strong);
   text-decoration: none;
 }
 
 a:hover {
   text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 .muted,
@@ -90,6 +163,28 @@ a:hover {
   min-width: 0;
 }
 
+/* Thin, unobtrusive scrollbars that pick up the accent on hover. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 45%, transparent) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+  background-color: color-mix(in srgb, var(--muted) 45%, transparent);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
 /* ---------------------------------------------------------------- *
  * Cards and sections
  * ---------------------------------------------------------------- */
@@ -102,6 +197,7 @@ a:hover {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .section-head {
@@ -126,6 +222,19 @@ section > h2,
   color: var(--muted);
 }
 
+/* A hairline gradient marker in front of every section title. */
+section > h2::before,
+.card h2::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 11px;
+  margin-inline-end: 7px;
+  border-radius: 999px;
+  background: var(--gradient-brand);
+  vertical-align: -1px;
+}
+
 .row {
   display: flex;
   flex-wrap: wrap;
@@ -139,12 +248,15 @@ section > h2,
   background: var(--surface-2);
   color: var(--muted);
   font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
 .app-logo {
   flex: 0 0 auto;
   border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent),
+    0 8px 20px -12px color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
 /* The four characters of the toolbar badge, repeated inside the UI. */
@@ -165,18 +277,23 @@ section > h2,
 }
 
 .pill[data-tone="manual"] {
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-strong);
 }
 
 .pill[data-tone="pac"] {
-  border-color: color-mix(in srgb, var(--pac) 40%, transparent);
+  border-color: color-mix(in srgb, var(--pac) 45%, transparent);
   background: var(--pac-soft);
   color: var(--pac);
 }
 
-.pill[data-tone="system"],
+.pill[data-tone="system"] {
+  border-color: color-mix(in srgb, var(--sys) 45%, transparent);
+  background: var(--sys-soft);
+  color: var(--sys);
+}
+
 .pill[data-tone="off"] {
   background: var(--surface-2);
   color: var(--muted);
@@ -196,29 +313,47 @@ section > h2,
   border: 1px solid transparent;
   background: transparent;
   cursor: pointer;
-  transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease,
+    transform 0.12s var(--ease), box-shadow 0.18s ease, filter 0.18s ease;
 }
 
 .btn {
-  padding: 8px 14px;
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-contrast);
+  padding: 8px 15px;
+  background: var(--gradient-brand);
+  border-color: transparent;
+  color: var(--brand-contrast);
   font-weight: 600;
+  box-shadow: 0 1px 2px rgba(11, 28, 22, 0.16),
+    0 10px 20px -14px color-mix(in srgb, var(--brand-1) 85%, transparent);
 }
 
 .btn:hover {
-  filter: brightness(1.06);
+  filter: brightness(1.07) saturate(1.05);
+  box-shadow: 0 1px 2px rgba(11, 28, 22, 0.18),
+    0 14px 24px -14px color-mix(in srgb, var(--brand-1) 95%, transparent);
+}
+
+.btn:active {
+  transform: translateY(1px) scale(0.99);
+  filter: brightness(0.96);
 }
 
 .ghost-btn {
   padding: 8px 12px;
   border-color: var(--border);
   background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
 }
 
 .ghost-btn:hover {
-  background: var(--surface-2);
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  color: var(--accent-strong);
+}
+
+.ghost-btn:active {
+  transform: translateY(1px) scale(0.99);
 }
 
 .ghost-btn.danger,
@@ -229,7 +364,8 @@ section > h2,
 
 .ghost-btn.danger:hover {
   background: var(--danger-soft);
-  border-color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 50%, var(--border));
+  color: var(--danger);
 }
 
 .icon-btn {
@@ -237,15 +373,21 @@ section > h2,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 999px;
+  color: var(--muted);
   font-size: 14px;
   line-height: 1;
 }
 
 .icon-btn:hover {
   background: var(--surface-2);
+  color: var(--text);
+}
+
+.icon-btn:active {
+  transform: scale(0.92);
 }
 
 .icon-btn.danger:hover {
@@ -253,34 +395,53 @@ section > h2,
   color: var(--danger);
 }
 
+/* The four proxy modes read as one segmented control. */
 .chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 4px;
   margin-bottom: 8px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius-sm) + 4px);
+  background: var(--track);
 }
 
 .chip {
-  padding: 6px 12px;
-  border-color: var(--border);
-  background: var(--surface-2);
+  padding: 7px 10px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
   font-size: 12.5px;
+  font-weight: 550;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .chip:hover {
-  border-color: var(--accent);
+  background: color-mix(in srgb, var(--track-active) 55%, transparent);
+  color: var(--text);
+}
+
+.chip:active {
+  transform: scale(0.97);
 }
 
 .chip.is-active {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: var(--track-active);
+  color: var(--accent-strong);
   font-weight: 650;
+  box-shadow: var(--shadow-sm);
 }
 
 button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+button:disabled:hover {
+  filter: none;
 }
 
 /* ---------------------------------------------------------------- *
@@ -294,12 +455,54 @@ input[type="number"],
 select,
 textarea {
   width: 100%;
-  padding: 8px 10px;
+  padding: 9px 11px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface);
   color: inherit;
   font: inherit;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+
+input:hover:not(:focus),
+select:hover:not(:focus),
+textarea:hover:not(:focus) {
+  border-color: var(--border-strong);
+}
+
+/* The port field is typed, not stepped: the native spinners only add noise. */
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* A drawn chevron instead of the platform arrow, so both themes agree. */
+select {
+  appearance: none;
+  padding-inline-end: 30px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%236b7d78' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 11px;
+}
+
+:root[data-theme='dark'] select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%2392a6ac' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+[dir="rtl"] select {
+  background-position: left 10px center;
+}
+
+select option {
+  background: var(--surface);
+  color: var(--text);
 }
 
 textarea {
@@ -311,11 +514,16 @@ textarea {
 
 input:focus-visible,
 select:focus-visible,
-textarea:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
 button:focus-visible,
 a:focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 
 label {
@@ -359,12 +567,21 @@ label {
 .check {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   margin: 0;
+  padding: 7px 9px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   color: var(--text);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease;
+}
+
+.check:hover {
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface));
 }
 
 .check input {
@@ -379,12 +596,13 @@ label {
   position: relative;
   flex: 0 0 auto;
   display: inline-block;
-  width: 42px;
-  height: 24px;
+  width: 44px;
+  height: 26px;
   margin: 0;
   border-radius: 999px;
-  background: var(--border);
-  transition: background 0.15s ease;
+  background: var(--track);
+  box-shadow: inset 0 1px 2px rgba(11, 28, 22, 0.12), inset 0 0 0 1px var(--border);
+  transition: background 0.25s var(--ease), box-shadow 0.25s ease;
   cursor: pointer;
 }
 
@@ -399,20 +617,30 @@ label {
   position: absolute;
   inset-block-start: 3px;
   inset-inline-start: 3px;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
-  transition: transform 0.15s ease;
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgba(11, 28, 22, 0.35);
+  transition: transform 0.25s var(--ease);
 }
 
 .switch:has(input:checked) {
-  background: var(--accent);
+  background: var(--gradient-brand);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand-1) 60%, transparent),
+    0 6px 14px -8px color-mix(in srgb, var(--brand-1) 90%, transparent);
 }
 
 .switch input:checked ~ span {
   transform: translateX(18px);
+}
+
+.switch:hover span {
+  box-shadow: 0 1px 5px rgba(11, 28, 22, 0.42);
+}
+
+.switch:has(input:focus-visible) {
+  box-shadow: 0 0 0 3px var(--ring);
 }
 
 [dir="rtl"] .switch input:checked ~ span {
@@ -455,26 +683,43 @@ label {
   height: 10px;
   border-radius: 50%;
   background: var(--muted);
+  color: var(--muted);
+  transition: background 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .dot.is-ok {
   background: var(--ok);
+  color: var(--ok);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 22%, transparent);
+  animation: dot-pulse 2.5s ease-in-out infinite;
 }
 
 .dot.is-warn {
   background: var(--warn);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 22%, transparent);
+  color: var(--warn);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 20%, transparent);
+  animation: dot-pulse 1.8s ease-in-out infinite;
 }
 
 .dot.is-idle {
   background: var(--muted);
+  color: var(--muted);
+}
+
+@keyframes dot-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 7px color-mix(in srgb, currentColor 6%, transparent);
+  }
 }
 
 .warning {
   margin: 10px 0 0;
   padding: 8px 10px;
-  border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
   border-radius: var(--radius-sm);
   background: var(--danger-soft);
   font-size: 12px;
@@ -489,24 +734,61 @@ label {
 }
 
 .health-row .ghost-btn {
-  padding: 6px 10px;
+  padding: 6px 11px;
   font-size: 12.5px;
 }
 
+/* The test result reads as a state chip rather than a loose line of text. */
 .health-result {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  align-self: flex-start;
+  max-width: 100%;
   margin: 0;
-  font-size: 12px;
+  padding: 5px 11px 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
   color: var(--muted);
+  font-size: 12px;
   unicode-bidi: plaintext;
   overflow-wrap: anywhere;
 }
 
+.health-result::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 20%, transparent);
+}
+
 .health-result.is-ok {
+  border-color: color-mix(in srgb, var(--ok) 35%, transparent);
+  background: color-mix(in srgb, var(--ok) 12%, var(--surface));
   color: var(--ok);
+  animation: chip-in 0.3s var(--ease);
 }
 
 .health-result.is-warn {
+  border-color: color-mix(in srgb, var(--warn) 35%, transparent);
+  background: color-mix(in srgb, var(--warn) 14%, var(--surface));
   color: var(--warn);
+  animation: chip-in 0.3s var(--ease);
+}
+
+@keyframes chip-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .profile-list {
@@ -519,23 +801,78 @@ label {
 }
 
 .profile-item {
+  position: relative;
   display: flex;
   align-items: stretch;
   gap: 2px;
   padding-inline-end: 2px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius);
   background: var(--surface);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
+  transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease,
+    transform 0.12s var(--ease);
+}
+
+/* The scheme (HTTP / SOCKS5 / …) as a compact badge, straight from the data set
+   on the list item by servers-ui.js. */
+.profile-item::before {
+  content: attr(data-scheme);
+  flex: 0 0 auto;
+  align-self: center;
+  margin-inline-start: 10px;
+  padding: 3px 7px;
+  border: 1px solid color-mix(in srgb, var(--sys) 28%, transparent);
+  border-radius: 7px;
+  background: var(--sys-soft);
+  color: var(--sys);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.profile-item:not([data-scheme])::before {
+  display: none;
 }
 
 .profile-item:hover {
   border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+}
+
+.profile-item:active {
+  transform: scale(0.995);
 }
 
 .profile-item.is-active {
-  border-color: var(--accent);
-  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  background: linear-gradient(
+    120deg,
+    var(--accent-soft),
+    color-mix(in srgb, var(--accent) 7%, var(--surface)) 70%
+  );
+}
+
+.profile-item.is-active::before {
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+  color: var(--accent-strong);
+}
+
+.profile-item.is-active::after {
+  content: "";
+  position: absolute;
+  inset-block: 22%;
+  inset-inline-start: 0;
+  width: 3px;
+  border-radius: 0 999px 999px 0;
+  background: var(--gradient-brand);
+}
+
+[dir="rtl"] .profile-item.is-active::after {
+  border-radius: 999px 0 0 999px;
 }
 
 .profile-main {
@@ -558,21 +895,31 @@ label {
   font-weight: 600;
 }
 
+.profile-item.is-active .profile-name {
+  color: var(--accent-strong);
+}
+
 .profile-detail {
   max-width: 100%;
   color: var(--muted);
   font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
   unicode-bidi: plaintext;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.profile-item .icon-btn {
+  align-self: center;
+  margin-inline-end: 2px;
+}
+
 .empty {
   margin: 0;
-  padding: 14px;
-  border: 1px dashed var(--border);
-  border-radius: 10px;
+  padding: 18px 14px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
   color: var(--muted);
   font-size: 12.5px;
   text-align: center;
@@ -589,7 +936,229 @@ label {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * {
-    transition: none !important;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------------------------------------------------------------- *
+ * Loading spinner (for test-connection button)
+ * ---------------------------------------------------------------- */
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+[aria-busy="true"] {
+  position: relative;
+  pointer-events: none;
+}
+
+[aria-busy="true"]::after {
+  content: "";
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-inline-start: 6px;
+  border: 2px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  vertical-align: -2px;
+  animation: spin 0.6s linear infinite;
+}
+
+/* ---------------------------------------------------------------- *
+ * Flash / toast messages
+ * ---------------------------------------------------------------- */
+
+.warning,
+[data-toast] {
+  animation: toast-in 0.25s var(--ease);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------------------------------------------------------------- *
+ * Panel slide transitions (used by PAC panel)
+ * ---------------------------------------------------------------- */
+
+#pacPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  animation: panel-in 0.2s var(--ease);
+}
+
+#pacPanel .form-actions {
+  margin-block-start: 6px;
+}
+
+#pacPanel.hidden {
+  animation: none;
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 200px;
+  }
+}
+
+/* ---------------------------------------------------------------- *
+ * Form reveal animation
+ * ---------------------------------------------------------------- */
+
+#profileForm:not(.hidden) {
+  animation: form-in 0.25s var(--ease);
+}
+
+#profileForm.hidden {
+  animation: none;
+}
+
+@keyframes form-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ---------------------------------------------------------------- *
+ * Empty state
+ * ---------------------------------------------------------------- */
+
+.empty::before {
+  display: block;
+  width: 42px;
+  height: 42px;
+  margin: 0 auto 10px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 40px;
+  text-align: center;
+  content: "+";
+}
+
+/* ---------------------------------------------------------------- *
+ * Profile delete micro-animation
+ * ---------------------------------------------------------------- */
+
+.profile-item.removing {
+  animation: item-out 0.2s ease forwards;
+}
+
+@keyframes item-out {
+  to {
+    opacity: 0;
+    transform: translateX(12px) scale(0.96);
+    max-height: 0;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+  }
+}
+
+/* ---------------------------------------------------------------- *
+ * Section card stagger (options page)
+ * ---------------------------------------------------------------- */
+
+.page > .card {
+  animation: card-in 0.35s var(--ease) backwards;
+}
+
+.page > .card:nth-child(2) {
+  animation-delay: 0.04s;
+}
+.page > .card:nth-child(3) {
+  animation-delay: 0.08s;
+}
+.page > .card:nth-child(4) {
+  animation-delay: 0.12s;
+}
+.page > .card:nth-child(5) {
+  animation-delay: 0.16s;
+}
+.page > .card:nth-child(6) {
+  animation-delay: 0.2s;
+}
+.page > .card:nth-child(7) {
+  animation-delay: 0.24s;
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------------------------------------------------------------- *
+ * Save feedback
+ * ---------------------------------------------------------------- */
+
+.btn.saved {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #fff;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+/* ---------------------------------------------------------------- *
+ * Accessibility: users who ask for more contrast get harder edges.
+ * ---------------------------------------------------------------- */
+
+@media (prefers-contrast: more) {
+  :root {
+    --border: var(--border-strong);
+  }
+
+  .card,
+  .profile-item,
+  .chips,
+  .health-result {
+    border-width: 1.5px;
+  }
+
+  .muted,
+  .form-note,
+  .status-detail,
+  .profile-detail {
+    color: var(--text);
   }
 }
