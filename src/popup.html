@@ -22,7 +22,8 @@
     <section id="statusCard" class="status-card">
       <div class="status-row">
         <span id="statusDot" class="dot"></span>
-        <div class="status-text">
+        <!-- role=status: a screen reader hears the new mode after a change. -->
+        <div class="status-text" role="status">
           <p class="status-head">
             <span id="statePill" class="pill" aria-hidden="true"></span>
             <span id="statusTitle" class="status-title"></span>
@@ -69,10 +70,41 @@
     <section id="manualPanel">
       <div class="section-head">
         <h2 data-i18n="profiles.title"></h2>
-        <button id="addBtn" class="ghost-btn" type="button" data-i18n="profiles.add"></button>
+        <button
+          id="addBtn"
+          class="ghost-btn"
+          type="button"
+          aria-controls="profileForm"
+          aria-expanded="false"
+          data-i18n="profiles.add"
+        ></button>
+      </div>
+      <!-- Only revealed once the list is long enough to need it (servers-ui.js). -->
+      <div id="profileSearch" class="search hidden">
+        <svg class="search-glyph" viewBox="0 0 16 16" aria-hidden="true">
+          <circle cx="7" cy="7" r="4.6" />
+          <path d="M10.5 10.5 14 14" />
+        </svg>
+        <input
+          id="profileQuery"
+          type="search"
+          autocomplete="off"
+          spellcheck="false"
+          data-i18n-placeholder="profiles.search"
+        />
+        <button
+          id="profileQueryClear"
+          class="icon-btn search-clear hidden"
+          type="button"
+          data-i18n-title="profiles.searchClear"
+          data-i18n-aria-label="profiles.searchClear"
+        >
+          ✕
+        </button>
       </div>
       <ul id="profileList" class="profile-list"></ul>
       <p id="profilesEmpty" class="empty hidden" data-i18n="profiles.empty"></p>
+      <p id="profilesNoMatch" class="empty empty-search hidden" role="status"></p>
 
       <form id="profileForm" class="card form-grid hidden" novalidate>
         <h3 id="formTitle" data-i18n="profiles.new"></h3>

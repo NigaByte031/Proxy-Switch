@@ -4,12 +4,14 @@ import assert from 'node:assert/strict';
 import {
   DEFAULT_BYPASS_LIST,
   EXPORT_FORMAT,
+  PROFILE_SEARCH_THRESHOLD,
   PROXY_MODES,
   STATE_VERSION,
   bracketIfIpv6,
   createDefaultState,
   createProfile,
   effectiveMode,
+  filterProfiles,
   findProfile,
   formatBypassList,
   formatProfileAddress,
@@ -21,8 +23,10 @@ import {
   parseBypassList,
   parseImport,
   parseProxyUrl,
+  profileSearchText,
   sanitizeState,
   serializeState,
+  shouldShowSearch,
   splitHostPort,
   uniqueProfileName,
   validateProfile,
@@ -165,6 +169,84 @@ test('formatProfileAddress never leaks the password', () => {
   assert.equal(formatProfileAddress(profile), 'socks5://127.0.0.1:1080 · user');
   assert.equal(formatProfileAddress(createProfile(draft({ username: '' }))), 'socks5://127.0.0.1:1080');
   assert.equal(formatProfileAddress(null), '');
+});
+
+/* ------------------------------------------------------------------ *
+ * Searching the server list
+ * ------------------------------------------------------------------ */
+
+const searchable = () =>
+  sanitizeState({
+    profiles: [
+      { id: 'a', name: 'Home proxy', scheme: 'socks5', host: '127.0.0.1', port: 1080 },
+      {
+        id: 'b',
+        name: 'Work HTTP',
+        scheme: 'http',
+        host: 'proxy.work.example.com',
+        port: 8080,
+        username: 'alice',
+        password: 'hunter2',
+      },
+      { id: 'c', name: 'Café', scheme: 'https', host: 'cafe.example.ir', port: 3128 },
+    ],
+  }).profiles;
+
+const names = (list) => list.map((profile) => profile.name);
+
+test('profileSearchText covers what the row shows and nothing else', () => {
+  const text = profileSearchText(searchable()[1]);
+  assert.match(text, /work http/);
+  assert.match(text, /proxy\.work\.example\.com/);
+  assert.match(text, /8080/);
+  assert.match(text, /alice/);
+  // a password is never rendered, so it must never match a search either
+  assert.ok(!text.includes('hunter2'));
+  assert.equal(profileSearchText(null), '');
+});
+
+test('filterProfiles matches name, host, scheme, port and username', () => {
+  const profiles = searchable();
+  assert.deepEqual(names(filterProfiles(profiles, 'work')), ['Work HTTP']);
+  assert.deepEqual(names(filterProfiles(profiles, 'example.com')), ['Work HTTP']);
+  assert.deepEqual(names(filterProfiles(profiles, 'socks5')), ['Home proxy']);
+  assert.deepEqual(names(filterProfiles(profiles, '3128')), ['Café']);
+  assert.deepEqual(names(filterProfiles(profiles, 'ALICE')), ['Work HTTP']);
+  // unicode names are searchable too
+  assert.deepEqual(names(filterProfiles(profiles, 'café')), ['Café']);
+});
+
+test('every word of a query has to match, in any order', () => {
+  const profiles = searchable();
+  assert.deepEqual(names(filterProfiles(profiles, 'http work')), ['Work HTTP']);
+  assert.deepEqual(names(filterProfiles(profiles, 'work http')), ['Work HTTP']);
+  assert.deepEqual(names(filterProfiles(profiles, 'http 8080')), ['Work HTTP']);
+  // one unsatisfied term is enough to rule a row out
+  assert.deepEqual(filterProfiles(profiles, 'work socks5'), []);
+  assert.deepEqual(filterProfiles(profiles, 'nothing here'), []);
+});
+
+test('a blank query is not a filter and the input is never mutated', () => {
+  const profiles = searchable();
+  for (const blank of ['', '   ', '\t\n', null, undefined]) {
+    const result = filterProfiles(profiles, blank);
+    assert.equal(result.length, profiles.length, `query: ${JSON.stringify(blank)}`);
+  }
+  assert.equal(filterProfiles(profiles, '')[0], profiles[0], 'rows should pass through untouched');
+  for (const junk of [null, undefined, 'nope', 42, {}]) {
+    assert.deepEqual(filterProfiles(junk, 'x'), []);
+  }
+});
+
+test('the search box only shows up when it earns its place', () => {
+  assert.ok(PROFILE_SEARCH_THRESHOLD >= 3, 'a search box for two rows would be noise');
+  assert.equal(shouldShowSearch(0), false);
+  assert.equal(shouldShowSearch(PROFILE_SEARCH_THRESHOLD - 1), false);
+  assert.equal(shouldShowSearch(PROFILE_SEARCH_THRESHOLD), true);
+  assert.equal(shouldShowSearch(50), true);
+  // an active query keeps it on screen, otherwise it could never be cleared
+  assert.equal(shouldShowSearch(1, 'wo'), true);
+  assert.equal(shouldShowSearch(1, '   '), false);
 });
 
 test('sanitizeState repairs garbage instead of throwing', () => {

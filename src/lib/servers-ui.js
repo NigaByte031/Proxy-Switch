@@ -1,10 +1,25 @@
 /**
- * Shared "servers" UI: the profile list plus the add/edit form.
+ * Shared "servers" UI: the search box, the profile list and the add/edit form.
  * Both the popup and the settings page use the same markup, so the behaviour
  * lives here once.
+ *
+ * Two interaction decisions are worth spelling out:
+ *   - Deleting is confirmed *in the row* instead of with `window.confirm`. A
+ *     native dialog freezes the whole popup (and is dismissed by clicking
+ *     outside it), which made "delete" feel like a trap.
+ *   - Escape/Enter are handled here, once, in the order the user expects:
+ *     a pending delete is cancelled first, then an open form is closed, then a
+ *     search box is emptied.
  */
 
-import { formatProfileAddress, parseProxyUrl, uniqueProfileName, validateProfile } from './model.js';
+import {
+  filterProfiles,
+  formatProfileAddress,
+  parseProxyUrl,
+  shouldShowSearch,
+  uniqueProfileName,
+  validateProfile,
+} from './model.js';
 import { t } from './i18n.js';
 
 /**
@@ -16,86 +31,240 @@ import { t } from './i18n.js';
 export function createServersUi({
   listEl,
   emptyEl,
+  noMatchEl,
+  searchEl,
+  searchInput,
+  searchClear,
   formEl,
   addBtn,
   getState,
   getLang,
   commit,
-  confirmFn = (message) => window.confirm(message),
 }) {
   /** id of the profile currently open in the form, null = creating a new one */
   let editingId = null;
   /** i18n key of the message shown under the form */
   let errorKey = null;
+  /** contents of the search box; '' means "no filter" */
+  let query = '';
+  /** id of the row waiting for a delete confirmation, null when none is */
+  let pendingDeleteId = null;
 
   const fields = formEl?.elements ?? {};
   const titleEl = formEl?.querySelector('#formTitle');
   const errorEl = formEl?.querySelector('#formError');
   const cancelBtn = formEl?.querySelector('#formCancel');
 
+  /* ---------------------------------------------------------------- *
+   * Small DOM helpers
+   * ---------------------------------------------------------------- */
+
+  /** Finds a rendered row by profile id — no id is ever pasted into a selector. */
+  function rowFor(id) {
+    if (!listEl || !id) return null;
+    for (const item of listEl.querySelectorAll('.profile-item')) {
+      if (item.dataset.id === id) return item;
+    }
+    return null;
+  }
+
+  function iconButton(glyph, label, role, onClick) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'icon-btn';
+    button.textContent = glyph;
+    button.title = label;
+    button.dataset.role = role;
+    button.setAttribute('aria-label', label);
+    button.addEventListener('click', onClick);
+    return button;
+  }
+
+  function actionButton(label, className, role, onClick) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = className;
+    button.textContent = label;
+    button.dataset.role = role;
+    button.addEventListener('click', onClick);
+    return button;
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The list
+   * ---------------------------------------------------------------- */
+
+  function buildRow(profile, state, lang) {
+    const active =
+      state.settings.enabled &&
+      state.settings.mode === 'fixed_servers' &&
+      state.settings.activeProfileId === profile.id;
+
+    const item = document.createElement('li');
+    item.className = 'profile-item';
+    if (active) item.classList.add('is-active');
+    item.dataset.id = profile.id;
+    // Drawn as the little scheme badge in front of the row (styles/base.css).
+    item.dataset.scheme = String(profile.scheme).toUpperCase();
+
+    if (pendingDeleteId === profile.id) {
+      item.classList.add('is-confirming');
+      const bar = document.createElement('div');
+      bar.className = 'profile-confirm';
+
+      const text = document.createElement('p');
+      text.className = 'profile-confirm-text';
+      // The name is repeated inside the question, so the row still says what it
+      // is about to remove.
+      text.textContent = t('profiles.confirmDelete', lang, { name: profile.name });
+      text.title = profile.name;
+
+      bar.append(
+        text,
+        actionButton(t('btn.cancel', lang), 'ghost-btn', 'cancel-delete', () => cancelDelete()),
+        actionButton(t('profiles.deleteAction', lang), 'btn danger', 'confirm-delete', () =>
+          removeProfile(profile),
+        ),
+      );
+      item.append(bar);
+      return item;
+    }
+
+    const main = document.createElement('button');
+    main.type = 'button';
+    main.className = 'profile-main';
+    main.title = t('profiles.use', lang);
+    main.setAttribute('aria-pressed', String(active));
+
+    const name = document.createElement('span');
+    name.className = 'profile-name';
+    name.textContent = profile.name;
+
+    const detail = document.createElement('span');
+    detail.className = 'profile-detail';
+    detail.textContent = formatProfileAddress(profile);
+
+    main.append(name, detail);
+    main.addEventListener('click', () => {
+      commit((draft) => {
+        draft.settings.activeProfileId = profile.id;
+        draft.settings.mode = 'fixed_servers';
+        draft.settings.enabled = true;
+      });
+    });
+
+    const edit = iconButton('✎', t('profiles.editAction', lang), 'edit', () =>
+      openForm(state, lang, profile),
+    );
+    const remove = iconButton('✕', t('profiles.deleteAction', lang), 'delete', () =>
+      askDelete(profile),
+    );
+    remove.classList.add('danger');
+
+    item.append(main, edit, remove);
+    return item;
+  }
+
   function renderList(state, lang) {
     if (!listEl) return;
-    listEl.textContent = '';
-    const { profiles } = state;
-    emptyEl?.classList.toggle('hidden', profiles.length > 0);
 
-    for (const profile of profiles) {
-      const active =
-        state.settings.enabled &&
-        state.settings.mode === 'fixed_servers' &&
-        state.settings.activeProfileId === profile.id;
-
-      const item = document.createElement('li');
-      item.className = 'profile-item';
-      if (active) item.classList.add('is-active');
-      item.dataset.id = profile.id;
-      // Drawn as the little scheme badge in front of the row (styles/base.css).
-      item.dataset.scheme = String(profile.scheme).toUpperCase();
-
-      const main = document.createElement('button');
-      main.type = 'button';
-      main.className = 'profile-main';
-      main.title = t('profiles.use', lang);
-      main.setAttribute('aria-pressed', String(active));
-
-      const name = document.createElement('span');
-      name.className = 'profile-name';
-      name.textContent = profile.name;
-
-      const detail = document.createElement('span');
-      detail.className = 'profile-detail';
-      detail.textContent = formatProfileAddress(profile);
-
-      main.append(name, detail);
-      main.addEventListener('click', () => {
-        commit((draft) => {
-          draft.settings.activeProfileId = profile.id;
-          draft.settings.mode = 'fixed_servers';
-          draft.settings.enabled = true;
-        });
-      });
-
-      const edit = iconButton('✎', t('profiles.editAction', lang), () => openForm(state, lang, profile));
-      const remove = iconButton('✕', t('profiles.deleteAction', lang), () =>
-        removeProfile(state, lang, profile),
-      );
-      remove.classList.add('danger');
-
-      item.append(main, edit, remove);
-      listEl.append(item);
+    const searching = shouldShowSearch(state.profiles.length, query);
+    searchEl?.classList.toggle('hidden', !searching);
+    if (searchInput) {
+      if (document.activeElement !== searchInput && searchInput.value !== query) {
+        searchInput.value = query;
+      }
+      searchInput.setAttribute('aria-label', t('profiles.search', lang));
+      searchInput.title = t('profiles.searchHint', lang);
     }
+    searchClear?.classList.toggle('hidden', query.trim() === '');
+
+    const visible = filterProfiles(state.profiles, query);
+
+    listEl.textContent = '';
+    emptyEl?.classList.toggle('hidden', state.profiles.length > 0);
+
+    const noMatch = state.profiles.length > 0 && visible.length === 0;
+    if (noMatchEl) {
+      noMatchEl.textContent = noMatch ? t('profiles.noMatch', lang, { query: query.trim() }) : '';
+      noMatchEl.classList.toggle('hidden', !noMatch);
+    }
+
+    for (const profile of visible) listEl.append(buildRow(profile, state, lang));
   }
+
+  /* ---------------------------------------------------------------- *
+   * Searching
+   * ---------------------------------------------------------------- */
+
+  function setQuery(next) {
+    query = String(next ?? '');
+    // Typing in the search box is a change of mind: drop a half-asked delete
+    // question instead of leaving it attached to a row that may no longer show.
+    pendingDeleteId = null;
+    if (searchInput && searchInput.value !== query) searchInput.value = query;
+    renderList(getState(), getLang());
+  }
+
+  /** @returns {boolean} whether the search box was there to be focused */
+  function focusSearch() {
+    if (!searchInput || searchEl?.classList.contains('hidden')) return false;
+    searchInput.focus?.();
+    searchInput.select?.();
+    return true;
+  }
+
+  searchInput?.addEventListener('input', () => setQuery(searchInput.value));
+  searchInput?.addEventListener('search', () => setQuery(searchInput.value));
+
+  searchClear?.addEventListener('click', () => {
+    setQuery('');
+    focusSearch();
+  });
+
+  /* ---------------------------------------------------------------- *
+   * Deleting (confirmed inside the row)
+   * ---------------------------------------------------------------- */
+
+  function askDelete(profile) {
+    pendingDeleteId = profile.id;
+    renderList(getState(), getLang());
+    rowFor(profile.id)?.querySelector('[data-role="confirm-delete"]')?.focus?.();
+  }
+
+  function cancelDelete() {
+    const id = pendingDeleteId;
+    pendingDeleteId = null;
+    renderList(getState(), getLang());
+    rowFor(id)?.querySelector('[data-role="delete"]')?.focus?.();
+  }
+
+  function removeProfile(profile) {
+    const state = getState();
+    const lang = getLang();
+    pendingDeleteId = null;
+    if (editingId === profile.id) closeForm(state, lang);
+    commit((draft) => {
+      draft.profiles = draft.profiles.filter((item) => item.id !== profile.id);
+      if (draft.settings.activeProfileId === profile.id) {
+        draft.settings.activeProfileId = draft.profiles[0]?.id ?? null;
+      }
+    });
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The add / edit form
+   * ---------------------------------------------------------------- */
 
   function renderForm(state, lang) {
     if (!formEl) return;
+    const open = !formEl.classList.contains('hidden');
     if (titleEl) titleEl.textContent = t(editingId ? 'profiles.edit' : 'profiles.new', lang);
     if (errorEl) {
       errorEl.textContent = errorKey ? t(errorKey, lang) : '';
       errorEl.classList.toggle('hidden', !errorKey);
     }
-    if (addBtn) {
-      addBtn.disabled = !formEl.classList.contains('hidden') && editingId === null;
-    }
+    if (addBtn) addBtn.setAttribute('aria-expanded', String(open));
   }
 
   function render(state, lang) {
@@ -105,6 +274,7 @@ export function createServersUi({
 
   function openForm(state, lang, profile = null) {
     if (!formEl) return;
+    pendingDeleteId = null;
     editingId = profile?.id ?? null;
     errorKey = null;
     fields.name.value = profile?.name ?? uniqueProfileName(state.profiles, t('profiles.new', lang));
@@ -114,30 +284,22 @@ export function createServersUi({
     fields.username.value = profile?.username ?? '';
     fields.password.value = profile?.password ?? '';
     formEl.classList.remove('hidden');
+    renderForm(state, lang);
     formEl.scrollIntoView?.({ block: 'nearest' });
     fields.name.focus?.();
     fields.name.select?.();
-    renderForm(state, lang);
   }
 
   function closeForm(state, lang) {
-    if (!formEl) return;
+    if (!formEl || formEl.classList.contains('hidden')) return;
     editingId = null;
     errorKey = null;
     formEl.classList.add('hidden');
     formEl.reset?.();
     renderForm(state, lang);
-  }
-
-  function removeProfile(state, lang, profile) {
-    if (!confirmFn(t('confirm.deleteProfile', lang))) return;
-    if (editingId === profile.id) closeForm(state, lang);
-    commit((draft) => {
-      draft.profiles = draft.profiles.filter((item) => item.id !== profile.id);
-      if (draft.settings.activeProfileId === profile.id) {
-        draft.settings.activeProfileId = draft.profiles[0]?.id ?? null;
-      }
-    });
+    // Back to the button that opened it, so the keyboard user is not dropped
+    // at the top of the page.
+    addBtn?.focus?.();
   }
 
   /**
@@ -169,7 +331,11 @@ export function createServersUi({
     event.preventDefault();
   });
 
-  addBtn?.addEventListener('click', () => openForm(getState(), getLang()));
+  addBtn?.addEventListener('click', () => {
+    // Clicking again while a blank form is open simply starts over, which beats
+    // a dead button the user cannot explain.
+    openForm(getState(), getLang());
+  });
   cancelBtn?.addEventListener('click', () => closeForm(getState(), getLang()));
 
   formEl?.addEventListener('submit', async (event) => {
@@ -204,23 +370,64 @@ export function createServersUi({
     closeForm(getState(), getLang());
   });
 
+  /* ---------------------------------------------------------------- *
+   * Keyboard shortcuts — registered once, in the order the user expects
+   * ---------------------------------------------------------------- */
+
+  document.addEventListener('keydown', (event) => {
+    if (event.defaultPrevented) return;
+    const state = getState();
+    const lang = getLang();
+
+    // Cmd/Ctrl+Enter saves the form from anywhere inside it.
+    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && formEl?.contains(event.target)) {
+      event.preventDefault();
+      formEl.requestSubmit?.();
+      return;
+    }
+
+    // "/" jumps to the search box, the way it does in most app lists. It stays
+    // plain text while a form control has the keyboard.
+    if (event.key === '/' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+      const tag = event.target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (!focusSearch()) return;
+      event.preventDefault();
+      return;
+    }
+
+    if (event.key !== 'Escape') return;
+
+    if (pendingDeleteId) {
+      event.preventDefault();
+      cancelDelete();
+      return;
+    }
+    if (formEl && !formEl.classList.contains('hidden')) {
+      event.preventDefault();
+      closeForm(state, lang);
+      return;
+    }
+    if (query) {
+      event.preventDefault();
+      setQuery('');
+    }
+  });
+
   return {
     render,
     openForm,
     closeForm,
+    focusSearch,
+    setQuery,
     get editingId() {
       return editingId;
     },
+    get query() {
+      return query;
+    },
+    get pendingDeleteId() {
+      return pendingDeleteId;
+    },
   };
-}
-
-function iconButton(glyph, label, onClick) {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'icon-btn';
-  button.textContent = glyph;
-  button.title = label;
-  button.setAttribute('aria-label', label);
-  button.addEventListener('click', onClick);
-  return button;
 }

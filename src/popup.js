@@ -66,6 +66,10 @@ const healthUi = createHealthUi({
 const serversUi = createServersUi({
   listEl: el('profileList'),
   emptyEl: el('profilesEmpty'),
+  noMatchEl: el('profilesNoMatch'),
+  searchEl: el('profileSearch'),
+  searchInput: el('profileQuery'),
+  searchClear: el('profileQueryClear'),
   formEl: el('profileForm'),
   addBtn: el('addBtn'),
   getState: () => state,
@@ -87,6 +91,15 @@ function openOptions() {
   chrome.runtime.openOptionsPage();
 }
 
+/**
+ * Only touches the DOM when the text really changed. The status line is an
+ * `aria-live` region, so writing the same string again would make a screen
+ * reader repeat itself on every unrelated state change.
+ */
+function setText(node, value) {
+  if (node && node.textContent !== value) node.textContent = value;
+}
+
 function render() {
   lang = resolveLang(state.settings.language, navigator.language);
   applyDocumentLang(lang);
@@ -94,6 +107,7 @@ function render() {
 
   els.langBtn.textContent = LANG_LABELS[otherLang(lang)];
   els.langBtn.title = t('lang.switch', lang);
+  els.langBtn.setAttribute('aria-label', els.langBtn.title);
 
   // The button shows the theme that is showing and names it, so a click never
   // lands on a theme the user did not expect (see nextTheme).
@@ -114,8 +128,8 @@ function render() {
     : t('popup.shortcuts', lang);
 
   const status = describeStatus(state);
-  els.statusTitle.textContent = t(status.title.key, lang, status.title.params);
-  els.statusDetail.textContent = t(status.detail.key, lang, status.detail.params);
+  setText(els.statusTitle, t(status.title.key, lang, status.title.params));
+  setText(els.statusDetail, t(status.detail.key, lang, status.detail.params));
   els.statusDot.className = `dot is-${status.tone}`;
 
   // The card wears the colour of the active mode (emerald for a server, indigo

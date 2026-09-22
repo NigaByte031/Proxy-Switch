@@ -277,6 +277,55 @@ export function formatProfileAddress(profile) {
   return profile.username ? `${base} · ${profile.username}` : base;
 }
 
+/**
+ * Filtering a handful of servers is pure data work, so it lives here next to
+ * the rest of the profile helpers (and can be unit tested without a DOM).
+ * Below this many servers the list is short enough to scan, and the search
+ * box would only add noise to the popup.
+ */
+export const PROFILE_SEARCH_THRESHOLD = 4;
+
+/**
+ * Everything a search box is allowed to match a row against, lower-cased.
+ * Passwords are deliberately absent: they are invisible in the list, so a
+ * hidden password must never decide which rows show up.
+ */
+export function profileSearchText(profile) {
+  return [profile?.name, profile?.host, profile?.scheme, profile?.port, profile?.username]
+    .filter((value) => value !== undefined && value !== null && value !== '')
+    .join(' ')
+    .toLowerCase();
+}
+
+/**
+ * Filters the server list for the search box.
+ *
+ * Every whitespace-separated term has to appear somewhere in the row, so
+ * "work http" and "http work" both find `http://proxy.work.example.com:8080`
+ * while `socks5 1080` narrows a mixed list down to one server.
+ * A blank query is not a filter at all and returns the list untouched.
+ */
+export function filterProfiles(profiles, query) {
+  const list = Array.isArray(profiles) ? profiles : [];
+  const terms = String(query ?? '')
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (terms.length === 0) return list;
+  return list.filter((profile) => {
+    const haystack = profileSearchText(profile);
+    return terms.every((term) => haystack.includes(term));
+  });
+}
+
+/**
+ * Whether the server list should show its search box: a long list, or a query
+ * the user is already typing (which must stay visible until it is cleared).
+ */
+export function shouldShowSearch(profileCount, query = '') {
+  return Number(profileCount) >= PROFILE_SEARCH_THRESHOLD || String(query ?? '').trim() !== '';
+}
+
 /** Appends a counter until the name is free, e.g. "New server 2". */
 export function uniqueProfileName(profiles, base) {
   const taken = new Set(profiles.map((profile) => profile.name.trim().toLowerCase()));

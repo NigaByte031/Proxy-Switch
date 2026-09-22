@@ -4,6 +4,44 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.2.1] — 2026-09-22
+
+The server list is now something you *work with* rather than scroll through: it can be searched, it
+explains itself to keyboard and screen-reader users, and deleting no longer interrupts you.
+
+### Added
+
+- **Server search** — once a list passes four servers a search box appears above it, and `/` jumps to
+  it from anywhere in the popup or the settings page. Every word of the query has to match the name,
+  host, scheme, port or username, so `socks5 1080` narrows a mixed list down to one row; a query that
+  finds nothing says so instead of leaving an empty list. The logic is pure and lives in `model.js`
+  (`filterProfiles`, `profileSearchText`, `shouldShowSearch`), covered by `tests/model.test.mjs`.
+- **Inline delete confirmation** — clicking ✕ turns that row into a `Delete “<name>”?` question with
+  Delete / Cancel buttons and moves focus straight onto Delete. `Escape` puts the row back and
+  returns focus to the ✕ that opened it, so a mis-click costs one key instead of a dialog.
+- **Keyboard shortcuts** — `Escape` cancels a pending delete, then closes the add/edit form, then
+  clears the search, in that order; `Cmd/Ctrl+Enter` saves the form from any field; `/` focuses the
+  search box (and stays plain text while you are typing in it).
+- The popup status line is a `role="status"` region, so a screen reader hears the new mode after a
+  switch instead of having to go looking for it, and it only reports when the text really changed.
+
+### Changed
+
+- Long server names are ellipsised on one line instead of wrapping, so every row keeps the same
+  height and the list reads as a list.
+- “Add server” no longer disables itself while the form is open — clicking it again simply starts a
+  fresh form — and it now reports `aria-expanded` alongside `aria-controls`.
+- The search field draws its magnifier with an inline SVG instead of the `⌕` character, which most UI
+  fonts do not carry.
+
+### Removed
+
+- `confirm.deleteProfile` and the `confirmFn` option of `createServersUi`: the blocking
+  `window.confirm` for deleting a server is gone. The full reset on the settings page still uses one,
+  deliberately — that action really is irreversible.
+
+[1.2.1]: ../../releases/tag/v1.2.1
+
 ## [1.2.0] — 2026-09-22
 
 You can now pick the theme instead of living with whatever the system says, and the interface was

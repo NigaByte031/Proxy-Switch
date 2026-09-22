@@ -16,6 +16,9 @@ bilingual — English and Persian (فارسی) with full RTL support — and eve
 - **Saved servers** — name, scheme (HTTP/HTTPS/SOCKS4/SOCKS5), host, port, optional credentials.
   Paste a whole proxy URL (`socks5://user:pass@127.0.0.1:1080`, or just `host:8080`) into the Host
   field and scheme, host, port and credentials fill themselves.
+- **Server search** — a search box appears above the list once it grows past four servers, and `/`
+  jumps to it from anywhere in the popup. Deleting a server is confirmed inside the row rather
+  than by a blocking dialog, so the popup never loses its place.
 - **Proxy authentication** — optional automatic answers to proxy login prompts, only for the
   server you are actually using.
 - **Bypass list** — one rule per line (`<local>`, `localhost`, `*.internal.example.com`, …).
@@ -46,7 +49,7 @@ bilingual — English and Persian (فارسی) with full RTL support — and eve
 ```bash
 git clone https://github.com/mohammadyazdani031/ProxyControler.git
 cd ProxyControler
-npm run package     # writes dist/proxy-switch-v1.2.0.zip (optional)
+npm run package     # writes dist/proxy-switch-v1.2.1.zip (optional)
 ```
 
 Then load the repository folder itself with **Load unpacked** — the manifest points at `src/`, so
@@ -157,10 +160,10 @@ Design decisions worth knowing:
 
 ## Publishing
 
-- [ ] `npm run package`, then upload `dist/proxy-switch-v1.2.0.zip` from the Chrome Web Store
+- [ ] `npm run package`, then upload `dist/proxy-switch-v1.2.1.zip` from the Chrome Web Store
       developer dashboard (a 128×128 icon is already included; screenshots can be taken from the
       preview pages).
-- [ ] Tag the release — `git tag v1.2.0 && git push origin v1.2.0`. The
+- [ ] Tag the release — `git tag v1.2.1 && git push origin v1.2.1`. The
       [release workflow](.github/workflows/release.yml) refuses a tag that does not match
       `manifest.json`, runs the tests and attaches the ZIP to the GitHub release.
 - [ ] Add real screenshots to `docs/` if you want them in this README.

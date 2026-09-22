@@ -67,6 +67,10 @@ const healthUi = createHealthUi({
 const serversUi = createServersUi({
   listEl: el('profileList'),
   emptyEl: el('profilesEmpty'),
+  noMatchEl: el('profilesNoMatch'),
+  searchEl: el('profileSearch'),
+  searchInput: el('profileQuery'),
+  searchClear: el('profileQueryClear'),
   formEl: el('profileForm'),
   addBtn: el('addBtn'),
   getState: () => state,

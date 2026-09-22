@@ -77,11 +77,42 @@
       <section class="card">
         <div class="section-head">
           <h2 data-i18n="options.servers"></h2>
-          <button id="addBtn" class="ghost-btn" type="button" data-i18n="profiles.add"></button>
+          <button
+            id="addBtn"
+            class="ghost-btn"
+            type="button"
+            aria-controls="profileForm"
+            aria-expanded="false"
+            data-i18n="profiles.add"
+          ></button>
         </div>
         <p class="muted" data-i18n="options.serversHint"></p>
+        <!-- Only revealed once the list is long enough to need it (servers-ui.js). -->
+        <div id="profileSearch" class="search hidden">
+          <svg class="search-glyph" viewBox="0 0 16 16" aria-hidden="true">
+            <circle cx="7" cy="7" r="4.6" />
+            <path d="M10.5 10.5 14 14" />
+          </svg>
+          <input
+            id="profileQuery"
+            type="search"
+            autocomplete="off"
+            spellcheck="false"
+            data-i18n-placeholder="profiles.search"
+          />
+          <button
+            id="profileQueryClear"
+            class="icon-btn search-clear hidden"
+            type="button"
+            data-i18n-title="profiles.searchClear"
+            data-i18n-aria-label="profiles.searchClear"
+          >
+            ✕
+          </button>
+        </div>
         <ul id="profileList" class="profile-list"></ul>
         <p id="profilesEmpty" class="empty hidden" data-i18n="profiles.empty"></p>
+        <p id="profilesNoMatch" class="empty empty-search hidden" role="status"></p>
 
         <form id="profileForm" class="form-grid hidden" novalidate>
           <h3 id="formTitle" data-i18n="profiles.new"></h3>

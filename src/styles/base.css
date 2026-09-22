@@ -356,6 +356,17 @@ section > h2::before,
   transform: translateY(1px) scale(0.99);
 }
 
+.btn.danger {
+  background: var(--danger);
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(11, 28, 22, 0.16),
+    0 10px 20px -14px color-mix(in srgb, var(--danger) 85%, transparent);
+}
+
+.btn.danger:hover {
+  filter: brightness(1.06) saturate(1.05);
+}
+
 .ghost-btn.danger,
 .error,
 .warning {
@@ -450,6 +461,7 @@ button:disabled:hover {
 
 input[type="text"],
 input[type="url"],
+input[type="search"],
 input[type="password"],
 input[type="number"],
 select,
@@ -791,6 +803,65 @@ label {
   }
 }
 
+/* ---------------------------------------------------------------- *
+ * Server search
+ *
+ * Revealed by servers-ui.js once the list is long enough to need it, so the
+ * simple case (one or two servers) stays a clean list.
+ * ---------------------------------------------------------------- */
+
+.search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  animation: panel-in 0.2s var(--ease);
+}
+
+/* Drawn, not typed: the ⌕ character is missing from most UI fonts. */
+.search-glyph {
+  position: absolute;
+  inset-inline-start: 11px;
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  color: var(--muted);
+  pointer-events: none;
+  transition: color 0.16s ease;
+}
+
+.search input {
+  padding-inline-start: 30px;
+  padding-inline-end: 36px;
+  background: var(--surface-2);
+}
+
+.search:focus-within .search-glyph {
+  color: var(--accent);
+}
+
+/* Chrome draws its own clear affordance; the row already has one. */
+.search input::-webkit-search-cancel-button,
+.search input::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.search-clear {
+  position: absolute;
+  inset-inline-end: 4px;
+  width: 26px;
+  height: 26px;
+  font-size: 12px;
+}
+
+.search-clear:hover {
+  background: var(--surface-3);
+}
+
 .profile-list {
   display: flex;
   flex-direction: column;
@@ -892,6 +963,10 @@ label {
 }
 
 .profile-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-weight: 600;
 }
 
@@ -913,6 +988,57 @@ label {
 .profile-item .icon-btn {
   align-self: center;
   margin-inline-end: 2px;
+}
+
+/* ---------------------------------------------------------------- *
+ * Deleting a server: the row asks, instead of a blocking window.confirm.
+ * ---------------------------------------------------------------- */
+
+.profile-item.is-confirming {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+  background: var(--danger-soft);
+}
+
+.profile-item.is-confirming::before {
+  display: none;
+}
+
+.profile-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  animation: confirm-in 0.18s var(--ease);
+}
+
+.profile-confirm-text {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  color: var(--danger);
+  font-size: 12.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-confirm .btn,
+.profile-confirm .ghost-btn {
+  padding: 5px 10px;
+  font-size: 12.5px;
+}
+
+@keyframes confirm-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .empty {
@@ -1069,6 +1195,12 @@ label {
   line-height: 40px;
   text-align: center;
   content: "+";
+}
+
+/* The list is filtered down to nothing: say so, instead of looking broken.
+   The "add a server" circle would be the wrong invitation here, so it goes. */
+.empty.empty-search::before {
+  display: none;
 }
 
 /* ---------------------------------------------------------------- *

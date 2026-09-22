@@ -87,6 +87,11 @@ export const MESSAGES = {
     'profiles.use': 'Use this server',
     'profiles.editAction': 'Edit',
     'profiles.deleteAction': 'Delete',
+    'profiles.search': 'Search servers',
+    'profiles.searchHint': 'Type to narrow the list down — press / anywhere to jump here.',
+    'profiles.searchClear': 'Clear search',
+    'profiles.noMatch': 'No server matches “{query}”.',
+    'profiles.confirmDelete': 'Delete “{name}”?',
 
     'field.name': 'Name',
     'field.namePlaceholder': 'e.g. Home proxy',
@@ -119,7 +124,6 @@ export const MESSAGES = {
     'msg.importError': 'That file could not be imported.',
     'msg.resetDone': 'Everything was reset to defaults.',
 
-    'confirm.deleteProfile': 'Delete this server?',
     'confirm.reset': 'Reset all settings and servers to their defaults?',
 
     'error.nameRequired': 'Enter a name.',
@@ -222,6 +226,11 @@ export const MESSAGES = {
     'profiles.use': 'استفاده از این سرور',
     'profiles.editAction': 'ویرایش',
     'profiles.deleteAction': 'حذف',
+    'profiles.search': 'جست‌وجوی سرورها',
+    'profiles.searchHint': 'برای کوتاه‌شدن فهرست تایپ کنید — کلید / از هر جا نشانگر را اینجا می‌آورد.',
+    'profiles.searchClear': 'پاک کردن جست‌وجو',
+    'profiles.noMatch': 'هیچ سروری با «{query}» پیدا نشد.',
+    'profiles.confirmDelete': '«{name}» حذف شود؟',
 
     'field.name': 'نام',
     'field.namePlaceholder': 'مثلاً پروکسی خانه',
@@ -254,7 +263,6 @@ export const MESSAGES = {
     'msg.importError': 'این فایل قابل خواندن نبود.',
     'msg.resetDone': 'همهچیز به حالت پیشفرض برگشت.',
 
-    'confirm.deleteProfile': 'این سرور حذف شود؟',
     'confirm.reset': 'همهٔ تنظیمات و سرورها به حالت پیشفرض برگردند؟',
 
     'error.nameRequired': 'نام را وارد کنید.',
