@@ -21,19 +21,56 @@ bilingual — English and Persian (فارسی) with full RTL support — and eve
   than by a blocking dialog, so the popup never loses its place.
 - **Proxy authentication** — optional automatic answers to proxy login prompts, only for the
   server you are actually using.
+- **Automatic failover** — when the active server stops answering, the extension checks the
+  connection once more and, if the server really is down, switches to the next server in your list.
+  One round visits every server once and then stops, so a network outage cannot make it flip back
+  and forth. Toggle it on the settings page (it defaults to on).
+- **Switch notification** — an automatic switch is never silent: a system notification names the
+  server that took over, and the toolbar icon wears its name for a few seconds. Clicking it opens
+  your server list, and its **Back to …** button undoes the switch. Only switches the extension makes
+  on its own are announced, and the notification can be switched off on the settings page.
+- **Domain routing** — in PAC mode, tick *Route only the sites I list* and give it one domain per
+  line: those sites and their subdomains go through your servers — the active one first, the others as
+  fallback — while everything else stays direct. The list is compiled into a PAC script inside the
+  extension — nothing to host, nothing to download — and a listed site is never sent direct, so a
+  server that is down fails loudly instead of leaking it. The fallback chain follows what the
+  extension has *seen*: a server that recently answered is tried before one nobody has looked at,
+  and one that recently failed goes last.
 - **Bypass list** — one rule per line (`<local>`, `localhost`, `*.internal.example.com`, …).
 - **Master switch** — instantly go direct without losing the mode you configured.
 - **Context menu** — right-click the toolbar icon to switch mode or server.
 - **Live badge** — the toolbar icon shows `SYS`, `ON`, `PAC`, `OFF` or `ERR`, and the popup repeats
   it as a pill next to the status text.
 - **Connection test** — one click tells you whether traffic really flows, through which host and
-  how many milliseconds it took.
+  how many milliseconds it took. Only a `204` from the probe endpoint counts as success, so a captive
+  portal or a block page that answers `200` is reported as a failure instead of a false “works”.
+- **Test all servers** — one button next to *Add server* looks at every saved server in turn, not
+  just the one the mode is using, so the row verdicts and the generated chain's order refresh from a
+  single click. The pass says where it is (`3 of 8 tested…`), ends with `5 worked · 2 no answer ·
+  1 skipped`, and a server it could not check is counted as *skipped* rather than guessed about. It
+  works in the modes whose routing a probe can reproduce (manual and domain routing) and says why
+  when it cannot, and it runs in the service worker, so closing the popup does not stop it.
+- **Background checks** — optional, off by default: while the extension is routing, it looks at one
+  server every few minutes so what it knows about each of them stays recent — which is what orders
+  the generated chain. A check installs *your* routing with a single difference: only the
+  extension's own probe travels through the server being tested, so your browsing keeps the route
+  you configured, and a server that is down fails the check rather than a page you were loading.
+  Turn it on with *Check my servers in the background* on the settings page.
+- **Server list that says what the extension knows** — under each address the row reports the last
+  verdict and how long ago it was taken (`answered in 42 ms · 3 min ago`, `no answer · 12 min ago`),
+  with a coloured dot for the tone. A server nobody has looked at says nothing, and a verdict too
+  old to order the chain is dimmed rather than dropped, so the list and the chain agree.
 - **Keyboard shortcuts** — `Alt+Shift+P` turns the proxy on or off, `Alt+Shift+D` goes direct.
 - **Bilingual UI** — switch language from the popup; Persian is rendered RTL.
 - **Theme** — automatic (follows your operating system), light or dark. Set it on the settings
   page, or click the ◐ button in the popup to cycle through the three options without leaving it.
+- **Accent colour** — five palettes (emerald, ocean, violet, amber and rose) recolour the interface.
+  Pick one on the settings page; both pages wear it, and a backup carries it. Mode and status colours
+  never change, so a green “reachable” hint stays green in every palette.
 - **Backup & restore** — export/import the whole configuration as JSON.
-- **No analytics, no network calls, no remote code.** See [PRIVACY.md](PRIVACY.md).
+- **No analytics, no telemetry, no remote code.** The only requests the extension itself ever makes
+  are the optional **Connection test**/**Test all** buttons and the background checks it can run on a
+  timer — the same bare `generate_204` probes, carrying nothing. See [PRIVACY.md](PRIVACY.md).
 
 ## Install
 
@@ -49,7 +86,7 @@ bilingual — English and Persian (فارسی) with full RTL support — and eve
 ```bash
 git clone https://github.com/mohammadyazdani031/ProxyControler.git
 cd ProxyControler
-npm run package     # writes dist/proxy-switch-v1.2.1.zip (optional)
+npm run package     # writes dist/proxy-switch-v1.4.0.zip (optional)
 ```
 
 Then load the repository folder itself with **Load unpacked** — the manifest points at `src/`, so
@@ -80,13 +117,20 @@ npm run preview -- --check   # verify they are in sync
 3. Flip the master switch off to go direct temporarily; your mode is remembered.
 4. Press **Test connection** when you want proof: it sends one tiny request through the mode that is
    currently applied and reports the host that answered and the round-trip time. Hover the result to
-   see the raw reason when it fails.
+   see the raw reason when it fails. The **Test all** button next to the server list asks the same
+   question of every saved server, one after another.
 5. The ◐ button switches between the automatic, light and dark themes; the ⚙ button (or
    `chrome://extensions` → Details → Extension options) opens the settings page, where you manage
-   servers, the bypass list, the language, the theme and JSON backups.
+   servers, the bypass list, the language, the theme and accent colour, automatic failover and JSON
+   backups.
 
 If a mode has nothing to work with (no server selected, empty PAC URL) the extension **fails open**:
 traffic goes direct and the popup shows a warning instead of leaving you without a connection.
+
+The toolbar badge is honest about what is really in force: it shows `ERR` when Chrome refused the
+change (another extension or a policy owns the proxy settings) or when the proxy stopped answering,
+and the popup spells out which of the two happened. The settings page repeats that reason next to
+the mode chips, with a **Try again** button that asks the service worker to apply the mode once more.
 
 ### Keyboard shortcuts
 
@@ -106,6 +150,8 @@ rebind both on `chrome://extensions/shortcuts`.
 | `storage` | Keep your servers, credentials and settings in `chrome.storage.local`. |
 | `webRequest` + `webRequestAuthProvider` | Answer proxy `407` challenges with the saved credentials of the active server (Manifest V3 supports blocking listeners for `onAuthRequired` only). |
 | `contextMenus` | The right-click menu on the toolbar icon. |
+| `notifications` | The system notification that names the server an automatic switch moved to. |
+| `alarms` | The timer behind the periodic background check — set only while that option is on. |
 | `<all_urls>` | Required to route traffic and to see proxy authentication challenges. |
 
 The extension has **no content scripts** and injects nothing into pages.
@@ -132,9 +178,17 @@ src/
   options.html|js           settings page
   lib/
     model.js                state shape, validation, import/export (pure, tested)
+    theme.js                theme + accent resolution, applied onto <html> (pure, tested)
+    failover.js             auto-failover policy: strikes, rounds, cooldown (pure, tested)
+    notice.js               the wording of the automatic-switch notification (pure, tested)
+    pac.js                  builds a PAC script from the domain list (pure, tested)
+    server-health.js        recent per-server verdicts, and the chain order they imply (pure, tested)
+    server-probe.js         the policy of the periodic background check (pure, tested)
     proxy.js                builds the chrome.proxy config + status text (pure, tested)
+    auth.js                 auto-auth policy: who may answer a proxy challenge (pure, tested)
     health.js               connection probe: timing and verdict (pure, tested)
     health-ui.js            the shared "Test connection" control
+    test-all-ui.js          the shared "Test all servers" control (pure core, tested)
     storage.js              chrome.storage.local wrapper
     i18n.js                 English/Persian dictionaries, RTL helpers (pure, tested)
     mode-ui.js              shared mode chips + PAC row
@@ -152,26 +206,31 @@ Design decisions worth knowing:
 - **Credentials never sync.** Everything lives in `chrome.storage.local`, never `chrome.storage.sync`.
 - **Pure logic is separated** from the Chrome APIs (`lib/model.js`, `lib/proxy.js`, `lib/i18n.js`)
   so it can be unit tested in plain Node.
+- **A verdict is only recorded where it means something.** The chain order comes from the
+  extension's own probes, and a probe is attributed to a server only in manual mode, where that
+  server is the whole route. In PAC mode a chain hides which hop answered, so nothing is guessed —
+  a server nobody has looked at simply keeps its place in the list.
 - **Theming is one file.** Every colour, radius and shadow is a custom property in
   `src/styles/base.css` — the light palette on `:root`, the dark one on `:root[data-theme='dark']`,
-  both chosen by `lib/theme.js` — so the themes and the per-mode accents (emerald for a saved
-  server, indigo for PAC, slate for the system proxy, amber when something is missing) can be
-  re-tuned without touching any other stylesheet.
+  one block per accent palette for each theme, all chosen by `lib/theme.js` and applied as
+  `data-theme`/`data-accent` on `<html>` — so the themes, the accent palettes and the per-mode accents
+  (emerald for a saved server, indigo for PAC, slate for the system proxy, amber when something is
+  missing) can be re-tuned without touching any other stylesheet.
 
 ## Publishing
 
-- [ ] `npm run package`, then upload `dist/proxy-switch-v1.2.1.zip` from the Chrome Web Store
+- [ ] `npm run package`, then upload `dist/proxy-switch-v1.4.0.zip` from the Chrome Web Store
       developer dashboard (a 128×128 icon is already included; screenshots can be taken from the
       preview pages).
-- [ ] Tag the release — `git tag v1.2.1 && git push origin v1.2.1`. The
+- [ ] Tag the release — `git tag v1.4.0 && git push origin v1.4.0`. The
       [release workflow](.github/workflows/release.yml) refuses a tag that does not match
       `manifest.json`, runs the tests and attaches the ZIP to the GitHub release.
 - [ ] Add real screenshots to `docs/` if you want them in this README.
 
 ## Roadmap ideas
 
-- Rules per domain, so one site uses one server and everything else another.
-- Automatic failover: try the next saved server when the active one stops answering.
+- One server per domain: domain routing sends every listed site through the same chain, so a
+  per-domain server is the next step.
 - Import from common formats (`SwitchyOmega` backups).
 - Firefox build (WebExtensions `browser.proxy` has the same shape).
 

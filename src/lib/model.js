@@ -26,6 +26,15 @@ export const LANGUAGES = ['auto', 'en', 'fa'];
 /** Accepted values of the theme setting ("auto" follows the operating system). */
 export const THEMES = ['auto', 'light', 'dark'];
 
+/**
+ * Accepted values of the accent setting: which hue the interface wears.
+ *
+ * The list is the contract between the picker on the settings page and the
+ * palette blocks in `src/styles/base.css` (one `:root[data-accent='…']` block
+ * each). "emerald" is the shipped look, so an upgrade changes nothing.
+ */
+export const ACCENTS = ['emerald', 'ocean', 'violet', 'amber', 'rose'];
+
 /** Hosts that skip the proxy out of the box. */
 export const DEFAULT_BYPASS_LIST = ['<local>', 'localhost', '[::1]'];
 
@@ -45,8 +54,21 @@ export function createDefaultState() {
       pacUrl: '',
       bypassList: [...DEFAULT_BYPASS_LIST],
       autoAuth: true,
+      autoFailover: true,
+      notifyFailover: true,
+      // Periodic background checks: the worker looks at one server at a time so
+      // the recorded verdicts (and with them the order of a generated PAC
+      // chain) stay recent — see `lib/server-probe.js`. Off by default because
+      // it is the one setting that makes the extension do network work on its
+      // own, on a timer the user did not press.
+      backgroundProbe: false,
+      // PAC mode can take its script from a URL or from the list below, which is
+      // turned into a PAC script on the fly (see `lib/pac.js`).
+      domainRouting: false,
+      proxyDomains: [],
       language: 'auto',
       theme: 'auto',
+      accent: 'emerald',
     },
     profiles: [],
   };
@@ -66,13 +88,38 @@ export function effectiveMode(state) {
 export function missingRequirement(state) {
   const mode = effectiveMode(state);
   if (mode === 'fixed_servers' && !findProfile(state, state.settings.activeProfileId)) return 'profile';
-  if (mode === 'pac_script' && !String(state.settings.pacUrl ?? '').trim()) return 'pac';
+  if (mode === 'pac_script') {
+    // A generated PAC needs a server to route through as well as rules to route.
+    if (state.settings.domainRouting) {
+      if (!findProfile(state, state.settings.activeProfileId)) return 'profile';
+      if ((state.settings.proxyDomains ?? []).length === 0) return 'domains';
+      return null;
+    }
+    if (!String(state.settings.pacUrl ?? '').trim()) return 'pac';
+  }
   return null;
 }
 
 export function findProfile(state, id) {
   if (!id) return null;
   return (state?.profiles ?? []).find((profile) => profile.id === id) ?? null;
+}
+
+/**
+ * The servers that may be routed through, in order: the one in charge first,
+ * then every other saved server in list order.
+ *
+ * Both things that name servers use it — the generated PAC chain
+ * (`lib/pac.js`) and answering a proxy challenge for any of them
+ * (`lib/auth.js`) — so the order can never disagree with itself.
+ *
+ * @returns {object[]}
+ */
+export function routingChain(state) {
+  const active = findProfile(state, state?.settings?.activeProfileId);
+  if (!active) return [];
+  const fallbacks = (state?.profiles ?? []).filter((profile) => profile.id !== active.id);
+  return [active, ...fallbacks];
 }
 
 let idCounter = 0;
@@ -339,6 +386,64 @@ export function uniqueProfileName(profiles, base) {
  * Bypass list
  * ------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------ *
+ * Domains routed through the proxy
+ * ------------------------------------------------------------------ */
+
+/** `#` starts a comment, so a list can explain itself. */
+export const DOMAIN_COMMENT = '#';
+
+/**
+ * One typed rule, cleaned up the way people type them: a whole
+ * `https://example.com/path` line becomes `example.com`, and anything that is
+ * not a host at all (a port, a space, a stray word) is dropped.
+ *
+ * @returns {string|null} the rule, or null when it can never match a host
+ */
+export function normalizeDomainRule(raw) {
+  const line = String(raw ?? '')
+    .split(DOMAIN_COMMENT)[0]
+    .trim();
+  if (!line) return null;
+
+  // A pasted URL is a rule with the interesting part buried in it, so it is
+  // reduced to its host. A pattern is *not* run through that: `*.example.com`
+  // and `shop?.example.com` are hosts already, and reading them as URLs would
+  // quietly turn them into "example.com" and "shop" — the wrong sites.
+  const pasted = /^[a-z][a-z0-9+.-]*:\/\//i.test(line) || line.includes('/');
+  const rule = pasted ? normalizeHost(line) : line;
+  // ... and a rule has to be something, not just punctuation that happens to
+  // survive the host check.
+  if (!rule || !isValidHost(rule) || !/[\p{L}\p{N}]/u.test(rule)) return null;
+  return rule;
+}
+
+/** Coerces a stored array of rules, dropping the ones that cannot match. */
+export function sanitizeDomainRules(list) {
+  const seen = new Set();
+  const result = [];
+  for (const raw of Array.isArray(list) ? list : []) {
+    const rule = normalizeDomainRule(raw);
+    if (!rule || seen.has(rule.toLowerCase())) continue;
+    seen.add(rule.toLowerCase());
+    result.push(rule);
+  }
+  return result;
+}
+
+/** One rule per line, `#` for comments — the format of the settings textarea. */
+export function parseDomainRules(text) {
+  return sanitizeDomainRules(String(text ?? '').split(/\r?\n/));
+}
+
+export function formatDomainList(list) {
+  return sanitizeDomainRules(list).join('\n');
+}
+
+/* ------------------------------------------------------------------ *
+ * Bypass list
+ * ------------------------------------------------------------------ */
+
 export function parseBypassList(text) {
   const seen = new Set();
   const result = [];
@@ -413,8 +518,24 @@ export function sanitizeState(raw) {
       pacUrl: typeof settings.pacUrl === 'string' ? settings.pacUrl.trim() : base.settings.pacUrl,
       bypassList,
       autoAuth: typeof settings.autoAuth === 'boolean' ? settings.autoAuth : base.settings.autoAuth,
+      autoFailover:
+        typeof settings.autoFailover === 'boolean' ? settings.autoFailover : base.settings.autoFailover,
+      notifyFailover:
+        typeof settings.notifyFailover === 'boolean'
+          ? settings.notifyFailover
+          : base.settings.notifyFailover,
+      backgroundProbe:
+        typeof settings.backgroundProbe === 'boolean'
+          ? settings.backgroundProbe
+          : base.settings.backgroundProbe,
+      domainRouting:
+        typeof settings.domainRouting === 'boolean'
+          ? settings.domainRouting
+          : base.settings.domainRouting,
+      proxyDomains: sanitizeDomainRules(settings.proxyDomains),
       language: LANGUAGES.includes(settings.language) ? settings.language : base.settings.language,
       theme: THEMES.includes(settings.theme) ? settings.theme : base.settings.theme,
+      accent: ACCENTS.includes(settings.accent) ? settings.accent : base.settings.accent,
     },
     profiles,
   };

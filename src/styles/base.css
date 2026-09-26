@@ -55,6 +55,9 @@
   --danger-soft: #fdeceb;
 
   /* ---- Shape and depth --------------------------------------------- */
+  /* One height for every control, so buttons, inputs and chips line up in a
+     row instead of each following its own padding. */
+  --control-h: 36px;
   --radius-lg: 18px;
   --radius: 14px;
   --radius-sm: 10px;
@@ -107,6 +110,162 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 16px 34px -24px rgba(0, 0, 0, 0.9);
   --shadow-lg: 0 2px 4px rgba(0, 0, 0, 0.45), 0 28px 54px -30px rgba(0, 0, 0, 0.95);
+}
+
+/* ---------------------------------------------------------------- *
+ * Accent palettes
+ *
+ * The brand hue is a setting (lib/theme.js writes `data-accent` next to
+ * `data-theme`), so the same product can wear five different colours without a
+ * stylesheet of its own. Each block overrides only the brand tokens and the two
+ * background glows; the mode hues (`--pac`, `--sys`) and the feedback colours
+ * keep their meaning whatever the accent is — a green "reachable" chip must
+ * stay green. The derived tokens (`--gradient-brand`, `--ring`) are left alone:
+ * they are built from the tokens below and follow along on their own.
+ *
+ * The light set reads on white, the dark set on #0b1113; each accent therefore
+ * has two blocks. Both are keyed off the same attribute, so a page only ever
+ * needs to write one value.
+ *
+ * Each block is written twice: once for the document element (the palette the
+ * product actually wears) and once for any element that carries the attribute
+ * (the swatch picker on the settings page paints itself with the real tokens of
+ * the palette it offers, so the two can never disagree).
+ * ---------------------------------------------------------------- */
+
+/* Emerald is the shipped look, and the tokens on `:root` already are it. The
+   block is written out all the same, because a swatch on the settings page has
+   to paint itself emerald even while the product wears another colour — a
+   palette that only inherited would show whichever colour is in force. A test
+   keeps the two copies identical. */
+:root[data-accent='emerald'],
+[data-accent='emerald'] {
+  --glow-1: rgba(14, 159, 110, 0.1);
+  --glow-2: rgba(13, 148, 136, 0.09);
+  --accent: #0e9f6e;
+  --accent-2: #0d9488;
+  --accent-strong: #096b4c;
+  --accent-soft: #dcf7ec;
+  --brand-1: #0a8055;
+  --brand-2: #0b7a72;
+  --brand-contrast: #ffffff;
+}
+
+:root[data-accent='ocean'],
+[data-accent='ocean'] {
+  --glow-1: rgba(37, 99, 235, 0.1);
+  --glow-2: rgba(14, 165, 233, 0.09);
+  --accent: #0f6fce;
+  --accent-2: #0d84a8;
+  --accent-strong: #0b4c8f;
+  --accent-soft: #e2effd;
+  --brand-1: #0b5cc8;
+  --brand-2: #0d84b0;
+  --brand-contrast: #ffffff;
+}
+
+:root[data-accent='violet'],
+[data-accent='violet'] {
+  --glow-1: rgba(124, 58, 237, 0.11);
+  --glow-2: rgba(162, 28, 175, 0.08);
+  --accent: #7048e8;
+  --accent-2: #8b46d9;
+  --accent-strong: #4b21b0;
+  --accent-soft: #edebfe;
+  --brand-1: #6236d6;
+  --brand-2: #8b46d9;
+  --brand-contrast: #ffffff;
+}
+
+:root[data-accent='amber'],
+[data-accent='amber'] {
+  --glow-1: rgba(234, 88, 12, 0.1);
+  --glow-2: rgba(217, 119, 6, 0.09);
+  --accent: #c2410c;
+  --accent-2: #d97706;
+  --accent-strong: #8f3208;
+  --accent-soft: #ffe9dc;
+  --brand-1: #dc5a12;
+  --brand-2: #c2410c;
+  --brand-contrast: #ffffff;
+}
+
+:root[data-accent='rose'],
+[data-accent='rose'] {
+  --glow-1: rgba(214, 51, 108, 0.1);
+  --glow-2: rgba(190, 24, 93, 0.08);
+  --accent: #d6336c;
+  --accent-2: #c2255c;
+  --accent-strong: #a11b4a;
+  --accent-soft: #ffe6ef;
+  --brand-1: #cf2c63;
+  --brand-2: #b11f6b;
+  --brand-contrast: #ffffff;
+}
+
+:root[data-theme='dark'][data-accent='emerald'],
+:root[data-theme='dark'] [data-accent='emerald'] {
+  --glow-1: rgba(52, 211, 153, 0.1);
+  --glow-2: rgba(45, 212, 191, 0.08);
+  --accent: #34d399;
+  --accent-2: #2dd4bf;
+  --accent-strong: #6ee7b7;
+  --accent-soft: #12362b;
+  --brand-1: #10b981;
+  --brand-2: #0d9488;
+  --brand-contrast: #04241b;
+}
+
+:root[data-theme='dark'][data-accent='ocean'],
+:root[data-theme='dark'] [data-accent='ocean'] {
+  --glow-1: rgba(56, 189, 248, 0.11);
+  --glow-2: rgba(34, 211, 238, 0.09);
+  --accent: #38bdf8;
+  --accent-2: #22d3ee;
+  --accent-strong: #a5e6ff;
+  --accent-soft: #0d3a4d;
+  --brand-1: #38bdf8;
+  --brand-2: #22d3ee;
+  --brand-contrast: #06283a;
+}
+
+:root[data-theme='dark'][data-accent='violet'],
+:root[data-theme='dark'] [data-accent='violet'] {
+  --glow-1: rgba(167, 139, 250, 0.11);
+  --glow-2: rgba(192, 132, 252, 0.09);
+  --accent: #a78bfa;
+  --accent-2: #c084fc;
+  --accent-strong: #ddd6fe;
+  --accent-soft: #2a1f52;
+  --brand-1: #a78bfa;
+  --brand-2: #c084fc;
+  --brand-contrast: #211046;
+}
+
+:root[data-theme='dark'][data-accent='amber'],
+:root[data-theme='dark'] [data-accent='amber'] {
+  --glow-1: rgba(251, 146, 60, 0.11);
+  --glow-2: rgba(245, 158, 11, 0.09);
+  --accent: #fb923c;
+  --accent-2: #f59e0b;
+  --accent-strong: #fed7aa;
+  --accent-soft: #3d220c;
+  --brand-1: #fb923c;
+  --brand-2: #f59e0b;
+  --brand-contrast: #3a1e05;
+}
+
+:root[data-theme='dark'][data-accent='rose'],
+:root[data-theme='dark'] [data-accent='rose'] {
+  --glow-1: rgba(251, 113, 133, 0.11);
+  --glow-2: rgba(244, 114, 182, 0.09);
+  --accent: #fb7185;
+  --accent-2: #f472b6;
+  --accent-strong: #fecdd3;
+  --accent-soft: #431a25;
+  --brand-1: #fb7185;
+  --brand-2: #f472b6;
+  --brand-contrast: #4a0d20;
 }
 
 * {
@@ -190,6 +349,7 @@ a:hover {
  * ---------------------------------------------------------------- */
 
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -198,6 +358,26 @@ a:hover {
   border-radius: var(--radius);
   background: var(--surface);
   box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* A hairline of brand light along the top edge: it separates stacked cards
+   without adding another border. */
+.card::before {
+  content: "";
+  position: absolute;
+  inset-inline: 16px;
+  inset-block-start: 0;
+  height: 1px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--accent) 55%, transparent),
+    transparent
+  );
+  opacity: 0.65;
+  pointer-events: none;
 }
 
 .section-head {
@@ -299,6 +479,13 @@ section > h2::before,
   color: var(--muted);
 }
 
+/* ERR: the proxy could not be applied, so the mode is not in force. */
+.pill[data-tone="error"] {
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
 /* ---------------------------------------------------------------- *
  * Buttons and chips
  * ---------------------------------------------------------------- */
@@ -318,12 +505,18 @@ section > h2::before,
 }
 
 .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--control-h);
   padding: 8px 15px;
   background: var(--gradient-brand);
   border-color: transparent;
   color: var(--brand-contrast);
   font-weight: 600;
-  box-shadow: 0 1px 2px rgba(11, 28, 22, 0.16),
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--brand-contrast) 22%, transparent),
+    0 1px 2px rgba(11, 28, 22, 0.16),
     0 10px 20px -14px color-mix(in srgb, var(--brand-1) 85%, transparent);
 }
 
@@ -339,6 +532,11 @@ section > h2::before,
 }
 
 .ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--control-h);
   padding: 8px 12px;
   border-color: var(--border);
   background: var(--surface);
@@ -419,6 +617,10 @@ section > h2::before,
 }
 
 .chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
   padding: 7px 10px;
   border-color: transparent;
   background: transparent;
@@ -444,6 +646,31 @@ section > h2::before,
   color: var(--accent-strong);
   font-weight: 650;
   box-shadow: var(--shadow-sm);
+}
+
+/* The selected chip wears the hue of its own mode, so the control doubles as a
+   legend for the colours used by the status pill, the card and the badge. */
+.chips .chip[data-mode='system'].is-active {
+  border-color: color-mix(in srgb, var(--sys) 40%, var(--border));
+  background: color-mix(in srgb, var(--sys) 14%, var(--track-active));
+  color: color-mix(in srgb, var(--sys) 88%, var(--text));
+}
+
+.chips .chip[data-mode='pac_script'].is-active {
+  border-color: color-mix(in srgb, var(--pac) 40%, var(--border));
+  background: color-mix(in srgb, var(--pac) 14%, var(--track-active));
+  color: color-mix(in srgb, var(--pac) 88%, var(--text));
+}
+
+.chips .chip[data-mode='direct'].is-active {
+  border-color: var(--border-strong);
+  background: var(--track-active);
+  color: var(--text);
+}
+
+.chip:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 1px;
 }
 
 button:disabled {
@@ -474,6 +701,17 @@ textarea {
   color: inherit;
   font: inherit;
   transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+
+/* One-line controls share a height with the buttons next to them; the
+   textareas stay free to grow. */
+input[type="text"],
+input[type="url"],
+input[type="search"],
+input[type="password"],
+input[type="number"],
+select {
+  min-height: var(--control-h);
 }
 
 input:hover:not(:focus),
@@ -536,6 +774,14 @@ button:focus-visible,
 a:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* The two controls that are not buttons still need to look reachable by
+   keyboard: the server row and the switch. */
+.profile-main:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: var(--radius);
 }
 
 label {
@@ -991,6 +1237,46 @@ label {
 }
 
 /* ---------------------------------------------------------------- *
+ * What the extension has seen about a server: the last verdict and how old it
+ * is (lib/server-health.js). The dot carries the tone, the words carry the
+ * meaning, and a verdict the chain no longer counts is dimmed rather than
+ * rewritten — the list says exactly what the ordering does.
+ * ---------------------------------------------------------------- */
+
+.profile-health {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  color: var(--muted);
+  font-size: 10.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-health::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border-strong);
+}
+
+.profile-health[data-tone="ok"]::before {
+  background: var(--ok);
+}
+
+.profile-health[data-tone="warn"]::before {
+  background: var(--warn);
+}
+
+.profile-health[data-tone="stale"] {
+  opacity: 0.75;
+}
+
+/* ---------------------------------------------------------------- *
  * Deleting a server: the row asks, instead of a blocking window.confirm.
  * ---------------------------------------------------------------- */
 
@@ -1043,12 +1329,19 @@ label {
 
 .empty {
   margin: 0;
-  padding: 18px 14px;
+  padding: 20px 16px;
   border: 1px dashed var(--border-strong);
   border-radius: var(--radius);
+  background: color-mix(in srgb, var(--accent) 4%, var(--surface));
   color: var(--muted);
   font-size: 12.5px;
   text-align: center;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.empty:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border-strong));
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
 }
 
 .permissions {
@@ -1067,6 +1360,14 @@ label {
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Jumping between sections on the settings page is smoother, but only for users
+   who have not asked the system to tone motion down. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
   }
 }
 

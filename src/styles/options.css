@@ -110,6 +110,153 @@ body.options {
 }
 
 /* ---------------------------------------------------------------- *
+ * Accent picker: one swatch per palette
+ *
+ * Each button carries its own `data-accent`, so the palette blocks in
+ * styles/base.css apply to the button itself and the dot is painted with that
+ * palette's real brand colours. The picker cannot drift from the product.
+ * ---------------------------------------------------------------- */
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.swatch {
+  flex: 0 1 auto;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  min-width: 74px;
+  padding: 9px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--muted);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease,
+    transform 0.12s var(--ease), box-shadow 0.18s ease;
+}
+
+.swatch:hover {
+  border-color: color-mix(in srgb, var(--brand-1) 45%, var(--border));
+  color: var(--text);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.swatch:active {
+  transform: scale(0.98);
+}
+
+.swatch:focus-visible {
+  outline: 2px solid var(--brand-1);
+  outline-offset: 2px;
+}
+
+.swatch.is-active {
+  border-color: color-mix(in srgb, var(--brand-1) 60%, var(--border));
+  background: color-mix(in srgb, var(--brand-1) 8%, var(--surface));
+  color: var(--text);
+  font-weight: 650;
+}
+
+.swatch-dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24),
+    0 6px 14px -8px color-mix(in srgb, var(--brand-1) 85%, transparent);
+  transition: transform 0.18s var(--ease);
+}
+
+.swatch:hover .swatch-dot {
+  transform: scale(1.06);
+}
+
+/* The tick is drawn in the palette's own contrast colour, so it stays legible
+   on the light palettes and the dark ones alike. */
+.swatch-dot::after {
+  content: "✓";
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 30px;
+  text-align: center;
+  color: var(--brand-contrast);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.18s ease, transform 0.18s var(--ease);
+}
+
+.swatch.is-active .swatch-dot::after {
+  opacity: 0.95;
+  transform: scale(1);
+}
+
+/* ---------------------------------------------------------------- *
+ * Apply status: why the toolbar badge says ERR, and a way to retry
+ * ---------------------------------------------------------------- */
+
+.apply-panel {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+
+.apply-copy {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.apply-title {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 650;
+}
+
+.apply-detail {
+  margin: 2px 0 0;
+  color: var(--text);
+  opacity: 0.8;
+  overflow-wrap: anywhere;
+}
+
+.apply-panel .ghost-btn {
+  padding: 6px 11px;
+  font-size: 12.5px;
+}
+
+/* ---------------------------------------------------------------- *
+ * Server section head: "Test all" sits next to "Add server"
+ * ---------------------------------------------------------------- */
+
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.section-actions .ghost-btn {
+  padding: 6px 11px;
+  font-size: 12.5px;
+}
+
+/* The pass's narration lives under the list it is about, and reads as the
+   same state chip the single-server test wears (styles/base.css). */
+#testAllResult {
+  margin-top: 8px;
+  max-width: 100%;
+}
+
+/* ---------------------------------------------------------------- *
  * Data message: a floating toast at the bottom of the window
  * ---------------------------------------------------------------- */
 

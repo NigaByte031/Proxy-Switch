@@ -26,7 +26,9 @@ pages are quicker for pure UI work.
   `src/lib/i18n.js`; `npm test` fails if a key or a translation is missing.
 - **Regenerate the previews.** If you touch `src/popup.html` or `src/options.html`, run
   `npm run preview` and commit the result — the tests check that the previews stay in sync.
-- **Never send data anywhere.** No analytics, no remote requests, no remote code.
+- **Never send user data anywhere.** No analytics, no telemetry, no remote code — the only network
+  requests the extension makes are the connection test's bare `generate_204` probes, which carry
+  nothing, and nothing new may be added without holding that line.
 
 ## Before opening a pull request
 

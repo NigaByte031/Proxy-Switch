@@ -29,13 +29,29 @@ test('probeHost extracts the host and survives junk', () => {
   assert.equal(probeHost(undefined), '');
 });
 
-test('only statuses that prove reachability count as success', () => {
-  for (const status of [200, 204, 301, 302, 303, 307, 308]) {
-    assert.equal(isReachableStatus(status), true, String(status));
-  }
-  for (const status of [0, 400, 401, 404, 407, 500, 502, 503, undefined]) {
+test('only a 204 from the probe endpoint counts as success', () => {
+  assert.equal(isReachableStatus(204), true);
+  for (const status of [200, 301, 302, 303, 307, 308, 0, 400, 401, 404, 407, 500, 502, 503, undefined]) {
     assert.equal(isReachableStatus(status), false, String(status));
   }
+});
+
+test('a 200 block page fails instead of faking a connection', async () => {
+  const result = await probeOnce('https://a.test/generate_204', {
+    fetchImpl: async () => ({ status: 200 }),
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.status, 200);
+  assert.equal(result.error, 'http-200');
+});
+
+test('a captive portal that answers 200 after a redirect fails the probe', async () => {
+  // fetch follows the portal's 302 (redirect: 'follow'), so what arrives is its login page
+  const outcome = await probe({ fetchImpl: async () => ({ status: 200 }) });
+  assert.equal(outcome.ok, false);
+  assert.equal(outcome.error, 'http-200');
+  assert.equal(outcome.attempts.length, PROBE_TARGETS.length, 'every target must be tried');
+  assert.ok(outcome.attempts.every((attempt) => attempt.ok === false));
 });
 
 test('formatDuration reads like a human wrote it', () => {

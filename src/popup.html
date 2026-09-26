@@ -43,7 +43,8 @@
         <button id="testBtn" class="ghost-btn" type="button" data-i18n="health.action">Test connection</button>
         <p id="testResult" class="health-result hidden" role="status" aria-live="polite"></p>
       </div>
-      <p id="warning" class="warning hidden"></p>
+      <!-- role=alert: a warning about the proxy not being applied is worth interrupting for. -->
+      <p id="warning" class="warning hidden" role="alert"></p>
     </section>
 
     <section>
@@ -59,25 +60,55 @@
 
     <!-- Sits right under the mode chips, so the PAC URL is never off-screen. -->
     <section id="pacPanel" class="hidden">
-      <label for="pacUrl" data-i18n="field.pacUrl"></label>
-      <input id="pacUrl" type="url" spellcheck="false" data-i18n-placeholder="field.pacPlaceholder" />
-      <p class="form-note" data-i18n="field.pacHint"></p>
-      <div class="form-actions">
-        <button id="pacSave" class="btn" type="button" data-i18n="btn.save"></button>
+      <!-- Either the URL is downloaded, or the list below builds the script
+           (lib/pac.js). Never both, which is why the two rows hide each other. -->
+      <label class="check">
+        <input id="pacDomainsToggle" type="checkbox" />
+        <span data-i18n="field.domainRouting"></span>
+      </label>
+      <p class="form-note" data-i18n="field.domainRoutingHint"></p>
+      <div id="pacUrlRow">
+        <label for="pacUrl" data-i18n="field.pacUrl"></label>
+        <input id="pacUrl" type="url" spellcheck="false" data-i18n-placeholder="field.pacPlaceholder" />
+        <p class="form-note" data-i18n="field.pacHint"></p>
+        <div class="form-actions">
+          <button id="pacSave" class="btn" type="button" data-i18n="btn.save"></button>
+        </div>
+      </div>
+      <div id="pacDomainsPanel" class="hidden">
+        <label for="pacDomains" data-i18n="field.domainList"></label>
+        <textarea
+          id="pacDomains"
+          rows="5"
+          spellcheck="false"
+          data-i18n-placeholder="field.domainListPlaceholder"
+        ></textarea>
+        <p class="form-note" data-i18n="field.domainListHint"></p>
+        <div class="form-actions">
+          <button id="pacDomainsSave" class="btn" type="button" data-i18n="btn.save"></button>
+        </div>
       </div>
     </section>
 
     <section id="manualPanel">
       <div class="section-head">
         <h2 data-i18n="profiles.title"></h2>
-        <button
-          id="addBtn"
-          class="ghost-btn"
-          type="button"
-          aria-controls="profileForm"
-          aria-expanded="false"
-          data-i18n="profiles.add"
-        ></button>
+        <div class="section-actions">
+          <button
+            id="testAllBtn"
+            class="ghost-btn"
+            type="button"
+            data-i18n="health.testAll.action"
+          ></button>
+          <button
+            id="addBtn"
+            class="ghost-btn"
+            type="button"
+            aria-controls="profileForm"
+            aria-expanded="false"
+            data-i18n="profiles.add"
+          ></button>
+        </div>
       </div>
       <!-- Only revealed once the list is long enough to need it (servers-ui.js). -->
       <div id="profileSearch" class="search hidden">
@@ -105,6 +136,9 @@
       <ul id="profileList" class="profile-list"></ul>
       <p id="profilesEmpty" class="empty hidden" data-i18n="profiles.empty"></p>
       <p id="profilesNoMatch" class="empty empty-search hidden" role="status"></p>
+      <!-- Filled by the "Test all servers" pass (lib/test-all-ui.js): progress
+           while it runs, the count of ok/failed/skipped when it ends. -->
+      <p id="testAllResult" class="health-result hidden" role="status" aria-live="polite"></p>
 
       <form id="profileForm" class="card form-grid hidden" novalidate>
         <h3 id="formTitle" data-i18n="profiles.new"></h3>

@@ -9,10 +9,22 @@
  * Dependency-free and DOM-light, so it can be unit tested in Node.
  */
 
-import { THEMES } from './model.js';
+import { ACCENTS, THEMES } from './model.js';
 
 /** Default value of `settings.theme`. */
 export const DEFAULT_THEME = 'auto';
+
+/** Default value of `settings.accent`. */
+export const DEFAULT_ACCENT = 'emerald';
+
+/** i18n key per accent setting. */
+export const ACCENT_KEYS = {
+  emerald: 'accent.emerald',
+  ocean: 'accent.ocean',
+  violet: 'accent.violet',
+  amber: 'accent.amber',
+  rose: 'accent.rose',
+};
 
 /** i18n key per theme setting. */
 export const THEME_KEYS = {
@@ -34,6 +46,11 @@ export function themeKey(theme) {
 
 export function themeIcon(theme) {
   return THEME_ICONS[theme] ?? THEME_ICONS[DEFAULT_THEME];
+}
+
+/** i18n key naming the palette, so the picker can label each swatch. */
+export function accentKey(accent) {
+  return ACCENT_KEYS[accent] ?? ACCENT_KEYS[DEFAULT_ACCENT];
 }
 
 /** Cycles `auto -> light -> dark -> auto`, so one button covers all three. */
@@ -61,6 +78,23 @@ export function applyTheme(setting, doc = globalThis.document, dark = prefersDar
   const theme = resolveTheme(setting, dark);
   if (doc?.documentElement) doc.documentElement.dataset.theme = theme;
   return theme;
+}
+
+/** Turns a setting into the palette that is actually shown. */
+export function resolveAccent(setting) {
+  return ACCENTS.includes(setting) ? setting : DEFAULT_ACCENT;
+}
+
+/**
+ * Writes the palette onto the document element, next to `data-theme`. The pair
+ * is what `src/styles/base.css` keys its palette blocks off, so the pages never
+ * need to know which colours a given accent is made of.
+ * @returns {string} the accent that is now active
+ */
+export function applyAccent(setting, doc = globalThis.document) {
+  const accent = resolveAccent(setting);
+  if (doc?.documentElement) doc.documentElement.dataset.accent = accent;
+  return accent;
 }
 
 /**

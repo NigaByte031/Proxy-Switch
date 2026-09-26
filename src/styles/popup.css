@@ -204,6 +204,33 @@ body.popup {
   gap: 6px;
 }
 
+/* ---------------------------------------------------------------- *
+ * Server section head: "Test all" sits next to "Add server"
+ * ---------------------------------------------------------------- */
+
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.section-actions .ghost-btn {
+  padding: 6px 11px;
+  font-size: 12.5px;
+}
+
+/* The pass's narration lives under the list it is about, and reads as the
+   same state chip the single-server test wears (styles/base.css). */
+#testAllResult {
+  margin-top: 8px;
+  max-width: 100%;
+}
+
+/* Persian packs the summary tighter; the chip stays on one line. */
+[dir="rtl"] #testAllResult {
+  padding: 5px 9px 5px 11px;
+}
+
 .app-footer a {
   font-weight: 500;
   transition: opacity 0.15s ease;

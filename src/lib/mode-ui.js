@@ -1,17 +1,23 @@
 /**
- * Shared "proxy mode" controls: the mode chips and the PAC URL row.
+ * Shared "proxy mode" controls: the mode chips, the PAC URL row and the domain
+ * list that replaces it (see `lib/pac.js`).
  * Used by both the popup and the settings page, which is why it lives here
  * instead of being duplicated in the two page scripts.
  */
 
-import { isValidPacUrl } from './model.js';
+import { formatDomainList, isValidPacUrl, parseDomainRules } from './model.js';
 import { modeKey, t } from './i18n.js';
 
 export function createModeUi({
   chipsEl,
   hintEl,
   pacPanelEl,
+  pacUrlRowEl,
   pacUrlEl,
+  pacDomainsToggleEl,
+  pacDomainsPanelEl,
+  pacDomainsEl,
+  pacDomainsSaveEl,
   pacSaveEl,
   commit,
   getLang,
@@ -19,6 +25,8 @@ export function createModeUi({
 }) {
   function render(state, lang) {
     const mode = state.settings.mode;
+    const routing = state.settings.domainRouting === true;
+
     if (chipsEl) {
       for (const chip of chipsEl.querySelectorAll('.chip')) {
         const active = chip.dataset.mode === mode;
@@ -27,8 +35,24 @@ export function createModeUi({
       }
     }
     if (hintEl) hintEl.textContent = t(modeKey(mode, 'mode.hint'), lang);
-    if (pacPanelEl) pacPanelEl.classList.toggle('hidden', mode !== 'pac_script');
-    if (pacUrlEl && document.activeElement !== pacUrlEl) pacUrlEl.value = state.settings.pacUrl;
+
+    const isPac = mode === 'pac_script';
+    if (pacPanelEl) pacPanelEl.classList.toggle('hidden', !isPac);
+    // One of the two sources is in charge at a time, so exactly one of them is
+    // on screen: the script the list builds, or the URL it downloads.
+    if (pacUrlRowEl) pacUrlRowEl.classList.toggle('hidden', routing);
+    if (pacDomainsPanelEl) pacDomainsPanelEl.classList.toggle('hidden', !routing);
+    if (pacDomainsToggleEl) pacDomainsToggleEl.checked = routing;
+
+    if (pacUrlEl && !routing && document.activeElement !== pacUrlEl) {
+      pacUrlEl.value = state.settings.pacUrl;
+    }
+    if (pacDomainsEl && !routing && document.activeElement !== pacDomainsEl) {
+      pacDomainsEl.value = '';
+    }
+    if (pacDomainsEl && routing && document.activeElement !== pacDomainsEl) {
+      pacDomainsEl.value = formatDomainList(state.settings.proxyDomains);
+    }
   }
 
   async function savePac() {
@@ -43,6 +67,16 @@ export function createModeUi({
     });
   }
 
+  async function saveDomains() {
+    // A line that cannot be a host is dropped rather than rejected: the list is
+    // read on every render, so what the user sees back is what will be used.
+    const domains = parseDomainRules(pacDomainsEl?.value ?? '');
+    onError(null);
+    await commit((draft) => {
+      draft.settings.proxyDomains = domains;
+    });
+  }
+
   chipsEl?.addEventListener('click', (event) => {
     const chip = event.target.closest('.chip');
     const mode = chip?.dataset.mode;
@@ -54,7 +88,16 @@ export function createModeUi({
     });
   });
 
+  pacDomainsToggleEl?.addEventListener('change', () => {
+    const domainRouting = pacDomainsToggleEl.checked;
+    onError(null);
+    commit((draft) => {
+      draft.settings.domainRouting = domainRouting;
+    });
+  });
+
   pacSaveEl?.addEventListener('click', savePac);
+  pacDomainsSaveEl?.addEventListener('click', saveDomains);
   pacUrlEl?.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
       event.preventDefault();
@@ -62,5 +105,5 @@ export function createModeUi({
     }
   });
 
-  return { render, savePac };
+  return { render, savePac, saveDomains };
 }

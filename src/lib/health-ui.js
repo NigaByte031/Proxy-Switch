@@ -9,14 +9,34 @@
 
 import { describeProbe, probe } from './health.js';
 import { t } from './i18n.js';
+import { noteServerHealth, probeObservation } from './server-health.js';
+import { updateServerHealth } from './storage.js';
+
+/**
+ * Remembers what the test proved — and about which server (`probeObservation`
+ * decides, and says "nobody" in every mode but manual). Nothing happens when
+ * the state is unknown or there is nothing to attribute; recording a verdict
+ * must never be the reason a test fails.
+ */
+async function rememberVerdict(state, outcome) {
+  const observation = probeObservation(state, outcome);
+  if (!observation) return;
+  try {
+    await updateServerHealth((draft) => noteServerHealth(draft, observation));
+  } catch (error) {
+    console.warn('[proxy-switch] the connection verdict could not be recorded', error);
+  }
+}
 
 /**
  * @param {object} options
  * @param {HTMLButtonElement|null} options.buttonEl
  * @param {HTMLElement|null} options.resultEl
  * @param {() => string} options.getLang
+ * @param {(() => object|null)|null} [options.getState] the current state, so a
+ *        verdict can be attributed to the server it was taken through
  */
-export function createHealthUi({ buttonEl, resultEl, getLang }) {
+export function createHealthUi({ buttonEl, resultEl, getLang, getState = null }) {
   let running = false;
   /** @type {object|null} last probe result */
   let outcome = null;
@@ -62,6 +82,9 @@ export function createHealthUi({ buttonEl, resultEl, getLang }) {
 
     try {
       outcome = await probe();
+      // The button is also a look at the active server, which is what the chain
+      // of a generated PAC script is ordered by.
+      await rememberVerdict(getState?.() ?? null, outcome);
     } finally {
       running = false;
       render(getLang());

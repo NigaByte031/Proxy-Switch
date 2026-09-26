@@ -43,6 +43,12 @@ export const MESSAGES = {
     'theme.auto': 'Automatic',
     'theme.light': 'Light',
     'theme.dark': 'Dark',
+    'accent.title': 'Accent colour',
+    'accent.emerald': 'Emerald',
+    'accent.ocean': 'Ocean',
+    'accent.violet': 'Violet',
+    'accent.amber': 'Amber',
+    'accent.rose': 'Rose',
 
     'mode.title': 'Mode',
     'mode.system': 'System',
@@ -64,10 +70,19 @@ export const MESSAGES = {
     'status.manual.detail': '{name} · {scheme}://{host}:{port}',
     'status.pac.title': 'PAC script',
     'status.pac.detail': '{url}',
+    'status.pacDomains.title': 'Selected sites are routed',
+    'status.pacDomains.detail': '{name} · {count} listed site(s)',
     'status.warnProfile.title': 'No server selected',
     'status.warnProfile.detail': 'Pick a server below — until then traffic stays direct.',
     'status.warnPac.title': 'PAC URL is empty',
     'status.warnPac.detail': 'Add a PAC URL — until then traffic stays direct.',
+    'status.warnDomains.title': 'No sites are listed',
+    'status.warnDomains.detail': 'Add at least one domain, or switch the list off — until then traffic stays direct.',
+    'status.applyFailed.title': 'The proxy could not be changed',
+    'status.applyFailed.detail': 'Chrome refused the change: {reason}',
+    'status.notInControl.title': 'Another program is controlling the proxy',
+    'status.notInControl.detail':
+      'Your browser, a policy or another extension owns the proxy settings, so this mode is not applied ({level}).',
 
     'popup.shortcuts': 'Alt+Shift+P on/off · Alt+Shift+D direct',
 
@@ -75,9 +90,24 @@ export const MESSAGES = {
     'health.running': 'Testing…',
     'health.ok.title': 'Connection works',
     'health.ok.detail': '{host} answered in {ms}',
+    'health.serverOk': 'answered in {ms}',
+    'health.serverFail': 'no answer',
+    'health.serverAge.now': 'just now',
+    'health.serverAge.minutes': '{count} min ago',
+    'health.serverAge.hours': '{count} h ago',
+    'health.serverAge.days': '{count} d ago',
     'health.fail.title': 'No connection',
     'health.fail.detail':
       'Nothing answered through the current mode — check the server or your network.',
+
+    'health.testAll.action': 'Test all',
+    'health.testAll.running': 'Testing all…',
+    'health.testAll.progress': '{done} of {total} tested…',
+    'health.testAll.summary': '{ok} worked · {failed} no answer · {skipped} skipped',
+    'health.testAll.busy': 'A test is already running.',
+    'health.testAll.notEligible':
+      'Servers cannot be tested in the current mode — switch to Manual or domain routing first.',
+    'health.testAll.empty': 'There is no server to test.',
 
     'profiles.title': 'Servers',
     'profiles.add': 'Add server',
@@ -107,10 +137,21 @@ export const MESSAGES = {
     'field.pacUrl': 'PAC script URL',
     'field.pacPlaceholder': 'https://example.com/proxy.pac',
     'field.pacHint': 'Chrome downloads this proxy auto-config file and obeys it.',
+    'field.domainRouting': 'Route only the sites I list',
+    'field.domainRoutingHint':
+      'Instead of downloading a PAC file, one is built from your own list: those sites use your servers — the active one first, the others as fallback, with a server that recently answered ahead of one nobody has looked at — while everything else stays direct. A listed site is never sent direct, so a server that is down fails loudly instead of leaking it.',
+    'field.domainList': 'Sites that use the proxy',
+    'field.domainListPlaceholder':
+      '# one per line\nexample.com\n*.internal.example.com\nlocalhost',
+    'field.domainListHint':
+      'A domain covers itself and its subdomains; *.domain covers the subdomains only, and * or ? work as patterns. Use <local> for dot-less intranet names. Leave a rule out and its traffic stays direct. Bypass rules above still win.',
     'field.bypass': 'Bypass list',
     'field.bypassPlaceholder': '<local>\nlocalhost\n127.0.0.1\n*.internal.example.com',
     'field.bypassSummary': '{count} bypass rules',
     'field.bypassNone': 'No bypass rules',
+
+    'apply.retry': 'Try again',
+    'apply.retrying': 'Applying…',
 
     'btn.save': 'Save',
     'btn.cancel': 'Cancel',
@@ -118,6 +159,8 @@ export const MESSAGES = {
     'btn.import': 'Import',
     'btn.reset': 'Reset',
 
+    'msg.applied': 'The proxy settings were applied.',
+    'msg.applyFailed': 'Chrome did not apply the settings — the reason is above.',
     'msg.saved': 'Saved.',
     'msg.imported': 'Settings imported.',
     'msg.exported': 'Settings exported.',
@@ -147,6 +190,15 @@ export const MESSAGES = {
     'options.auth': 'Send proxy credentials automatically',
     'options.authHint':
       'Answers the login prompt of your active server so Chrome stops asking for it.',
+    'options.failover': 'Switch to another server when the active one stops answering',
+    'options.failoverHint':
+      'Manual mode with two servers or more: after a few failed requests the connection is checked once more, and only a server that really is down is replaced — by the healthiest other one, meaning the fastest server that recently answered, and never one that just failed. One round visits every other server once and then stops, so a network outage cannot make the extension flip back and forth.',
+    'options.notifyFailover': 'Tell me when the extension switches servers on its own',
+    'options.notifyFailoverHint':
+      'A system notification names the server that took over, and the toolbar icon briefly wears its name. Only automatic switches are reported — picking a server yourself is an answer, not news.',
+    'options.backgroundProbe': 'Check my servers in the background',
+    'options.backgroundProbeHint':
+      'While the extension is routing traffic it looks at one server every few minutes, so what it knows about each of them stays recent and the fallback chain of a generated PAC script stays in the order that actually works. A check hands only the extension\'s own probe request to the server it is testing — your browsing keeps the routing you configured, and nothing about it goes anywhere new. Off by default: it is the one thing here that uses the network on its own.',
     'options.mode': 'Proxy mode',
     'options.servers': 'Servers',
     'options.serversHint': 'Click a server to activate it right away.',
@@ -163,6 +215,10 @@ export const MESSAGES = {
     'options.perm.storage': 'storage — keep servers and settings on this device',
     'options.perm.webRequest':
       'webRequest — answer proxy authentication prompts with your saved credentials',
+    'options.perm.notifications':
+      'notifications — show a system notification when the extension switches servers by itself',
+    'options.perm.alarms':
+      'alarms — the timer behind the periodic background check, which is only set while that setting is on',
     'options.perm.host': 'all sites — required to route traffic and authenticate the proxy',
     'options.shortcuts':
       'Shortcuts: Alt+Shift+P turns the proxy on or off, Alt+Shift+D goes direct. Change them on chrome://extensions/shortcuts.',
@@ -171,6 +227,12 @@ export const MESSAGES = {
     'menu.direct': 'Direct (no proxy)',
     'menu.system': 'System proxy',
     'menu.settings': 'Settings…',
+
+    'notice.switched.title': 'Server changed',
+    'notice.switched.message':
+      'The active server stopped answering, so {name} is now in use.',
+    'badge.switched': 'switched to {name}',
+    'notice.switched.button': 'Back to {name}',
   },
 
   fa: {
@@ -183,6 +245,12 @@ export const MESSAGES = {
     'theme.auto': 'خودکار',
     'theme.light': 'روشن',
     'theme.dark': 'تیره',
+    'accent.title': 'رنگ اصلی',
+    'accent.emerald': 'زمردی',
+    'accent.ocean': 'اقیانوسی',
+    'accent.violet': 'بنفش',
+    'accent.amber': 'کهربایی',
+    'accent.rose': 'سرخابی',
 
     'mode.title': 'حالت',
     'mode.system': 'سیستم',
@@ -204,10 +272,19 @@ export const MESSAGES = {
     'status.manual.detail': '{name} · {scheme}://{host}:{port}',
     'status.pac.title': 'اسکریپت PAC',
     'status.pac.detail': '{url}',
+    'status.pacDomains.title': 'فقط سایت‌های انتخابی از پروکسی می‌روند',
+    'status.pacDomains.detail': '{name} · {count} سایت فهرست‌شده',
     'status.warnProfile.title': 'سروری انتخاب نشده',
     'status.warnProfile.detail': 'از پایین یک سرور انتخاب کنید؛ تا آن زمان ترافیک مستقیم است.',
     'status.warnPac.title': 'نشانی PAC خالی است',
     'status.warnPac.detail': 'نشانی PAC را وارد کنید؛ تا آن زمان ترافیک مستقیم است.',
+    'status.warnDomains.title': 'هیچ سایتی فهرست نشده',
+    'status.warnDomains.detail': 'دست‌کم یک دامنه اضافه کنید یا این فهرست را خاموش کنید؛ تا آن زمان ترافیک مستقیم است.',
+    'status.applyFailed.title': 'پروکسی تغییر نکرد',
+    'status.applyFailed.detail': 'کروم این تغییر را نپذیرفت: {reason}',
+    'status.notInControl.title': 'برنامهٔ دیگری پروکسی را کنترل می‌کند',
+    'status.notInControl.detail':
+      'تنظیمات پروکسی در اختیار مرورگر، یک سیاست سازمانی یا افزونهٔ دیگری است؛ بنابراین این حالت اعمال نشده است ({level}).',
 
     'popup.shortcuts': 'Alt+Shift+P روشن/خاموش · Alt+Shift+D مستقیم',
 
@@ -215,8 +292,23 @@ export const MESSAGES = {
     'health.running': 'در حال تست…',
     'health.ok.title': 'اتصال برقرار است',
     'health.ok.detail': '{host} در {ms} پاسخ داد',
+    'health.serverOk': 'پاسخ در {ms}',
+    'health.serverFail': 'بدون پاسخ',
+    'health.serverAge.now': 'همین حالا',
+    'health.serverAge.minutes': '{count} دقیقه پیش',
+    'health.serverAge.hours': '{count} ساعت پیش',
+    'health.serverAge.days': '{count} روز پیش',
     'health.fail.title': 'اتصال برقرار نشد',
     'health.fail.detail': 'در حالت فعلی پاسخی نرسید — سرور یا شبکه را بررسی کنید.',
+
+    'health.testAll.action': 'تست همه',
+    'health.testAll.running': 'در حال تست همه…',
+    'health.testAll.progress': '{done} از {total} آزموده شد…',
+    'health.testAll.summary': '{ok} جواب داد · {failed} بی‌پاسخ · {skipped} رد شد',
+    'health.testAll.busy': 'یک آزمایش از قبل در جریان است.',
+    'health.testAll.notEligible':
+      'در حالت فعلی امکان آزمایش سرورها نیست — اول حالت دستی یا مسیردهی دامنه‌ها را انتخاب کنید.',
+    'health.testAll.empty': 'سروری برای آزمایش وجود ندارد.',
 
     'profiles.title': 'سرورها',
     'profiles.add': 'افزودن سرور',
@@ -241,6 +333,14 @@ export const MESSAGES = {
     'field.username': 'نام کاربری',
     'field.password': 'گذرواژه',
     'field.authNote': 'نام کاربری و گذرواژه فقط روی همین دستگاه ذخیره میشود و هرگز همگامسازی نمیشود.',
+    'field.domainRouting': 'فقط سایت‌هایی که فهرست می‌کنم از پروکسی بروند',
+    'field.domainRoutingHint':
+      'به‌جای دانلود فایل PAC، از فهرست خودتان یکی ساخته می‌شود: آن سایت‌ها از سرورهای شما می‌روند — اول سرور فعال و بعدی‌ها به‌عنوان پشتیبان، و سروری که تازه جواب داده جلوتر از سروری می‌آید که هنوز آزمایش نشده — و بقیه مستقیم می‌مانند. سایتِ فهرست‌شده هیچ‌وقت مستقیم فرستاده نمی‌شود، پس سرور قطع‌شده پیام خطا می‌دهد و ترافیک را بی‌صدا لو نمی‌دهد.',
+    'field.domainList': 'سایت‌هایی که از پروکسی می‌روند',
+    'field.domainListPlaceholder':
+      '# هر خط یک قاعده\nexample.com\n*.internal.example.com\nlocalhost',
+    'field.domainListHint':
+      'یک دامنه، خودش و زیردامنه‌هایش را می‌گیرد؛ *.domain فقط زیردامنه‌ها را، و * و ? به‌عنوان الگو کار می‌کنند. برای نام‌های داخلی بدون نقطه از <local> استفاده کنید. هر چیزی که در فهرست نباشد مستقیم می‌رود. قواعد عبور بالا هنوز مقدم‌اند.',
     'field.pacUrl': 'نشانی اسکریپت PAC',
     'field.pacPlaceholder': 'https://example.com/proxy.pac',
     'field.pacHint': 'کروم این فایل PAC را دانلود میکند و طبق آن عمل میکند.',
@@ -251,12 +351,17 @@ export const MESSAGES = {
     'field.bypassSummary': '{count} قاعدهٔ عبور',
     'field.bypassNone': 'بدون قاعدهٔ عبور',
 
+    'apply.retry': 'تلاش دوباره',
+    'apply.retrying': 'در حال اعمال…',
+
     'btn.save': 'ذخیره',
     'btn.cancel': 'انصراف',
     'btn.export': 'خروجی گرفتن',
     'btn.import': 'ورود از فایل',
     'btn.reset': 'بازنشانی',
 
+    'msg.applied': 'تنظیمات پروکسی اعمال شد.',
+    'msg.applyFailed': 'کروم تنظیمات را اعمال نکرد — دلیلش بالا آمده است.',
     'msg.saved': 'ذخیره شد.',
     'msg.imported': 'تنظیمات وارد شد.',
     'msg.exported': 'فایل خروجی ساخته شد.',
@@ -285,6 +390,15 @@ export const MESSAGES = {
     'options.enabled': 'امکان جابهجایی پروکسی فعال باشد',
     'options.auth': 'ارسال خودکار نام کاربری و گذرواژه',
     'options.authHint': 'به درخواست ورود سرور فعال، خودکار پاسخ میدهد تا کروم دوباره نپرسد.',
+    'options.failover': 'هنگام بی‌پاسخ ماندن سرور فعال، خودکار به سرور دیگری سوئیچ شود',
+    'options.failoverHint':
+      'در حالت دستی و با دست‌کم دو سرور: بعد از چند درخواست ناموفق، اتصال یک بار دیگر بررسی می‌شود و فقط سروری که واقعاً قطع است با سرور بعدیِ فهرست عوض می‌شود. در هر نوبت یک‌بار از همهٔ سرورها رد می‌شویم و بعد متوقف می‌شویم تا قطعی شبکه باعث جابهجایی پیوسته نشود.',
+    'options.notifyFailover': 'وقتی افزونه خودش سرور را عوض می‌کند به من اطلاع بده',
+    'options.notifyFailoverHint':
+      'یک اعلان سیستمی نام سروری را که جایگزین شده می‌گوید و آیکون افزونه هم چند لحظه همان نام را نشان می‌دهد. فقط سوئیچ‌های خودکار گزارش می‌شوند — انتخاب دستی سرور خودِ پاسخ است، نه خبر تازه.',
+    'options.backgroundProbe': 'سرورها را در پس‌زمینه بررسی کن',
+    'options.backgroundProbeHint':
+      'تا وقتی افزونه ترافیک را مسیردهی می‌کند، هر چند دقیقه یک سرور را نگاه می‌کند تا دانسته‌هایش دربارهٔ هر سرور تازه بماند و زنجیرهٔ پشتیبان اسکریپت PAC تولیدشده به همان ترتیبی بماند که واقعاً کار می‌کند. هر بررسی فقط درخواست کاوش خودِ افزونه را به سروری می‌دهد که آزمایش می‌شود — گشت‌وگذار شما همان مسیردهی تنظیم‌شده را نگه می‌دارد و چیزی از آن به جای تازه‌ای نمی‌رود. پیش‌فرض خاموش است: تنها گزینه‌ای است که خودش از شبکه استفاده می‌کند.',
     'options.mode': 'حالت پروکسی',
     'options.servers': 'سرورها',
     'options.serversHint': 'روی هر سرور بزنید تا همان لحظه فعال شود.',
@@ -300,6 +414,10 @@ export const MESSAGES = {
     'options.perm.proxy': 'proxy — تغییر تنظیمات پروکسی مرورگر',
     'options.perm.storage': 'storage — نگهداشتن سرورها و تنظیمات روی همین دستگاه',
     'options.perm.webRequest': 'webRequest — پاسخ به درخواست احراز هویت پروکسی با اطلاعات ذخیرهشده',
+    'options.perm.notifications':
+      'notifications — نمایش اعلان سیستمی وقتی افزونه خودش سرور را عوض می‌کند',
+    'options.perm.alarms':
+      'alarms — زمان‌سنج بررسی دوره‌ای پس‌زمینه، که فقط وقتی آن گزینه روشن باشد تنظیم می‌شود',
     'options.perm.host': 'دسترسی به همهٔ سایتها — برای مسیردهی ترافیک و احراز هویت پروکسی',
     'options.shortcuts':
       'میان‌برهای صفحه‌کلید: Alt+Shift+P پروکسی را روشن/خاموش می‌کند و Alt+Shift+D اتصال را مستقیم می‌کند. تغییر آن‌ها در chrome://extensions/shortcuts.',
@@ -308,6 +426,11 @@ export const MESSAGES = {
     'menu.direct': 'مستقیم (بدون پروکسی)',
     'menu.system': 'پروکسی سیستمی',
     'menu.settings': 'تنظیمات…',
+
+    'notice.switched.title': 'سرور عوض شد',
+    'notice.switched.message': 'سرور فعال پاسخ نداد؛ از این پس از «{name}» استفاده می‌شود.',
+    'badge.switched': 'سوئیچ به «{name}»',
+    'notice.switched.button': 'بازگشت به «{name}»',
   },
 };
 

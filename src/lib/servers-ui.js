@@ -3,6 +3,9 @@
  * Both the popup and the settings page use the same markup, so the behaviour
  * lives here once.
  *
+ * A row also says what the extension has seen about that server — its last
+ * verdict and how old it is (`lib/server-health.js`), when there is one.
+ *
  * Two interaction decisions are worth spelling out:
  *   - Deleting is confirmed *in the row* instead of with `window.confirm`. A
  *     native dialog freezes the whole popup (and is dismissed by clicking
@@ -20,13 +23,22 @@ import {
   uniqueProfileName,
   validateProfile,
 } from './model.js';
+import { describeServerVerdict } from './server-health.js';
 import { t } from './i18n.js';
+
+/**
+ * How often the age of a verdict is re-read while a list is on screen. Ages are
+ * spoken in minutes, so anything faster would only repaint the same words.
+ */
+const HEALTH_TICK_MS = 60_000;
 
 /**
  * @param {object} options
  * @param {() => object} options.getState  current state (for duplicate-name checks)
  * @param {() => string} options.getLang
  * @param {(mutator: (draft: object) => void) => Promise<unknown>} options.commit  persists a change
+ * @param {(() => object|null)|null} [options.getHealth] what the extension has
+ *        seen about each server (`lib/server-health.js`), so a row can say it
  */
 export function createServersUi({
   listEl,
@@ -40,6 +52,7 @@ export function createServersUi({
   getState,
   getLang,
   commit,
+  getHealth = null,
 }) {
   /** id of the profile currently open in the form, null = creating a new one */
   let editingId = null;
@@ -66,6 +79,29 @@ export function createServersUi({
       if (item.dataset.id === id) return item;
     }
     return null;
+  }
+
+  /**
+   * One server's last verdict, said as the row says it: the state, then how old
+   * it is. The dot in front carries the tone (styles/base.css); the words carry
+   * the meaning, so it reads the same without colour.
+   */
+  function healthBadge(health, lang) {
+    const badge = document.createElement('span');
+    badge.className = 'profile-health';
+    badge.dataset.tone = health.current ? health.tone : 'stale';
+    badge.textContent = verdictText(health, lang);
+    badge.title = badge.textContent;
+    return badge;
+  }
+
+  /** `answered in 42 ms · 3 min ago`, in whichever language is on. */
+  function verdictText(health, lang) {
+    return `${t(health.state.key, lang, health.state.params)} · ${t(
+      health.age.key,
+      lang,
+      health.age.params,
+    )}`;
   }
 
   function iconButton(glyph, label, role, onClick) {
@@ -145,6 +181,12 @@ export function createServersUi({
     detail.textContent = formatProfileAddress(profile);
 
     main.append(name, detail);
+
+    // What the extension has seen about this server, if it has looked at all:
+    // never looked at is not a thing to say, it is the absence of one.
+    const health = describeServerVerdict(getHealth?.() ?? null, profile.id);
+    if (health) main.append(healthBadge(health, lang));
+
     main.addEventListener('click', () => {
       commit((draft) => {
         draft.settings.activeProfileId = profile.id;
@@ -192,6 +234,40 @@ export function createServersUi({
 
     for (const profile of visible) listEl.append(buildRow(profile, state, lang));
   }
+
+  /**
+   * Re-reads the verdicts already on screen. Only the words change — the rows
+   * themselves are left alone, so a row being clicked, or a delete question
+   * waiting for an answer, is never pulled out from under the user.
+   */
+  function refreshHealth() {
+    if (!listEl) return;
+    const health = getHealth?.() ?? null;
+    const lang = getLang();
+
+    for (const item of listEl.querySelectorAll('.profile-item')) {
+      const badge = item.querySelector?.('.profile-health');
+      if (!badge) continue;
+      const verdict = describeServerVerdict(health, item.dataset.id);
+      if (!verdict) {
+        badge.remove?.();
+        continue;
+      }
+      const text = verdictText(verdict, lang);
+      if (badge.textContent !== text) {
+        badge.textContent = text;
+        badge.title = text;
+      }
+      badge.dataset.tone = verdict.current ? verdict.tone : 'stale';
+    }
+  }
+
+  // A list can stay on screen (the popup is often left open, and the settings
+  // page is a tab), so the ages are kept honest on a timer of their own.
+  const healthTimer = setInterval(refreshHealth, HEALTH_TICK_MS);
+  // Node (the tests) keeps its event loop alive for a live interval; a browser
+  // timer is a number and has nothing to release.
+  healthTimer?.unref?.();
 
   /* ---------------------------------------------------------------- *
    * Searching
@@ -416,6 +492,7 @@ export function createServersUi({
 
   return {
     render,
+    refreshHealth,
     openForm,
     closeForm,
     focusSearch,

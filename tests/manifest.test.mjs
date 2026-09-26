@@ -35,10 +35,118 @@ test('the extension requests a minimal, documented permission set', () => {
     'webRequest',
     'webRequestAuthProvider',
     'contextMenus',
+    'notifications',
+    'alarms',
   ]);
   assert.deepEqual(manifest.host_permissions, ['<all_urls>']);
   assert.equal(manifest.content_scripts, undefined);
   assert.equal(manifest.externally_connectable, undefined);
+});
+
+test('every element a page script looks up exists in its own page', () => {
+  // `el('id')` returns null rather than throwing, so a renamed input would only
+  // show up as a control that silently does nothing. The shared mode control
+  // reaches the popup and the settings page the same way.
+  for (const [script, page] of [
+    ['src/popup.js', 'src/popup.html'],
+    ['src/options.js', 'src/options.html'],
+  ]) {
+    const source = read(script);
+    const html = read(page);
+    const ids = [...new Set([...source.matchAll(/\bel\('([^']+)'\)/g)].map((match) => match[1]))];
+
+    assert.ok(ids.length > 10, `${script} only looks up ${ids.length} elements`);
+    assert.ok(ids.includes('pacDomains') && ids.includes('pacDomainsToggle'), `${script}: domain list`);
+    for (const id of ids) {
+      assert.ok(html.includes(`id="${id}"`), `${page} has no #${id}, which ${script} uses`);
+    }
+  }
+});
+
+test('the settings page explains the notification it asks for', () => {
+  // `notifications` exists only for the automatic-switch message, so the page
+  // that lists the permissions has to justify it like all the others.
+  const html = read('src/options.html');
+  assert.match(html, /data-i18n="options\.perm\.notifications"/);
+  assert.match(html, /id="notifyToggle"/);
+});
+
+test('the settings page explains the timer it asks for', () => {
+  // `alarms` exists only for the periodic background check, so the page that
+  // lists the permissions justifies it like the others — and the switch that
+  // turns it on lives there too.
+  const html = read('src/options.html');
+  assert.match(html, /data-i18n="options\.perm\.alarms"/);
+  assert.match(html, /id="probeToggle"/);
+  assert.ok(
+    read('src/options.js').includes("draft.settings.backgroundProbe"),
+    'the switch has to write the setting the worker reads',
+  );
+});
+
+test('the background check is a timer in the worker, and only while it is on', () => {
+  const worker = read('src/background.js');
+  // the alarm is created when the check is allowed and cleared when it is not
+  assert.match(worker, /alarms\?\.onAlarm\.addListener/);
+  assert.match(worker, /alarms\.create\(PROBE_ALARM/);
+  assert.match(worker, /alarms\.clear\(PROBE_ALARM\)/);
+  assert.match(worker, /ensureProbeAlarm\(state\)/);
+  // a pass only looks at servers the policy says are due …
+  assert.match(worker, /probeCandidates\(state\.profiles, health\)/);
+  assert.match(worker, /probeEligible\(state\)/);
+  // … and a check never leaves its own configuration applied
+  assert.match(worker, /isConfigApplied\(await readProxySettings\(\), config\)/);
+  // a failover must not run against the check's temporary route, and the check
+  // itself is the only writer of the config it installs
+  assert.match(worker, /if \(confirming \|\| checking\) return;/);
+  assert.match(worker, /checkingProfileId/);
+  // and the pages never schedule or apply anything themselves
+  for (const page of ['src/popup.js', 'src/options.js']) {
+    assert.ok(!read(page).includes('alarms'), `${page} must not run the timer itself`);
+  }
+});
+
+test('the server list shows what the extension has seen, in both pages', () => {
+  // The verdicts are read from storage and handed to the shared list, which is
+  // the only place a row is built — so the popup and the settings page cannot
+  // disagree about which server answered.
+  for (const page of ['src/popup.js', 'src/options.js']) {
+    const source = read(page);
+    assert.match(source, /loadServerHealth\(/, `${page} must load the verdicts`);
+    assert.match(source, /subscribeServerHealth\(/, `${page} must react to a new one`);
+    assert.match(source, /getHealth: \(\) => serverHealth/, `${page} must pass them to the list`);
+  }
+
+  const list = read('src/lib/servers-ui.js');
+  assert.match(list, /describeServerVerdict\(/);
+  assert.match(list, /profile-health/);
+  // the row wears a tone, and the stylesheet knows the tones
+  const css = read('src/styles/base.css');
+  assert.match(css, /\.profile-health\[data-tone="ok"\]::before/);
+  assert.match(css, /\.profile-health\[data-tone="warn"\]::before/);
+});
+
+test('a health verdict reaches the chain, through the worker only', () => {
+  const worker = read('src/background.js');
+  // a probe the worker runs is attributed to a server …
+  assert.match(worker, /probeObservation\(/);
+  assert.match(worker, /updateServerHealth\(/);
+  // … a new verdict asks for another apply (a chain only changes on an apply)
+  assert.match(worker, /subscribeServerHealth\(\(\) => \{\s*sync\(\)/);
+  // and the pages may record one, but never push a config themselves
+  for (const page of ['src/popup.js', 'src/options.js']) {
+    assert.ok(!read(page).includes('applyProxy'), `${page} must not apply the proxy itself`);
+  }
+});
+
+test('the switch notification is answered in the worker, not in a page', () => {
+  const worker = read('src/background.js');
+  assert.match(worker, /notifications\?\.create/, 'the worker shows the notification');
+  assert.match(worker, /onClicked\.addListener/, 'clicking it must open the server list');
+  assert.match(worker, /onButtonClicked\.addListener/, 'the "go back" button must do something');
+  assert.match(worker, /failoverUndoTarget\(/, 'the way back is decided by the failover policy');
+  assert.match(worker, /clear\(SWITCH_NOTICE_ID\)/, 'an answered notification is taken off the screen');
+  assert.match(worker, /openOptionsPage\(/, 'Chrome without action.openPopup still has a fallback');
 });
 
 test('the keyboard shortcuts are declared in a Chrome-valid shape', () => {
@@ -123,4 +231,24 @@ test('the service worker is an ES module with a single bootstrap', () => {
   for (const page of ['src/popup.js', 'src/options.js']) {
     assert.ok(!read(page).includes('applyProxy'), `${page} must not apply the proxy itself`);
   }
+});
+
+test('a retry is a message to the worker, never a second writer', () => {
+  const worker = read('src/background.js');
+  assert.match(worker, /onMessage\.addListener/);
+  assert.match(worker, /REAPPLY_MESSAGE/);
+
+  const options = read('src/options.js');
+  assert.match(options, /requestReapply\(/, 'the settings page must ask the worker to retry');
+  assert.match(options, /subscribeStatus\(/, 'the settings page must react to the worker\'s status');
+  assert.ok(
+    !/chrome\.proxy\??\.settings/.test(options),
+    'the settings page must not talk to chrome.proxy.settings',
+  );
+
+  // the panel that explains a failing badge exists, and can be reached
+  const html = read('src/options.html');
+  assert.match(html, /id="applyPanel"[^>]*role="alert"/);
+  assert.match(html, /id="applyRetry"/);
+  assert.match(html, /data-i18n="apply.retry"/);
 });

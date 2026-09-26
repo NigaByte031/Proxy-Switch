@@ -10,7 +10,7 @@
 (function installChromeStub() {
   if (globalThis.chrome?.storage) return; // a real extension context: do nothing
 
-  var VERSION = '1.2.1'; // kept in sync with manifest.json by tests/manifest.test.mjs
+  var VERSION = '1.4.0'; // kept in sync with manifest.json by tests/manifest.test.mjs
   var DATA_KEY = 'proxySwitch.preview.data';
   var PROXY_KEY = 'proxySwitch.preview.proxy';
 
@@ -27,6 +27,7 @@
   }
 
   var listeners = new Set();
+  var messageListeners = new Set();
 
   function emit(changes, areaName) {
     for (var listener of Array.from(listeners)) {
@@ -67,7 +68,31 @@
       },
       onInstalled: { addListener: function () {} },
       onStartup: { addListener: function () {} },
-      onMessage: { addListener: function () {} },
+      onMessage: {
+        addListener: function (listener) {
+          messageListeners.add(listener);
+        },
+        removeListener: function (listener) {
+          messageListeners.delete(listener);
+        },
+      },
+      sendMessage: async function (message) {
+        // No service worker runs in the preview, so "Try again" plays its part:
+        // it answers with a healthy status and clears the failure on screen
+        // (the real worker's answer is what lib/proxy.js `requestReapply` reads).
+        if (!message || message.type !== 'proxy-switch:reapply') {
+          if (message && message.type === 'proxy-switch:test-all') return simulateTestAllPass();
+          return undefined;
+        }
+        var status = {
+          ok: true,
+          failed: null,
+          levelOfControl: 'controlled_by_this_extension',
+          at: Date.now(),
+        };
+        await globalThis.chrome.storage.local.set({ proxySwitchApplyStatus: status });
+        return { status: status };
+      },
     },
     storage: {
       local: {
@@ -130,6 +155,11 @@
       onProxyError: { addListener: function () {} },
     },
     action: {
+      // Chrome 127+ only; the preview pretends to have it so the "which server
+      // am I on?" path in background.js can be exercised here too.
+      openPopup: async function () {
+        window.open('./__preview_popup.html', '_blank', 'noopener');
+      },
       setBadgeText: async function () {},
       setBadgeBackgroundColor: async function () {},
       setTitle: async function () {},
@@ -139,6 +169,14 @@
       create: function () {},
       removeAll: async function () {},
       onClicked: { addListener: function () {} },
+    },
+    notifications: {
+      create: async function (id, options) {
+        console.info('[preview] notification', id, options);
+      },
+      clear: async function () {},
+      onClicked: { addListener: function () {} },
+      onButtonClicked: { addListener: function () {} },
     },
     webRequest: {
       onAuthRequired: { addListener: function () {} },
@@ -150,6 +188,72 @@
     },
     i18n: { getMessage: function (key) { return key; } },
   };
+
+  /*
+   * The worker's "Test all servers" pass is simulated too: the same policy the
+   * real pass applies (`testAllEligible` in lib/server-probe.js — manual mode or
+   * domain routing, with its requirements in force), one progress message per
+   * saved server (the latency of the probe hook decides ok/down), recorded into
+   * the same health key the real worker writes.
+   */
+  var TEST_ALL_MESSAGE = 'proxy-switch:test-all';
+  var TEST_ALL_PROGRESS_MESSAGE = 'proxy-switch:test-all-progress';
+  var HEALTH_KEY = 'proxySwitchServerHealth';
+  var MODES_WITH_ROUTING = ['fixed_servers', 'pac_script'];
+
+  function testAllEligible(state) {
+    if (!state || !state.settings) return false;
+    var settings = state.settings;
+    if (!settings.enabled) return false;
+    var mode = settings.mode;
+    if (MODES_WITH_ROUTING.indexOf(mode) === -1) return false;
+    if (mode === 'pac_script' && settings.domainRouting !== true) return false;
+    if (!settings.activeProfileId) return false;
+    if (mode === 'pac_script' && !(settings.proxyDomains || []).length) return false;
+    return true;
+  }
+
+  function simulateTestAllPass() {
+    var profiles = ((readAll().proxySwitchState || {}).profiles) || [];
+    if (profiles.length === 0) return { started: false };
+    var state = readAll().proxySwitchState;
+    if (!testAllEligible(state)) return { started: false };
+
+    var index = 0;
+    var timer = setInterval(function () {
+      if (index >= profiles.length) {
+        clearInterval(timer);
+        return;
+      }
+      var profile = profiles[index];
+      index += 1;
+      var ok = (SIMULATED_LATENCY_MS + profile.port) % 7 !== 0; // one in seven is down
+      var merged = readAll();
+      var record = merged[HEALTH_KEY] || {};
+      record[profile.id] = {
+        ok: ok,
+        at: Date.now(),
+        ms: ok ? SIMULATED_LATENCY_MS + Math.floor(Math.random() * 60) : null,
+      };
+      merged[HEALTH_KEY] = record;
+      writeAll(merged);
+      var message = {
+        type: TEST_ALL_PROGRESS_MESSAGE,
+        done: index,
+        total: profiles.length,
+        ok: ok,
+      };
+      for (var listener of Array.from(messageListeners)) {
+        try {
+          listener(message);
+        } catch (error) {
+          console.error('[preview] message listener failed', error);
+        }
+      }
+    }, SIMULATED_LATENCY_MS + 120);
+
+    return { started: true, total: profiles.length };
+  }
 
   /*
    * The "Test connection" button really calls fetch(), which a file:// preview

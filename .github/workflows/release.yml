@@ -40,5 +40,5 @@ jobs:
           files: dist/*.zip
           generate_release_notes: true
           body: |
-            Upload `proxy-switch-v${{ github.ref_name }}.zip` in the Chrome Web Store developer
+            Upload `proxy-switch-${{ github.ref_name }}.zip` in the Chrome Web Store developer
             dashboard, or load the unzipped folder via `chrome://extensions` → **Load unpacked**.

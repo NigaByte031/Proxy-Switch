@@ -1,6 +1,6 @@
 # Privacy policy
 
-**Proxy Switch collects nothing and sends nothing anywhere.**
+**Proxy Switch collects nothing: no analytics, no telemetry, no account, no identifiers.**
 
 ## What the extension stores
 
@@ -12,13 +12,34 @@ Everything lives in `chrome.storage.local` on your own device, and never in `chr
 
 ## What leaves your device
 
-Nothing. The extension has no network code, no analytics, no telemetry, no remote configuration and
-loads no remote scripts. It only:
+No settings, servers or credentials — ever. The extension ships no analytics, no telemetry, no
+remote configuration and loads no remote scripts. It only:
 
 - writes your configuration to the browser's own storage,
 - tells Chrome which proxy to use (`chrome.proxy`),
 - reads the proxy login prompt so it can answer it with the credentials you saved
-  (`chrome.webRequest.onAuthRequired`).
+  (`chrome.webRequest.onAuthRequired`),
+- shows a local system notification naming the server an automatic switch moved to, if you keep that
+  option on (`chrome.notifications`) — it carries your server name and nothing else, and is handed to
+  your operating system, not to any server,
+- and, only while the **Test connection** button or the **Test all** pass is running, sends two
+  plain requests to public online-check endpoints (`https://www.gstatic.com/generate_204` and
+  `https://cp.cloudflare.com/generate_204`) to see whether traffic really flows. They carry no
+  configuration, no identifiers and no credentials — the same kind of check a browser makes on
+  startup. A **Test all** pass asks the same pair once per saved server, one server at a time.
+
+The **background check** option (off by default) makes the same two requests on its own, one server
+at a time, so what the extension knows about each of your servers stays recent. Each check installs
+a temporary proxy configuration first — your own routing, with only those two check requests handed
+to the server being tested — so your browsing keeps the route you configured while it runs. Nothing
+about it is sent anywhere: the requests are the same plain `204` endpoints, they carry no
+configuration and no credentials, and the answer is only ever written to your own storage as
+“answered, in 42 ms”.
+
+Two other pieces of traffic are yours, not the extension's: Chrome downloads the PAC script URL
+you entered, and your browsing travels through the proxy server you configured. (A PAC script built
+from your own domain list is not downloaded at all — it is handed to Chrome as text, and no copy of
+it leaves the browser.)
 
 ## Exports
 

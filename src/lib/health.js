@@ -20,8 +20,13 @@ export const PROBE_TARGETS = [
 /** Per-target budget. Two targets means a fully dead link reports in ~12s. */
 export const PROBE_TIMEOUT_MS = 6000;
 
-/** Statuses that still prove the request reached the network. */
-const REACHABLE_STATUSES = new Set([200, 204, 301, 302, 303, 307, 308]);
+/**
+ * Only a `204` proves the route: the probe endpoints answer `204` and nothing
+ * else. Any other status means the response was fabricated on the way — a
+ * captive portal's `302` to its login page (followed by `redirect: 'follow'`
+ * into a `200`), a firewall's `200` block page — so it fails the probe.
+ */
+const REACHABLE_STATUSES = new Set([204]);
 
 /**
  * Preview/test seam: the offline preview pages run from `file://`, where a

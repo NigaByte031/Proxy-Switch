@@ -14,13 +14,17 @@ import {
   filterProfiles,
   findProfile,
   formatBypassList,
+  formatDomainList,
   formatProfileAddress,
   isValidHost,
   isValidPacUrl,
   missingRequirement,
   newId,
+  normalizeDomainRule,
   normalizeHost,
   parseBypassList,
+  parseDomainRules,
+  sanitizeDomainRules,
   parseImport,
   parseProxyUrl,
   profileSearchText,
@@ -50,6 +54,11 @@ test('createDefaultState is a valid, empty state', () => {
   assert.equal(state.settings.enabled, true);
   assert.equal(state.settings.language, 'auto');
   assert.equal(state.settings.activeProfileId, null);
+  assert.equal(state.settings.autoFailover, true);
+  assert.equal(state.settings.notifyFailover, true);
+  assert.equal(state.settings.backgroundProbe, false, 'nothing uses the network on its own by default');
+  assert.equal(state.settings.domainRouting, false);
+  assert.deepEqual(state.settings.proxyDomains, []);
   assert.deepEqual(state.settings.bypassList, DEFAULT_BYPASS_LIST);
   // defaults must survive a round trip through sanitizeState
   assert.deepEqual(sanitizeState(state), state);
@@ -147,6 +156,84 @@ test('bypass list parsing trims, drops blanks and de-duplicates', () => {
   assert.equal(formatBypassList(parsed), '<local>\nlocalhost\n*.example.com');
   assert.deepEqual(parseBypassList(''), []);
   assert.equal(formatBypassList(undefined), '');
+});
+
+test('the domain list is read the way people type it', () => {
+  const typed = [
+    'example.com',
+    '# the intranet, and every subdomain of it',
+    '*.internal.example.com',
+    '  Example.COM  ',
+    'https://pasted.example.net/some/page?q=1#frag',
+    '<local>',
+    '[::1]',
+    'host:8080',
+    'has space',
+    'user:pass@host.example',
+    '-',
+    '',
+  ].join('\n');
+
+  assert.deepEqual(parseDomainRules(typed), [
+    'example.com',
+    '*.internal.example.com',
+    'pasted.example.net',
+    '<local>',
+    '[::1]',
+  ]);
+  // a rule is a host pattern, so a pattern is never read as a URL
+  assert.equal(normalizeDomainRule('shop?.example.com'), 'shop?.example.com');
+  assert.equal(normalizeDomainRule('https://example.com/a/b'), 'example.com');
+  assert.equal(normalizeDomainRule('   '), null);
+  assert.equal(normalizeDomainRule('# only a comment'), null);
+  // de-duplication ignores case, and blank input is an empty list
+  assert.deepEqual(sanitizeDomainRules(['A.test', 'a.TEST']), ['A.test']);
+  assert.deepEqual(sanitizeDomainRules(undefined), []);
+  assert.equal(formatDomainList(['example.com', 'host:80', 'example.com']), 'example.com');
+});
+
+const routingState = (settings = {}) =>
+  sanitizeState({
+    settings: { mode: 'pac_script', domainRouting: true, proxyDomains: ['example.com'], ...settings },
+    profiles: [draft()],
+  });
+
+test('domain routing has to have both a server and something to route', () => {
+  assert.equal(missingRequirement(routingState()), null);
+  assert.equal(missingRequirement(routingState({ proxyDomains: [] })), 'domains');
+  assert.equal(
+    missingRequirement(
+      sanitizeState({ settings: { mode: 'pac_script', domainRouting: true, proxyDomains: ['x.test'] } }),
+    ),
+    'profile',
+    'the server is asked for first — without one there is nothing to route through',
+  );
+
+  // and the same state with the list switched off is an ordinary PAC mode again
+  assert.equal(missingRequirement(routingState({ domainRouting: false, pacUrl: '' })), 'pac');
+  assert.equal(
+    missingRequirement(routingState({ domainRouting: false, pacUrl: 'https://x/p.pac' })),
+    null,
+  );
+});
+
+test('the domain list survives storage, export and a broken value', () => {
+  const state = routingState();
+  assert.equal(sanitizeState(state).settings.domainRouting, true);
+  assert.deepEqual(sanitizeState(state).settings.proxyDomains, ['example.com']);
+
+  const exported = serializeState(state);
+  const imported = parseImport(JSON.stringify(exported));
+  assert.deepEqual(imported.state.settings.proxyDomains, ['example.com']);
+  assert.equal(imported.state.settings.domainRouting, true);
+
+  // hand-edited storage cannot smuggle rules that never match a host
+  const repaired = sanitizeState({
+    settings: { domainRouting: 'yes', proxyDomains: ['ok.test', 'no space', 'x:1', 'ok.test'] },
+  });
+  assert.equal(repaired.settings.domainRouting, false, 'a string is not a boolean');
+  assert.deepEqual(repaired.settings.proxyDomains, ['ok.test']);
+  assert.deepEqual(sanitizeState({ settings: { proxyDomains: 'example.com' } }).settings.proxyDomains, []);
 });
 
 test('newId is unique and findProfile tolerates unknown ids', () => {
@@ -255,9 +342,17 @@ test('sanitizeState repairs garbage instead of throwing', () => {
   assert.deepEqual(sanitizeState({ profiles: 'nope' }), createDefaultState());
 
   const state = sanitizeState({
-    settings: { mode: 'wat', enabled: 'yes', language: 'de', bypassList: [' ok ', ''] },
+    settings: { mode: 'wat', enabled: 'yes', language: 'de', bypassList: [' ok ', ''], notifyFailover: false },
     profiles: [{ host: 'example.com', port: '99999' }, { host: '' }, null],
   });
+  assert.equal(state.settings.notifyFailover, false, 'the opt-out is a boolean and survives');
+  assert.equal(sanitizeState({ settings: { notifyFailover: 'yes' } }).settings.notifyFailover, true);
+  assert.equal(sanitizeState({ settings: { backgroundProbe: true } }).settings.backgroundProbe, true);
+  assert.equal(
+    sanitizeState({ settings: { backgroundProbe: 'on' } }).settings.backgroundProbe,
+    false,
+    'only a real boolean turns the checks on',
+  );
   assert.equal(state.settings.mode, 'system');
   assert.equal(state.settings.enabled, true);
   assert.equal(state.settings.language, 'auto');

@@ -5,12 +5,29 @@
  */
 
 import { applyDocumentLang, applyStaticText, LANG_LABELS, otherLang, resolveLang, t } from './lib/i18n.js';
-import { applyTheme, nextTheme, themeIcon, themeKey, watchSystemTheme } from './lib/theme.js';
-import { loadState, subscribe, updateState } from './lib/storage.js';
-import { describeBadge, describeStatus } from './lib/proxy.js';
+import {
+  applyAccent,
+  applyTheme,
+  nextTheme,
+  themeIcon,
+  themeKey,
+  watchSystemTheme,
+} from './lib/theme.js';
+import {
+  loadServerHealth,
+  loadState,
+  loadStatus,
+  subscribe,
+  subscribeServerHealth,
+  subscribeStatus,
+  updateState,
+} from './lib/storage.js';
+import { describeApplyProblem, describeBadge, describeStatus } from './lib/proxy.js';
 import { createModeUi } from './lib/mode-ui.js';
 import { createServersUi } from './lib/servers-ui.js';
 import { createHealthUi } from './lib/health-ui.js';
+import { createTestAllUi } from './lib/test-all-ui.js';
+import { TEST_ALL_PROGRESS_MESSAGE } from './lib/server-probe.js';
 
 const el = (id) => document.getElementById(id);
 
@@ -37,6 +54,10 @@ const els = {
 };
 
 let state = null;
+/** Result of the last attempt by the service worker to apply the proxy. */
+let applyStatus = null;
+/** What the extension has seen about each server (lib/server-health.js). */
+let serverHealth = null;
 let lang = 'en';
 let transientWarning = null;
 let warningTimer = 0;
@@ -47,7 +68,12 @@ const modeUi = createModeUi({
   chipsEl: el('modeChips'),
   hintEl: el('modeHint'),
   pacPanelEl: el('pacPanel'),
+  pacUrlRowEl: el('pacUrlRow'),
   pacUrlEl: el('pacUrl'),
+  pacDomainsToggleEl: el('pacDomainsToggle'),
+  pacDomainsPanelEl: el('pacDomainsPanel'),
+  pacDomainsEl: el('pacDomains'),
+  pacDomainsSaveEl: el('pacDomainsSave'),
   pacSaveEl: el('pacSave'),
   commit,
   getLang: () => lang,
@@ -61,6 +87,18 @@ const healthUi = createHealthUi({
   buttonEl: el('testBtn'),
   resultEl: el('testResult'),
   getLang: () => lang,
+  // so a verdict can be attributed to the server the test went through
+  getState: () => state,
+});
+
+// The pass itself runs in the service worker (only the worker may touch
+// chrome.proxy); this is the narration: progress while it runs, counts at the
+// end, under the list the verdicts are appearing on.
+const testAllUi = createTestAllUi({
+  buttonEl: el('testAllBtn'),
+  resultEl: el('testAllResult'),
+  getLang: () => lang,
+  getState: () => state,
 });
 
 const serversUi = createServersUi({
@@ -75,6 +113,9 @@ const serversUi = createServersUi({
   getState: () => state,
   getLang: () => lang,
   commit,
+  // The rows say which servers the extension believes are working, so the same
+  // list the worker orders the chain by is visible here.
+  getHealth: () => serverHealth,
 });
 
 function flashWarning(message) {
@@ -115,13 +156,27 @@ function render() {
   els.themeBtn.title = `${t('theme.switch', lang)} · ${t(themeKey(state.settings.theme), lang)}`;
   els.themeBtn.setAttribute('aria-label', els.themeBtn.title);
 
-  // The theme is written onto <html>, where src/styles/base.css picks it up.
+  // The theme and the brand hue are written onto <html>, where src/styles/base.css
+  // picks the two palettes up. The popup has no picker of its own: a popup is
+  // the wrong place to choose a colour, so it only wears what the settings page
+  // saved.
   applyTheme(state.settings.theme);
+  applyAccent(state.settings.accent);
 
-  // The pill repeats what the toolbar badge shows, so the popup explains the icon.
-  const badge = describeBadge(state);
+  // A proxy that is not really in force outranks the mode: pill, card and warning
+  // line all say what the toolbar badge says instead of contradicting it.
+  const problem = describeApplyProblem(applyStatus);
+  const problemText = problem
+    ? `${t(problem.title.key, lang, problem.title.params)} — ${t(
+        problem.detail.key,
+        lang,
+        problem.detail.params,
+      )}`
+    : null;
+  const badge = describeBadge(state, problem);
   els.statePill.textContent = badge.text;
   els.statePill.dataset.tone = badge.tone;
+  els.statePill.title = problemText ?? '';
 
   els.footerMeta.textContent = version
     ? `${t('popup.shortcuts', lang)} · v${version}`
@@ -135,11 +190,14 @@ function render() {
   // The card wears the colour of the active mode (emerald for a server, indigo
   // for PAC, slate for the system proxy) and turns amber when something is
   // missing, so the popup can be read at a glance.
-  els.statusCard.dataset.tone = status.tone === 'warn' ? 'warn' : badge.tone;
+  els.statusCard.dataset.tone = problem || status.tone === 'warn' ? 'warn' : badge.tone;
   els.masterToggle.checked = state.settings.enabled;
 
-  els.warning.textContent = transientWarning ?? '';
-  els.warning.classList.toggle('hidden', !transientWarning);
+  // A short-lived message ("that PAC URL is not valid") takes the line for a few
+  // seconds; the apply problem stays until it is fixed.
+  const warning = transientWarning ?? problemText;
+  els.warning.textContent = warning ?? '';
+  els.warning.classList.toggle('hidden', !warning);
 
   const count = state.settings.bypassList.length;
   els.bypassInfo.textContent = count
@@ -149,6 +207,7 @@ function render() {
   modeUi.render(state, lang);
   serversUi.render(state, lang);
   healthUi.render(lang);
+  testAllUi.render(lang);
 }
 
 function wire() {
@@ -195,12 +254,35 @@ function wire() {
 
 async function init() {
   state = await loadState();
+  applyStatus = await loadStatus();
+  serverHealth = await loadServerHealth();
   wire();
   render();
   subscribe((next) => {
     state = next;
     render();
   });
+  // A background check or the test button can add a verdict while the popup is
+  // open; the list is the place it shows up.
+  subscribeServerHealth((next) => {
+    serverHealth = next;
+    render();
+  });
+  // The service worker writes this after every apply attempt, including the ones
+  // that happen while the popup is already open.
+  subscribeStatus((next) => {
+    applyStatus = next;
+    render();
+  });
+
+  // The test-all pass announces each verdict as it is recorded; this page only
+  // narrates (the verdict itself reaches the rows through the health record).
+  if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage?.addListener) {
+    chrome.runtime.onMessage.addListener((message) => {
+      if (message?.type !== TEST_ALL_PROGRESS_MESSAGE) return;
+      testAllUi.handleProgress(message);
+    });
+  }
 
   // A popup can stay open for a while; an "auto" theme keeps following the OS.
   watchSystemTheme(() => {
