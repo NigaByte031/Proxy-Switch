@@ -84,8 +84,8 @@
 ### از روی سورس
 
 ```bash
-git clone https://github.com/mohammadyazdani031/ProxyControler.git
-cd ProxyControler
+git clone https://github.com/NigaByte031/Proxy-Switch.git
+cd Proxy-Switch
 ```
 
 سپس همین پوشهٔ مخزن را با **Load unpacked** بارگذاری کنید؛ منیفست به `src/` اشاره میکند و

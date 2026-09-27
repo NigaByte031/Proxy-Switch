@@ -1,8 +1,8 @@
 blank_issues_enabled: true
 contact_links:
   - name: Installation and usage questions
-    url: https://github.com/mohammadyazdani031/ProxyControler#install
+    url: https://github.com/NigaByte031/Proxy-Switch#install
     about: The README covers installing, the four proxy modes and the offline preview pages.
   - name: Privacy
-    url: https://github.com/mohammadyazdani031/ProxyControler/blob/main/PRIVACY.md
+    url: https://github.com/NigaByte031/Proxy-Switch/blob/main/PRIVACY.md
     about: What the extension stores, what it never sends anywhere, and how to erase your data.

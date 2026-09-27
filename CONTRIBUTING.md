@@ -5,7 +5,7 @@ Thanks for taking a look! This is a small project, so the rules are short.
 ## Getting started
 
 ```bash
-git clone https://github.com/mohammadyazdani031/ProxyControler.git
+git clone https://github.com/NigaByte031/Proxy-Switch.git
 cd proxy-switch
 npm test              # unit tests (Node 20+, no install step, no dependencies)
 npm run preview       # regenerate src/__preview_*.html after editing a page

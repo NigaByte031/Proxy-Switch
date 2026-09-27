@@ -3,7 +3,7 @@
   "name": "Proxy Switch",
   "version": "1.4.0",
   "description": "Switch Chrome between system, direct, manual HTTP/SOCKS and PAC proxies in one click. English and Persian UI, works offline.",
-  "homepage_url": "https://github.com/mohammadyazdani031/ProxyControler",
+  "homepage_url": "https://github.com/NigaByte031/Proxy-Switch",
   "minimum_chrome_version": "116",
   "icons": {
     "16": "icons/icon16.png",

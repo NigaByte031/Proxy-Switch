@@ -84,8 +84,8 @@ bilingual — English and Persian (فارسی) with full RTL support — and eve
 ### From source
 
 ```bash
-git clone https://github.com/mohammadyazdani031/ProxyControler.git
-cd ProxyControler
+git clone https://github.com/NigaByte031/Proxy-Switch.git
+cd Proxy-Switch
 npm run package     # writes dist/proxy-switch-v1.4.0.zip (optional)
 ```
 
