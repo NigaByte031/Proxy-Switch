@@ -40,5 +40,13 @@ jobs:
           files: dist/*.zip
           generate_release_notes: true
           body: |
-            Upload `proxy-switch-${{ github.ref_name }}.zip` in the Chrome Web Store developer
-            dashboard, or load the unzipped folder via `chrome://extensions` → **Load unpacked**.
+            **Download `proxy-switch-${{ github.ref_name }}.zip`**, unzip it, then open
+            `chrome://extensions`, turn on **Developer mode** and click **Load unpacked**. Requires
+            Chrome 116 or newer; the extension works offline, keeps everything on the device and
+            sends nothing anywhere.
+
+            The same archive is what the Chrome Web Store developer dashboard wants, so it can also
+            be uploaded there as-is.
+
+            Everything in this version is written up in
+            [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md).
