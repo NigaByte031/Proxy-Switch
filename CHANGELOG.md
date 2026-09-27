@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+
+- **`SECURITY.md`** — how to report a vulnerability privately, what counts as one here (a route that
+  leaks direct, credentials that answer for the wrong server, state that outlives *Delete
+  everything*) and what does not. Private vulnerability reporting, secret scanning and push
+  protection are switched on for the repository, so a token pushed by mistake is blocked before it
+  lands.
+
 ### Fixed
 
 - **CI failed on every push.** `node --test "tests/**/*.test.mjs"` leans on Node's own glob

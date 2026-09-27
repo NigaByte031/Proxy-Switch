@@ -47,4 +47,6 @@ it stays deliberate.
 Include your Chrome version, the proxy mode you were in, and what you expected to happen. If the
 popup shows a warning or the badge shows `ERR`, mention it — that narrows things down quickly.
 
-For security or privacy questions, see [PRIVACY.md](PRIVACY.md).
+For security reports, see [SECURITY.md](SECURITY.md) — they go through the private advisory form,
+not the issue tracker. For what the extension stores and when it talks to the network, see
+[PRIVACY.md](PRIVACY.md).

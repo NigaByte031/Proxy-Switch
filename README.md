@@ -234,6 +234,12 @@ Design decisions worth knowing:
 - Import from common formats (`SwitchyOmega` backups).
 - Firefox build (WebExtensions `browser.proxy` has the same shape).
 
+## Security
+
+Vulnerabilities go through the Security tab rather than the issue tracker — [SECURITY.md](SECURITY.md)
+says what counts as one here (a route that leaks direct, credentials that answer for the wrong
+server, state that outlives *Delete everything*) and what does not.
+
 ## License
 
 [MIT](LICENSE)
