@@ -4,6 +4,20 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- **CI failed on every push.** `node --test "tests/**/*.test.mjs"` leans on Node's own glob
+  expansion for `--test`, which arrived in Node 21: Node 20 received the pattern as a literal path,
+  stopped with `Could not find .../tests/**/*.test.mjs` before running a single test, and took the
+  release job down with it — so the *Run the unit tests* step was red on every commit while the
+  same suite passed locally and on the Node 22 half of the matrix. Node 20 is past end of life, so
+  the baseline is Node 22: the CI matrix now tests 22 and 24, the release job runs on 22, and
+  `engines.node` asks for `>=22`. The glob stays explicit on purpose — `node --test` with no
+  arguments discovers files by name and would pick up `src/lib/test-all-ui.js`, which is extension
+  source, not a test.
+
 ## [1.4.0] — 2026-09-26
 
 ### Added
