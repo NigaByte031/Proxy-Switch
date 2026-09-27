@@ -60,6 +60,15 @@ bilingual — English and Persian (فارسی) with full RTL support — and eve
   verdict and how long ago it was taken (`answered in 42 ms · 3 min ago`, `no answer · 12 min ago`),
   with a coloured dot for the tone. A server nobody has looked at says nothing, and a verdict too
   old to order the chain is dimmed rather than dropped, so the list and the chain agree.
+- **Traffic meter** — the popup shows how much has gone down and up today, and the settings page the
+  same for today and in total, with a reset button. Chrome tells an extension nothing about the size
+  of a request, so the meter adds up what each one *declares* before its bytes move: the
+  `Content-Length` of the request and of its response. That makes the figures a floor rather than a
+  bill — a streamed video, an event stream or a chunked page declares nothing and is not counted,
+  and a response Chrome answers out of its own cache is not counted at all — and the settings page
+  says so next to the numbers. Counting happens on your device, only while the proxy is on, and the
+  counters live in their own storage key, so an exported settings file never carries them. *Count
+  traffic* on the settings page turns it off.
 - **Keyboard shortcuts** — `Alt+Shift+P` turns the proxy on or off, `Alt+Shift+D` goes direct.
 - **Bilingual UI** — switch language from the popup; Persian is rendered RTL.
 - **Theme** — automatic (follows your operating system), light or dark. Set it on the settings
@@ -148,7 +157,7 @@ rebind both on `chrome://extensions/shortcuts`.
 | --- | --- |
 | `proxy` | Change the browser's proxy configuration — the entire point of the extension. |
 | `storage` | Keep your servers, credentials and settings in `chrome.storage.local`. |
-| `webRequest` + `webRequestAuthProvider` | Answer proxy `407` challenges with the saved credentials of the active server (Manifest V3 supports blocking listeners for `onAuthRequired` only). |
+| `webRequest` + `webRequestAuthProvider` | Answer proxy `407` challenges with the saved credentials of the active server (Manifest V3 supports blocking listeners for `onAuthRequired` only), and read the size each request and response declares for the traffic meter. Observation only — no request is ever modified. |
 | `contextMenus` | The right-click menu on the toolbar icon. |
 | `notifications` | The system notification that names the server an automatic switch moved to. |
 | `alarms` | The timer behind the periodic background check — set only while that option is on. |

@@ -1,17 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { STORAGE_KEY, createDefaultState, sanitizeState } from '../src/lib/model.js';
+import { STORAGE_KEY, createDefaultState, sanitizeState, serializeState } from '../src/lib/model.js';
 import { createFailoverRecord, noteProxyError, planFailover } from '../src/lib/failover.js';
 import {
   FAILOVER_KEY,
   SERVER_HEALTH_KEY,
   STATUS_KEY,
+  TRAFFIC_KEY,
   ensureState,
   loadFailover,
   loadServerHealth,
   loadState,
   loadStatus,
+  loadTraffic,
   sameApplyStatus,
   sanitizeApplyStatus,
   saveState,
@@ -19,11 +21,14 @@ import {
   subscribe,
   subscribeServerHealth,
   subscribeStatus,
+  subscribeTraffic,
   updateFailover,
   updateServerHealth,
   updateState,
+  updateTraffic,
 } from '../src/lib/storage.js';
 import { noteServerHealth } from '../src/lib/server-health.js';
+import { createTraffic, noteTraffic, resetTraffic } from '../src/lib/traffic.js';
 
 /**
  * `chrome.storage.local` in memory, so the module's promise wrappers (and the
@@ -310,6 +315,80 @@ test('the health record has its own key, its own queue and its own subscribers',
     a: { ok: true, at: 1000, ms: 90 },
     b: { ok: false, at: 2000, ms: null },
   });
+});
+
+test('the traffic counters are read back cleaned, and written once per batch', async () => {
+  const { writes } = fakeChrome();
+  const stamp = new Date(2026, 8, 27, 12).getTime();
+
+  const stored = await updateTraffic((draft) => noteTraffic(draft, { up: 300, down: 900, at: stamp }));
+  assert.equal(stored.up, 300);
+  assert.equal(stored.down, 900);
+  assert.equal(stored.upTotal, 300);
+  assert.equal(stored.since, stamp);
+  assert.deepEqual(await loadTraffic(), stored, 'the write must not alias the returned object');
+
+  await updateTraffic((draft) => noteTraffic(draft, { up: 100, at: stamp + 1 }));
+  assert.equal(writes.length, 2, 'one write per batch');
+  assert.equal((await loadTraffic()).upTotal, 400);
+
+  // A batch that would change nothing is not a write at all.
+  await updateTraffic(() => {});
+  assert.equal(writes.length, 2);
+});
+
+test('the counters are memory, not configuration', async () => {
+  fakeChrome();
+  await saveState(createDefaultState());
+  await updateTraffic((draft) => noteTraffic(draft, { up: 1, down: 2, at: 1000 }));
+
+  // A backup carries what the user configured — never a byte count, and never a
+  // counter that a restore could bring back from somebody else's machine.
+  const exported = JSON.stringify(serializeState(await loadState()));
+  assert.ok(!exported.includes('upTotal'), 'the export must not carry the counters');
+  assert.ok(!exported.includes('proxySwitchTraffic'));
+
+  await updateState((draft) => {
+    draft.settings.trafficMeter = false;
+  });
+  assert.equal((await loadTraffic()).down, 2, 'a settings write leaves the counters alone');
+});
+
+test('traffic subscriptions fire for the counter key only', async () => {
+  fakeChrome();
+  await saveState(createDefaultState());
+
+  const seen = [];
+  const stop = subscribeTraffic((next) => seen.push(next));
+
+  await updateState((draft) => {
+    draft.settings.theme = 'dark';
+  });
+  assert.equal(seen.length, 0, 'a settings change is not a counter');
+
+  await updateTraffic((draft) => noteTraffic(draft, { up: 200, down: 400, at: 5000 }));
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0].down, 400);
+
+  // The settings page resets through the same key, so both pages see it happen.
+  await updateTraffic((draft) => resetTraffic(draft, 6000));
+  assert.equal(seen.length, 2);
+  assert.equal(seen[1].down, 0);
+  stop();
+});
+
+test('the counters degrade to an empty record outside the extension', async () => {
+  const previous = globalThis.chrome;
+  globalThis.chrome = undefined;
+  try {
+    assert.deepEqual(await loadTraffic(), createTraffic());
+    const record = await updateTraffic((draft) => noteTraffic(draft, { down: 10, at: 4242 }));
+    assert.equal(record.down, 10);
+    assert.equal(record.downTotal, 10);
+    assert.equal(record.at, 4242);
+  } finally {
+    globalThis.chrome = previous;
+  }
 });
 
 test('the failover record degrades to defaults outside the extension', async () => {

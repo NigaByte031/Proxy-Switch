@@ -1050,6 +1050,88 @@ label {
 }
 
 /* ---------------------------------------------------------------- *
+ * Traffic meter
+ *
+ * A reading, not a control: the figures stay in the text colour under the
+ * status line instead of borrowing the accent, which belongs to the mode.
+ * The digits are tabular so a number that grows does not drag the row with it.
+ * ---------------------------------------------------------------- */
+
+.traffic-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-block-start: 10px;
+  padding-block-start: 9px;
+  border-block-start: 1px dashed var(--border);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.traffic-metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text);
+}
+
+.traffic-arrow {
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1;
+}
+
+.traffic-value {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* The window the figures belong to trails them: it names the numbers rather
+   than competing with them. */
+.traffic-when {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.traffic-row .traffic-when {
+  margin-inline-start: auto;
+}
+
+/* The settings page says the same thing as two labelled lines, because it has
+   the room to name each direction in words. */
+.traffic-readout {
+  display: grid;
+  gap: 5px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.traffic-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12.5px;
+}
+
+.traffic-line .traffic-when {
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.traffic-values {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  unicode-bidi: plaintext;
+}
+
+/* ---------------------------------------------------------------- *
  * Server search
  *
  * Revealed by servers-ui.js once the list is long enough to need it, so the

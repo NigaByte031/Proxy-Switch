@@ -109,6 +109,21 @@ export const MESSAGES = {
       'Servers cannot be tested in the current mode — switch to Manual or domain routing first.',
     'health.testAll.empty': 'There is no server to test.',
 
+    'traffic.title': 'Traffic',
+    'traffic.today': 'Today',
+    'traffic.total': 'Total',
+    'traffic.down': 'Downloaded {value}',
+    'traffic.up': 'Uploaded {value}',
+    'traffic.totalTitle': 'Counted so far: ↓ {down} · ↑ {up}',
+    'traffic.note':
+      'Counted from the size each request and response declares before its bytes move, so it is a floor rather than a bill: a streamed video, an event stream or a chunked page declares nothing and is not counted, and a response Chrome answers out of its own cache is not counted at all. Only traffic while the proxy is on is counted.',
+    'traffic.enable': 'Count traffic',
+    'traffic.enableHint':
+      'The counting happens here, on this device: nothing is sent anywhere, and the counters are not part of an exported settings file. Switching it off stops the counting — the numbers already there stay until you reset them.',
+    'traffic.reset': 'Reset counters',
+    'traffic.confirmReset': 'Reset the traffic counters to zero?',
+    'traffic.resetDone': 'Counters reset.',
+
     'profiles.title': 'Servers',
     'profiles.add': 'Add server',
     'profiles.new': 'New server',
@@ -214,7 +229,7 @@ export const MESSAGES = {
     'options.perm.proxy': 'proxy — change the browser proxy settings',
     'options.perm.storage': 'storage — keep servers and settings on this device',
     'options.perm.webRequest':
-      'webRequest — answer proxy authentication prompts with your saved credentials',
+      'webRequest — answer proxy authentication prompts with your saved credentials, and measure traffic sizes for the meter',
     'options.perm.notifications':
       'notifications — show a system notification when the extension switches servers by itself',
     'options.perm.alarms':
@@ -309,6 +324,21 @@ export const MESSAGES = {
     'health.testAll.notEligible':
       'در حالت فعلی امکان آزمایش سرورها نیست — اول حالت دستی یا مسیردهی دامنه‌ها را انتخاب کنید.',
     'health.testAll.empty': 'سروری برای آزمایش وجود ندارد.',
+
+    'traffic.title': 'ترافیک',
+    'traffic.today': 'امروز',
+    'traffic.total': 'مجموع',
+    'traffic.down': 'دانلود {value}',
+    'traffic.up': 'آپلود {value}',
+    'traffic.totalTitle': 'آنچه تا اینجا شمرده شده: ↓ {down} · ↑ {up}',
+    'traffic.note':
+      'از روی اندازهٔ اعلام‌شدهٔ هر درخواست و پاسخ شمرده می‌شود، پیش از آنکه بایت‌هایش جابه‌جا شوند؛ پس عددها یک کف هستند و نه صورت‌حساب: ویدئوی استریم، جریان رویداد و صفحهٔ تکه‌تکه‌ای (chunked) چیزی اعلام نمی‌کنند و شمرده نمی‌شوند، و پاسخی که کروم از کش خودش می‌دهد به‌کل شمرده نمی‌شود. فقط ترافیک زمانِ روشن‌بودن پروکسی شمرده می‌شود.',
+    'traffic.enable': 'شمارش ترافیک',
+    'traffic.enableHint':
+      'شمارش همین‌جا و روی همین دستگاه انجام می‌شود: چیزی به جایی فرستاده نمی‌شود و این شمارنده‌ها در فایل پشتیبان تنظیمات نمی‌آیند. خاموش‌کردنش شمارش را متوقف می‌کند — عددهای موجود تا وقتی خودتان صفرشان نکنید می‌مانند.',
+    'traffic.reset': 'صفر کردن شمارنده‌ها',
+    'traffic.confirmReset': 'شمارنده‌های ترافیک صفر شوند؟',
+    'traffic.resetDone': 'شمارنده‌ها صفر شدند.',
 
     'profiles.title': 'سرورها',
     'profiles.add': 'افزودن سرور',
@@ -413,7 +443,8 @@ export const MESSAGES = {
     'options.permissions': 'این افزونه فقط به چیزهایی نیاز دارد که لازم دارد:',
     'options.perm.proxy': 'proxy — تغییر تنظیمات پروکسی مرورگر',
     'options.perm.storage': 'storage — نگهداشتن سرورها و تنظیمات روی همین دستگاه',
-    'options.perm.webRequest': 'webRequest — پاسخ به درخواست احراز هویت پروکسی با اطلاعات ذخیرهشده',
+    'options.perm.webRequest':
+      'webRequest — پاسخ به درخواست احراز هویت پروکسی با اطلاعات ذخیره‌شده، و اندازه‌گیری اندازهٔ ترافیک برای شمارنده',
     'options.perm.notifications':
       'notifications — نمایش اعلان سیستمی وقتی افزونه خودش سرور را عوض می‌کند',
     'options.perm.alarms':

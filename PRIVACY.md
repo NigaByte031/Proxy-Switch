@@ -8,7 +8,10 @@ Everything lives in `chrome.storage.local` on your own device, and never in `chr
 
 - the modes, PAC URL and bypass list you configure,
 - the servers you add (name, scheme, host, port),
-- the proxy username and password you optionally type in.
+- the proxy username and password you optionally type in,
+- the traffic counters: two byte counts per direction (today and since the last reset) and the day
+  they belong to. Nothing else about your traffic is written down — not a URL, not a host, not a
+  page, not a time.
 
 ## What leaves your device
 
@@ -19,6 +22,8 @@ remote configuration and loads no remote scripts. It only:
 - tells Chrome which proxy to use (`chrome.proxy`),
 - reads the proxy login prompt so it can answer it with the credentials you saved
   (`chrome.webRequest.onAuthRequired`),
+- reads how large the browser says a request and its response are, so the popup can show how much
+  has gone down and up today (`chrome.webRequest` observers, see the **Traffic meter** below),
 - shows a local system notification naming the server an automatic switch moved to, if you keep that
   option on (`chrome.notifications`) — it carries your server name and nothing else, and is handed to
   your operating system, not to any server,
@@ -35,6 +40,17 @@ to the server being tested — so your browsing keeps the route you configured w
 about it is sent anywhere: the requests are the same plain `204` endpoints, they carry no
 configuration and no credentials, and the answer is only ever written to your own storage as
 “answered, in 42 ms”.
+
+## The traffic meter
+
+The **traffic meter** keeps two numbers per direction — what has gone down and up today, and in
+total since you last reset them. The extension never knows what those bytes *were*: it reads the
+size a request and its response declare, discards everything else about them (the URL the moment it
+has been checked against the extension's own probe endpoints), and adds that size to a counter in
+`chrome.storage.local`. No host, no page, no history and no per-site breakdown is stored, and no
+part of it is ever sent anywhere. The counters are deliberately kept out of an exported settings
+file, and uninstalling the extension removes them with everything else. *Count traffic* on the
+settings page switches the whole thing off.
 
 Two other pieces of traffic are yours, not the extension's: Chrome downloads the PAC script URL
 you entered, and your browsing travels through the proxy server you configured. (A PAC script built

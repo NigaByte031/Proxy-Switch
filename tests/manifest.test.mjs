@@ -149,6 +149,49 @@ test('the switch notification is answered in the worker, not in a page', () => {
   assert.match(worker, /openOptionsPage\(/, 'Chrome without action.openPopup still has a fallback');
 });
 
+test('the traffic meter counts in the worker, and asks for nothing new', () => {
+  const worker = read('src/background.js');
+  // the sizes come from observers — this extension never modifies a request
+  assert.match(worker, /onBeforeSendHeaders\.addListener/);
+  assert.match(worker, /onCompleted\.addListener/);
+  assert.match(worker, /\['requestHeaders'\]/, 'without extraInfoSpec there are no headers to read');
+  assert.match(worker, /\['responseHeaders'\]/);
+  // the bytes are batched, and the extension's own probes are not your traffic
+  assert.match(worker, /TRAFFIC_FLUSH_MS/);
+  assert.match(worker, /updateTraffic\(\(draft\) => noteTraffic/);
+  assert.match(worker, /if \(!meterOn \|\| isProbeUrl\(details\?\.url\)\) return;/);
+  // …and the setting is honoured, which only the worker knows about
+  assert.match(worker, /meterOn = meterRuns\(state\)/);
+
+  // a page may show the counters and reset them, but never read a request
+  for (const page of ['src/popup.js', 'src/options.js']) {
+    assert.ok(!read(page).includes('webRequest'), `${page} must not observe requests`);
+  }
+
+  // the permission was already there: the meter adds no new warning
+  assert.ok(manifest.permissions.includes('webRequest'));
+  assert.equal(manifest.permissions.includes('webRequestBlocking'), false);
+});
+
+test('the settings page owns the meter switch and the counters', () => {
+  const html = read('src/options.html');
+  assert.match(html, /id="trafficToggle"/);
+  assert.match(html, /data-i18n="traffic.enable"/);
+  assert.match(html, /id="trafficToday"/);
+  assert.match(html, /id="trafficTotal"/);
+  assert.match(html, /id="trafficReset"/);
+  assert.ok(
+    read('src/options.js').includes('draft.settings.trafficMeter'),
+    'the switch has to write the setting the worker reads',
+  );
+
+  // the popup shows today's figures, and says what it is really showing
+  const popup = read('src/popup.html');
+  assert.match(popup, /id="trafficRow"/);
+  assert.match(popup, /id="trafficDown"/);
+  assert.match(popup, /id="trafficUp"/);
+});
+
 test('the keyboard shortcuts are declared in a Chrome-valid shape', () => {
   const commands = manifest.commands;
   assert.ok(commands, 'the commands block is missing');

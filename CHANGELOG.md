@@ -6,7 +6,32 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [1.5.0] — 2026-09-27
+
 ### Added
+
+- **Traffic meter.** The popup shows how much has gone down and up today, and the settings page the
+  same for today and in total, with a reset button and a switch (*Count traffic*, on by default).
+  Chrome hands an extension no byte counts — a `webRequest` observer sees that a request happened,
+  not how large it was — so `src/lib/traffic.js` adds up what each request and response *declares*
+  before its bytes move: the `Content-Length` of the request (`onBeforeSendHeaders`) and of the
+  response (`onCompleted`). The numbers are therefore a floor and not a bill — a streamed video, an
+  event stream or a chunked page declares nothing and is not counted, and a response Chrome answers
+  out of its own cache is not counted at all — and the settings page says exactly that next to the
+  figures instead of implying a precision the API cannot give.
+- Counting runs in the service worker, which is the only context that may see a request: bytes are
+  batched and written every few seconds rather than per event (one page load is hundreds of events,
+  and one storage write per event would be both slower and noisier than the number is worth), the
+  extension's own probes are excluded so a background check never shows up as your traffic, and only
+  traffic while the proxy is on is counted — `direct` is the one mode where nothing is being
+  routed, so `meterRuns()` refuses it. The counters live in their own key, `proxySwitchTraffic`,
+  beside the failover record and the server verdicts: memory rather than configuration, never
+  written into an exported settings file, and reset without touching anything the user configured.
+- The permission the meter needs was already granted: `webRequest` is an observer here (`responseHeaders`
+  and `requestHeaders` in `extraInfoSpec`), so no new warning, no new permission and no request is
+  ever modified. `PRIVACY.md` says plainly what is and is not written down.
 
 - **`SECURITY.md`** — how to report a vulnerability privately, what counts as one here (a route that
   leaks direct, credentials that answer for the wrong server, state that outlives *Delete
@@ -216,6 +241,7 @@ so an existing configuration is untouched.
   touch `chrome.proxy` themselves. The offline preview answers a retry with a healthy status, so the
   whole path can be clicked through without installing anything.
 
+[1.5.0]: ../../releases/tag/v1.5.0
 [1.4.0]: ../../releases/tag/v1.4.0
 [1.3.0]: ../../releases/tag/v1.3.0
 

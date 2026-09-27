@@ -10,7 +10,7 @@
 (function installChromeStub() {
   if (globalThis.chrome?.storage) return; // a real extension context: do nothing
 
-  var VERSION = '1.4.0'; // kept in sync with manifest.json by tests/manifest.test.mjs
+  var VERSION = '1.5.0'; // kept in sync with manifest.json by tests/manifest.test.mjs
   var DATA_KEY = 'proxySwitch.preview.data';
   var PROXY_KEY = 'proxySwitch.preview.proxy';
 

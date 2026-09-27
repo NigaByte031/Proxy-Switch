@@ -17,13 +17,16 @@ import {
   loadServerHealth,
   loadState,
   loadStatus,
+  loadTraffic,
   subscribe,
   subscribeServerHealth,
   subscribeStatus,
+  subscribeTraffic,
   updateState,
 } from './lib/storage.js';
 import { describeApplyProblem, describeBadge, describeStatus } from './lib/proxy.js';
 import { createModeUi } from './lib/mode-ui.js';
+import { createTraffic, describeTraffic } from './lib/traffic.js';
 import { createServersUi } from './lib/servers-ui.js';
 import { createHealthUi } from './lib/health-ui.js';
 import { createTestAllUi } from './lib/test-all-ui.js';
@@ -49,6 +52,11 @@ const els = {
   warning: el('warning'),
   testBtn: el('testBtn'),
   testResult: el('testResult'),
+  trafficRow: el('trafficRow'),
+  trafficDown: el('trafficDown'),
+  trafficUp: el('trafficUp'),
+  trafficDownMetric: el('trafficDownMetric'),
+  trafficUpMetric: el('trafficUpMetric'),
   bypassInfo: el('bypassInfo'),
   editBypass: el('editBypass'),
 };
@@ -58,6 +66,8 @@ let state = null;
 let applyStatus = null;
 /** What the extension has seen about each server (lib/server-health.js). */
 let serverHealth = null;
+/** What the meter has counted (lib/traffic.js). */
+let traffic = null;
 let lang = 'en';
 let transientWarning = null;
 let warningTimer = 0;
@@ -204,6 +214,25 @@ function render() {
     ? t('field.bypassSummary', lang, { count })
     : t('field.bypassNone', lang);
 
+  // The meter is the one thing in the popup that moves while it is open. The
+  // row is hidden when counting is off, so the popup never shows a number that
+  // is not being kept up to date; each figure is labelled with its direction,
+  // because the arrows next to them are decoration.
+  const meterOn = state.settings.trafficMeter === true;
+  els.trafficRow.classList.toggle('hidden', !meterOn);
+  if (meterOn) {
+    const reading = describeTraffic(traffic ?? createTraffic());
+    setText(els.trafficDown, reading.down);
+    setText(els.trafficUp, reading.up);
+    els.trafficDownMetric.setAttribute('aria-label', t('traffic.down', lang, { value: reading.down }));
+    els.trafficUpMetric.setAttribute('aria-label', t('traffic.up', lang, { value: reading.up }));
+    // The totals, which do not fit on one popup row, are a hover away.
+    els.trafficRow.title = t('traffic.totalTitle', lang, {
+      down: reading.totalDown,
+      up: reading.totalUp,
+    });
+  }
+
   modeUi.render(state, lang);
   serversUi.render(state, lang);
   healthUi.render(lang);
@@ -256,6 +285,7 @@ async function init() {
   state = await loadState();
   applyStatus = await loadStatus();
   serverHealth = await loadServerHealth();
+  traffic = await loadTraffic();
   wire();
   render();
   subscribe((next) => {
@@ -272,6 +302,13 @@ async function init() {
   // that happen while the popup is already open.
   subscribeStatus((next) => {
     applyStatus = next;
+    render();
+  });
+
+  // The meter writes in batches while pages load under this popup, so the
+  // figures follow along on their own.
+  subscribeTraffic((next) => {
+    traffic = next;
     render();
   });
 

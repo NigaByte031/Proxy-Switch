@@ -43,6 +43,21 @@
         <button id="testBtn" class="ghost-btn" type="button" data-i18n="health.action">Test connection</button>
         <p id="testResult" class="health-result hidden" role="status" aria-live="polite"></p>
       </div>
+      <!-- The meter (lib/traffic.js, counted in background.js): what has gone
+           down and up today. It moves on its own, so it is read rather than
+           announced — no live region here, and each figure carries its own
+           label for a screen reader. -->
+      <div id="trafficRow" class="traffic-row">
+        <span id="trafficDownMetric" class="traffic-metric">
+          <span class="traffic-arrow" aria-hidden="true">↓</span>
+          <span id="trafficDown" class="traffic-value">0 B</span>
+        </span>
+        <span id="trafficUpMetric" class="traffic-metric">
+          <span class="traffic-arrow" aria-hidden="true">↑</span>
+          <span id="trafficUp" class="traffic-value">0 B</span>
+        </span>
+        <span class="traffic-when" data-i18n="traffic.today"></span>
+      </div>
       <!-- role=alert: a warning about the proxy not being applied is worth interrupting for. -->
       <p id="warning" class="warning hidden" role="alert"></p>
     </section>

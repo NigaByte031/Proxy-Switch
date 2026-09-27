@@ -24,6 +24,7 @@ import {
   updateFailover,
   updateServerHealth,
   updateState,
+  updateTraffic,
 } from './lib/storage.js';
 import {
   REAPPLY_MESSAGE,
@@ -61,6 +62,7 @@ import {
   testAllEligible,
 } from './lib/server-probe.js';
 import { PROBE_TARGETS, probe, probeHost } from './lib/health.js';
+import { meterRuns, noteTraffic, requestBytes, responseBytes } from './lib/traffic.js';
 import { resolveAuthCredentials } from './lib/auth.js';
 import { resolveLang, t } from './lib/i18n.js';
 
@@ -83,6 +85,10 @@ async function runSync() {
   // The generated PAC chain is ordered by the last verdicts about each server,
   // so "apply everything" means reading those too.
   const health = await loadServerHealth();
+  // Whether the meter may count is a fact about the state, and the meter itself
+  // runs on every request — so the answer is cached here rather than read back
+  // out of storage per event.
+  meterOn = meterRuns(state);
 
   let outcome = null;
   let failed = null;
@@ -518,6 +524,98 @@ async function checkServers() {
     await sync();
   }
 }
+
+/* ------------------------------------------------------------------ *
+ * Traffic meter
+ * ------------------------------------------------------------------ */
+
+/**
+ * Counts what the browser declares about a request and its response. Chrome
+ * gives an extension no byte counts of its own (see `lib/traffic.js`), so this
+ * adds up declared body sizes — and writes them in batches, because a single
+ * page load is hundreds of events and one storage write per event would be both
+ * slower and noisier than the number is worth.
+ *
+ * The listeners may not be a second writer of anything: the counters live in
+ * their own key, and no state, no verdict and no applied configuration is
+ * touched from here.
+ */
+
+/** How long a batch may grow before it is written (the worker may die any time). */
+const TRAFFIC_FLUSH_MS = 5000;
+
+/** Whether the meter may count at all — kept current by `runSync()`. */
+let meterOn = false;
+/** The bytes seen since the last write, and the timer that will write them. */
+let pendingUp = 0;
+let pendingDown = 0;
+let flushTimer = 0;
+
+/**
+ * Writes the batch that has piled up. The bytes are taken out of the counters
+ * *before* the write, so a failed write loses that batch rather than counting it
+ * twice on the next flush.
+ */
+async function flushTraffic() {
+  if (flushTimer) {
+    clearTimeout(flushTimer);
+    flushTimer = 0;
+  }
+  if (pendingUp <= 0 && pendingDown <= 0) return;
+
+  const up = pendingUp;
+  const down = pendingDown;
+  pendingUp = 0;
+  pendingDown = 0;
+
+  try {
+    await updateTraffic((draft) => noteTraffic(draft, { up, down, at: Date.now() }));
+  } catch (error) {
+    console.warn('[proxy-switch] the traffic counters could not be written', error);
+  }
+}
+
+/** Adds one observation to the batch in hand, and arms the timer if it is idle. */
+function countTraffic(up, down) {
+  if (up <= 0 && down <= 0) return;
+  pendingUp += up;
+  pendingDown += down;
+
+  if (flushTimer) return;
+  flushTimer = setTimeout(() => {
+    flushTraffic().catch((error) => console.warn('[proxy-switch] the flush failed', error));
+  }, TRAFFIC_FLUSH_MS);
+}
+
+// Uploads: the size a request declares for the body it is about to send. Most
+// requests declare nothing, which is exactly what `requestBytes` returns.
+chrome.webRequest?.onBeforeSendHeaders.addListener(
+  (details) => {
+    if (!meterOn || isProbeUrl(details?.url)) return;
+    countTraffic(requestBytes(details), 0);
+  },
+  { urls: ['<all_urls>'] },
+  ['requestHeaders'],
+);
+
+// Downloads: the size a response declared when it arrived — and only when it
+// really arrived, because a response served from the cache is not traffic.
+chrome.webRequest?.onCompleted.addListener(
+  (details) => {
+    if (!meterOn || isProbeUrl(details?.url)) return;
+    countTraffic(0, responseBytes(details));
+  },
+  { urls: ['<all_urls>'] },
+  ['responseHeaders'],
+);
+
+// The worker is stopped between events, and a timer does not survive that. This
+// is best effort by nature — the write is asynchronous and the worker may be
+// gone before it lands — but it costs nothing and usually saves the last few
+// seconds of counting.
+chrome.runtime?.onSuspend?.addListener(() => {
+  flushTraffic().catch(() => {});
+});
 
 /* ------------------------------------------------------------------ *
  * Test all servers — the popup button's pass over the whole list

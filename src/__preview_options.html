@@ -140,6 +140,35 @@
       </section>
 
       <section class="card">
+        <h2 data-i18n="traffic.title"></h2>
+        <!-- The meter's counters (lib/traffic.js, counted in background.js).
+             They live in their own storage key, never in the settings, so what
+             is read here is not something a settings import can overwrite. -->
+        <div class="traffic-readout">
+          <div class="traffic-line">
+            <span class="traffic-when" data-i18n="traffic.today"></span>
+            <span id="trafficToday" class="traffic-values"></span>
+          </div>
+          <div class="traffic-line">
+            <span class="traffic-when" data-i18n="traffic.total"></span>
+            <span id="trafficTotal" class="traffic-values"></span>
+          </div>
+        </div>
+        <p class="form-note" data-i18n="traffic.note"></p>
+        <!-- Counted in the service worker, on requests every page makes; the
+             switch says whether it may (background.js reads the setting). -->
+        <label class="check">
+          <input id="trafficToggle" type="checkbox" />
+          <span data-i18n="traffic.enable"></span>
+        </label>
+        <p class="form-note" data-i18n="traffic.enableHint"></p>
+        <div class="form-actions">
+          <button id="trafficReset" class="ghost-btn danger" type="button" data-i18n="traffic.reset"></button>
+        </div>
+        <p id="trafficMessage" class="muted hidden" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="card">
         <div class="section-head">
           <h2 data-i18n="options.servers"></h2>
           <div class="section-actions">

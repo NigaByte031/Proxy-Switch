@@ -10,11 +10,14 @@ import {
   loadServerHealth,
   loadState,
   loadStatus,
+  loadTraffic,
   saveState,
   subscribe,
   subscribeServerHealth,
   subscribeStatus,
+  subscribeTraffic,
   updateState,
+  updateTraffic,
 } from './lib/storage.js';
 import {
   ACCENTS,
@@ -25,6 +28,7 @@ import {
   serializeState,
 } from './lib/model.js';
 import { describeApplyProblem, requestReapply } from './lib/proxy.js';
+import { createTraffic, describeTraffic, resetTraffic } from './lib/traffic.js';
 import { createModeUi } from './lib/mode-ui.js';
 import { createServersUi } from './lib/servers-ui.js';
 import { createHealthUi } from './lib/health-ui.js';
@@ -44,6 +48,11 @@ const els = {
   failoverToggle: el('failoverToggle'),
   notifyToggle: el('notifyToggle'),
   probeToggle: el('probeToggle'),
+  trafficToday: el('trafficToday'),
+  trafficTotal: el('trafficTotal'),
+  trafficToggle: el('trafficToggle'),
+  trafficReset: el('trafficReset'),
+  trafficMessage: el('trafficMessage'),
   bypassInput: el('bypassInput'),
   bypassSave: el('bypassSave'),
   testBtn: el('testBtn'),
@@ -130,6 +139,11 @@ function renderAccents() {
 let applyStatus = null;
 /** What the extension has seen about each server (lib/server-health.js). */
 let serverHealth = null;
+/** What the meter has counted (lib/traffic.js). */
+let traffic = null;
+/** The line under the counters ("counters reset"), and its timer. */
+let trafficMessage = null;
+let trafficMessageTimer = 0;
 /** True while a retry is in flight, so the button cannot be pressed twice. */
 let reapplying = false;
 let lang = 'en';
@@ -207,6 +221,22 @@ function setText(node, value) {
   if (node && node.textContent !== value) node.textContent = value;
 }
 
+/** One line of the traffic readout: what came down and what went up. */
+function describeReading(down, up) {
+  return `${t('traffic.down', lang, { value: down })} · ${t('traffic.up', lang, { value: up })}`;
+}
+
+/** Says what just happened under the counters, for a few seconds. */
+function flashTraffic(text) {
+  trafficMessage = text;
+  render();
+  clearTimeout(trafficMessageTimer);
+  trafficMessageTimer = setTimeout(() => {
+    trafficMessage = null;
+    render();
+  }, 4000);
+}
+
 function render() {
   lang = resolveLang(state.settings.language, navigator.language);
   applyDocumentLang(lang);
@@ -225,6 +255,17 @@ function render() {
   els.failoverToggle.checked = state.settings.autoFailover;
   els.notifyToggle.checked = state.settings.notifyFailover;
   els.probeToggle.checked = state.settings.backgroundProbe;
+  els.trafficToggle.checked = state.settings.trafficMeter === true;
+
+  // Read-only figures for both windows of time the meter keeps. The labels come
+  // from the same keys the popup's two arrows are labelled with, so "today's
+  // download" is one sentence everywhere it is said.
+  const reading = describeTraffic(traffic ?? createTraffic());
+  setText(els.trafficToday, describeReading(reading.down, reading.up));
+  setText(els.trafficTotal, describeReading(reading.totalDown, reading.totalUp));
+
+  els.trafficMessage.textContent = trafficMessage ?? '';
+  els.trafficMessage.classList.toggle('hidden', !trafficMessage);
 
   if (document.activeElement !== els.bypassInput) {
     els.bypassInput.value = formatBypassList(state.settings.bypassList);
@@ -349,6 +390,24 @@ function wire() {
     });
   });
 
+  // Same division of labour once more: the worker counts, this says whether it
+  // may.
+  els.trafficToggle.addEventListener('change', () => {
+    const trafficMeter = els.trafficToggle.checked;
+    commit((draft) => {
+      draft.settings.trafficMeter = trafficMeter;
+    });
+  });
+
+  // The counters are not configuration, so this is a write to their own key and
+  // not a settings change — the worker reads that record fresh for every batch it
+  // flushes, so a reset can never be overwritten by a batch counted earlier.
+  els.trafficReset.addEventListener('click', async () => {
+    if (!window.confirm(t('traffic.confirmReset', lang))) return;
+    await updateTraffic((draft) => resetTraffic(draft));
+    flashTraffic(t('traffic.resetDone', lang));
+  });
+
   els.bypassSave.addEventListener('click', async () => {
     const rules = parseBypassList(els.bypassInput.value);
     await commit((draft) => {
@@ -395,6 +454,7 @@ async function init() {
   state = await loadState();
   applyStatus = await loadStatus();
   serverHealth = await loadServerHealth();
+  traffic = await loadTraffic();
   wire();
   render();
 
@@ -419,6 +479,13 @@ async function init() {
   // button on either page; the rows say so as soon as they do.
   subscribeServerHealth((next) => {
     serverHealth = next;
+    render();
+  });
+
+  // The worker writes the counters in batches as requests are made, so the
+  // figures on this page move by themselves.
+  subscribeTraffic((next) => {
+    traffic = next;
     render();
   });
 

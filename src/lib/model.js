@@ -65,6 +65,13 @@ export function createDefaultState() {
       // PAC mode can take its script from a URL or from the list below, which is
       // turned into a PAC script on the fly (see `lib/pac.js`).
       domainRouting: false,
+      // The traffic meter (see `lib/traffic.js`): counts what each request and
+      // response declared its size to be, while the proxy is on. On by default,
+      // because a counter nobody can see is a counter nobody asked for — it
+      // sends nothing anywhere and the whole record stays on this device, so the
+      // only reason to turn it off is that observing every request is work the
+      // worker would otherwise not do.
+      trafficMeter: true,
       proxyDomains: [],
       language: 'auto',
       theme: 'auto',
@@ -532,6 +539,10 @@ export function sanitizeState(raw) {
         typeof settings.domainRouting === 'boolean'
           ? settings.domainRouting
           : base.settings.domainRouting,
+      trafficMeter:
+        typeof settings.trafficMeter === 'boolean'
+          ? settings.trafficMeter
+          : base.settings.trafficMeter,
       proxyDomains: sanitizeDomainRules(settings.proxyDomains),
       language: LANGUAGES.includes(settings.language) ? settings.language : base.settings.language,
       theme: THEMES.includes(settings.theme) ? settings.theme : base.settings.theme,

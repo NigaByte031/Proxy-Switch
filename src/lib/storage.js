@@ -6,7 +6,8 @@
  *
  * Two keys live here: the state itself and the result of the last attempt to
  * apply it, which is what lets the popup explain a badge that shows `ERR`.
- * A third one — the failover record — is documented next to its own section.
+ * The other three — the failover record, the server verdicts and the traffic
+ * counters — are documented next to their own sections.
  */
 
 import { STORAGE_KEY, createDefaultState, sanitizeState } from './model.js';
@@ -16,6 +17,7 @@ import {
   sameServerHealth,
   sanitizeServerHealth,
 } from './server-health.js';
+import { createTraffic, sameTraffic, sanitizeTraffic } from './traffic.js';
 
 /** Key holding the outcome of the last `chrome.proxy.settings.set`. */
 export const STATUS_KEY = 'proxySwitchApplyStatus';
@@ -34,6 +36,13 @@ export const FAILOVER_KEY = 'proxySwitchFailover';
  * not configuration, for the same reason as the failover record above.
  */
 export const SERVER_HEALTH_KEY = 'proxySwitchServerHealth';
+
+/**
+ * Key holding the traffic counters: what the meter has added up today and in
+ * total. Memory as well — a backup file carries what the user *configured*,
+ * and nobody wants a restore to bring back somebody else's byte counts.
+ */
+export const TRAFFIC_KEY = 'proxySwitchTraffic';
 
 function store() {
   if (typeof chrome === 'undefined' || !chrome.storage?.local) return null;
@@ -226,6 +235,47 @@ export function subscribeServerHealth(callback) {
   return changeListener((changes) => {
     if (!changes[SERVER_HEALTH_KEY]) return;
     callback(sanitizeServerHealth(changes[SERVER_HEALTH_KEY].newValue));
+  });
+}
+
+/* ------------------------------------------------------------------ *
+ * Traffic counters
+ * ------------------------------------------------------------------ */
+
+/** @returns {Promise<object>} the stored counters, or an empty record. */
+export async function loadTraffic() {
+  const area = store();
+  if (!area) return createTraffic();
+  const result = await area.get(TRAFFIC_KEY);
+  return sanitizeTraffic(result?.[TRAFFIC_KEY]);
+}
+
+/**
+ * Queued read–modify–write of the counters — `updateState` for this key.
+ *
+ * The worker batches the bytes it observes and calls this once per batch (see
+ * `src/background.js`), so a busy page load is one write rather than a hundred.
+ * A batch that would not change the record is not written at all.
+ *
+ * @param {(draft: object) => any} mutator
+ */
+export function updateTraffic(mutator) {
+  return enqueue(async () => {
+    const stored = await loadTraffic();
+    const draft = structuredClone(stored);
+    mutator(draft);
+    const clean = sanitizeTraffic(draft);
+    const area = store();
+    if (area && !sameTraffic(stored, clean)) await area.set({ [TRAFFIC_KEY]: clean });
+    return clean;
+  });
+}
+
+/** Subscribes to counter changes (both pages show the numbers live). */
+export function subscribeTraffic(callback) {
+  return changeListener((changes) => {
+    if (!changes[TRAFFIC_KEY]) return;
+    callback(sanitizeTraffic(changes[TRAFFIC_KEY].newValue));
   });
 }
 
