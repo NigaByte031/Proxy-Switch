@@ -275,17 +275,34 @@ async function notifySwitch(state, to, from) {
   if (!notice || !chrome.notifications?.create) return;
 
   try {
-    await chrome.notifications.create(notice.id, {
+    const base = {
       type: 'basic',
       iconUrl: chrome.runtime.getURL('icons/icon128.png'),
       title: notice.title,
       message: notice.message,
-      // "Back to <server>": the notification is the only place the user can
-      // answer a switch the extension made for them.
-      ...(notice.button ? { buttons: [{ title: notice.button }] } : {}),
-    });
-  } catch (error) {
-    console.warn('[proxy-switch] the switch notification could not be shown', error);
+    };
+    // "Back to <server>": the notification is the only place the user can
+    // answer a switch the extension made for them.
+    await chrome.notifications.create(
+      notice.id,
+      notice.button ? { ...base, buttons: [{ title: notice.button }] } : base,
+    );
+  } catch {
+    // Firefox could not put a button in a notification until 152 (MDN lists
+    // `NotificationOptions.buttons` as unsupported there), and a build that
+    // refuses the option would cost the whole announcement. Announcing the
+    // switch matters more than the undo affordance, so the same notice is
+    // shown without the button rather than not at all.
+    try {
+      await chrome.notifications.create(notice.id, {
+        type: 'basic',
+        iconUrl: chrome.runtime.getURL('icons/icon128.png'),
+        title: notice.title,
+        message: notice.message,
+      });
+    } catch (error) {
+      console.warn('[proxy-switch] the switch notification could not be shown', error);
+    }
   }
 }
 
@@ -918,13 +935,22 @@ chrome.webRequest?.onAuthRequired.addListener(
   ['asyncBlocking'],
 );
 
-chrome.proxy?.onProxyError?.addListener((details) => {
+/**
+ * A route broke. Chrome calls this event `onProxyError`; Firefox renamed it to
+ * `onError` and keeps the old name only as a deprecated alias, so whichever the
+ * browser still has is the one to subscribe to. The two hand over different
+ * shapes — Chrome an object carrying an `error` string, Firefox an Error — and
+ * the badge treats both the same way: what matters is that a route broke, not
+ * how it spelled itself.
+ */
+const proxyErrors = chrome.proxy?.onError ?? chrome.proxy?.onProxyError;
+proxyErrors?.addListener((details) => {
   // A check hands its own probe to a server the user may not even be using: the
   // error is that server's answer, not a broken route, and it is recorded as a
   // verdict by the check itself.
   if (checking && isProbeUrl(details?.url)) return;
 
-  reportProxyError(details?.error);
+  reportProxyError(details?.error ?? details?.message);
   // Not awaited on purpose: the listener must return immediately, and a failed
   // check must not look like an unhandled rejection in the worker.
   considerFailover().catch((error) => {

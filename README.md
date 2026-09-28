@@ -96,11 +96,36 @@ them by `npm run shots`, so they are the interface itself rather than a drawing 
   are the optional **Connection test**/**Test all** buttons and the background checks it can run on a
   timer — the same bare `generate_204` probes, carrying nothing. See [PRIVACY.md](PRIVACY.md).
 
+## Browsers
+
+| Browser | Minimum version | Archive |
+| --- | --- | --- |
+| Chrome, Edge, Brave, Opera, Vivaldi | 116+ | `proxy-switch-vX.Y.Z.zip` |
+| Firefox (desktop) | 140+ (ESR) | `proxy-switch-vX.Y.Z-firefox.zip` |
+
+Both archives go out with every [release](../../releases) and hold the same extension: the Firefox
+one swaps `manifest.json` for `manifest.firefox.json`, which runs the same code as an event page
+(Firefox has no extension service worker — see
+[MDN](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/manifest.json/background))
+and adds the Gecko id plus the *no data collection* declaration AMO requires from new add-ons.
+`npm run package:firefox` builds it, and Mozilla's own `addons-linter` accepts it with zero errors.
+
+Two honest differences on the Firefox side:
+
+- The **Back to …** button on the automatic-switch notification needs **Firefox 152** — older
+  versions get the same notification without the button, and the popup still switches back.
+- An unsigned build installs as a **temporary add-on** only: `about:debugging` → *This Firefox* →
+  *Load Temporary Add-on* to try it, or submit it to
+  [addons.mozilla.org](https://addons.mozilla.org) for a permanent install. Firefox for Android is
+  not a target — a proxy the operating system routes anyway is not something an extension can move
+  there.
+
 ## Install
 
 ### From a release (recommended)
 
-1. Download `proxy-switch-vX.Y.Z.zip` from the [releases page](../../releases).
+1. Download `proxy-switch-vX.Y.Z.zip` from the [releases page](../../releases) (Firefox:
+   `proxy-switch-vX.Y.Z-firefox.zip`).
 2. Unzip it somewhere permanent.
 3. Open `chrome://extensions`, enable **Developer mode**, click **Load unpacked** and pick the
    unzipped folder.
@@ -190,6 +215,7 @@ npm test                 # unit tests (state, proxy config, i18n coverage, manif
 npm run preview          # regenerate the offline preview pages
 npm run shots           # retake docs/screenshots/*.png (needs the preview server running)
 npm run package          # build dist/proxy-switch-v<version>.zip for the Web Store
+npm run package:firefox  # build dist/proxy-switch-v<version>-firefox.zip for Firefox
 ```
 
 Project layout:
@@ -244,20 +270,23 @@ Design decisions worth knowing:
 
 ## Publishing
 
-- [ ] `npm run package`, then upload `dist/proxy-switch-v1.4.0.zip` from the Chrome Web Store
+- [ ] `npm run package`, then upload `dist/proxy-switch-v<version>.zip` from the Chrome Web Store
       developer dashboard (a 128×128 icon is already included; screenshots can be taken from the
       preview pages).
-- [ ] Tag the release — `git tag v1.4.0 && git push origin v1.4.0`. The
+- [ ] `npm run package:firefox`, then submit `dist/proxy-switch-v<version>-firefox.zip` to
+      [addons.mozilla.org](https://addons.mozilla.org) — the manifest is already linted clean, and
+      the listing's data-collection answer is declared as *none*.
+- [ ] Tag the release — `git tag v<version> && git push origin v<version>`. The
       [release workflow](.github/workflows/release.yml) refuses a tag that does not match
-      `manifest.json`, runs the tests and attaches the ZIP to the GitHub release.
-- [ ] Add real screenshots to `docs/` if you want them in this README.
+      `manifest.json`, runs the tests and attaches **both** ZIPs to the GitHub release.
+- [ ] Retake the screenshots (`npm run shots`) if the interface changed — the version they show is
+      the version the README claims.
 
 ## Roadmap ideas
 
 - One server per domain: domain routing sends every listed site through the same chain, so a
   per-domain server is the next step.
 - Import from common formats (`SwitchyOmega` backups).
-- Firefox build (WebExtensions `browser.proxy` has the same shape).
 
 ## Security
 

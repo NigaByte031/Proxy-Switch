@@ -1,11 +1,19 @@
 /**
- * Builds the uploadable extension package: `dist/proxy-switch-v<version>.zip`.
+ * Builds the uploadable extension package: `dist/proxy-switch-v<version>.zip`,
+ * or `dist/proxy-switch-v<version>-firefox.zip` with `--firefox`.
  *
  * Dependency-free on purpose (the repo installs nothing), so the ZIP writer is
  * implemented here. It writes stored/deflated entries, UTF-8 names and a normal
- * central directory — which is exactly what Chrome Web Store and `unzip` expect.
+ * central directory — which is exactly what Chrome Web Store, AMO and `unzip`
+ * expect.
  *
- * Usage: node tools/package.mjs [--out <file>]
+ * The two builds are the same tree with a different manifest at their root:
+ * `manifest.firefox.json` runs the same `src/background.js` as an event page
+ * (Firefox has no extension service worker, see MDN on `background`) and adds
+ * the Gecko id AMO asks for. Everything else — files, permissions, code — is
+ * identical, so there is one extension to maintain and two stores to feed.
+ *
+ * Usage: node tools/package.mjs [--firefox] [--out <file>]
  */
 
 import { readFileSync, readdirSync, mkdirSync, writeFileSync, statSync } from 'node:fs';
@@ -20,6 +28,17 @@ export const PACKAGE_DIRS = ['icons', 'src'];
 
 /** Development-only files that must never end up in the store upload. */
 export const EXCLUDE_PATTERNS = [/^__preview_/, /\.test\.mjs$/, /\.map$/];
+
+/**
+ * Which manifest each build puts at the root of its archive: the archive is
+ * named `manifest.json` in both cases, because that is what a store reads.
+ *
+ * @param {boolean} firefox
+ * @returns {string}
+ */
+export function manifestFor(firefox = false) {
+  return firefox ? 'manifest.firefox.json' : 'manifest.json';
+}
 
 const CRC_TABLE = (() => {
   const table = new Int32Array(256);
@@ -136,8 +155,10 @@ function walk(absoluteDirectory, prefix, files) {
 }
 
 /** Everything that belongs in the uploaded package, `manifest.json` first. */
-export function collectFiles(root = ROOT) {
-  const files = [{ name: 'manifest.json', data: readFileSync(join(root, 'manifest.json')) }];
+export function collectFiles(root = ROOT, { firefox = false } = {}) {
+  const files = [
+    { name: 'manifest.json', data: readFileSync(join(root, manifestFor(firefox))) },
+  ];
   for (const directory of PACKAGE_DIRS) {
     walk(join(root, directory), directory, files);
   }
@@ -147,12 +168,12 @@ export function collectFiles(root = ROOT) {
 }
 
 /** Builds the archive and returns `{ target, entries, zip }`. */
-export function buildPackage({ root = ROOT, out } = {}) {
-  const { version } = JSON.parse(readFileSync(join(root, 'manifest.json'), 'utf8'));
-  const entries = collectFiles(root);
+export function buildPackage({ root = ROOT, out, firefox = false } = {}) {
+  const { version } = JSON.parse(readFileSync(join(root, manifestFor(firefox)), 'utf8'));
+  const entries = collectFiles(root, { firefox });
   const zip = createZip(entries);
-  const target =
-    out ?? join(root, 'dist', `proxy-switch-v${version}.zip`);
+  const suffix = firefox ? '-firefox' : '';
+  const target = out ?? join(root, 'dist', `proxy-switch-v${version}${suffix}.zip`);
   mkdirSync(dirname(target), { recursive: true });
   writeFileSync(target, zip);
   return { target, entries, zip };
@@ -160,9 +181,10 @@ export function buildPackage({ root = ROOT, out } = {}) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const outIndex = process.argv.indexOf('--out');
-  const { target, entries, zip } = buildPackage(
-    outIndex > -1 ? { out: resolve(process.argv[outIndex + 1]) } : {},
-  );
+  const { target, entries } = buildPackage({
+    firefox: process.argv.includes('--firefox'),
+    ...(outIndex > -1 ? { out: resolve(process.argv[outIndex + 1]) } : {}),
+  });
   const size = statSync(target).size;
   console.log(
     `packaged ${entries.length} files -> ${relative(ROOT, target)} ` +

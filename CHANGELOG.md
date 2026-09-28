@@ -16,6 +16,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   seed for it: three servers with verdicts, today's counters and a speed that keeps moving, so the
   pictures show the interface with something in it. `tests/docs.test.mjs` fails the suite when a
   picture a README points at is missing or is not a PNG.
+- **A Firefox build.** `npm run package:firefox` writes
+  `dist/proxy-switch-v<version>-firefox.zip` — the same tree under a new `manifest.firefox.json`,
+  which runs `src/background.js` as an event page (Firefox has no extension service worker at all,
+  see MDN) and carries the Gecko id, the floor of 140 that the manifest's own keys need, and the
+  `data_collection_permissions: none` declaration AMO requires from every new add-on. Two code paths
+  learned to speak both dialects: the proxy-error event (Chrome calls it `onProxyError`, Firefox
+  `onError`) and the switch notification, which now retries without its button where notifications
+  have no buttons (Firefox before 152). Both READMEs gained a browsers table — minimum versions,
+  what the Firefox archive is and how an unsigned one gets installed — the release workflow builds
+  and attaches both archives, and Mozilla's `addons-linter` accepts the result with zero errors.
 
 ## [1.6.0] — 2026-09-28
 

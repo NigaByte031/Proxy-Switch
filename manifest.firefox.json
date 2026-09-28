@@ -1,0 +1,56 @@
+{
+  "manifest_version": 3,
+  "name": "Proxy Switch",
+  "version": "1.6.0",
+  "description": "Switch Firefox between system, direct, manual HTTP/SOCKS and PAC proxies in one click. Live traffic speed, daily counters, EN/FA UI.",
+  "homepage_url": "https://github.com/NigaByte031/Proxy-Switch",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "Proxy Switch",
+    "default_popup": "src/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    }
+  },
+  "options_page": "src/options.html",
+  "background": {
+    "scripts": ["src/background.js"],
+    "type": "module"
+  },
+  "commands": {
+    "toggle-proxy": {
+      "suggested_key": { "default": "Alt+Shift+P" },
+      "description": "Turn the proxy on or off"
+    },
+    "go-direct": {
+      "suggested_key": { "default": "Alt+Shift+D" },
+      "description": "Route traffic directly, without any proxy"
+    }
+  },
+  "permissions": [
+    "proxy",
+    "storage",
+    "webRequest",
+    "webRequestAuthProvider",
+    "contextMenus",
+    "notifications",
+    "alarms"
+  ],
+  "host_permissions": ["<all_urls>"],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "proxy-switch@nigabyte031.github.io",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  }
+}
