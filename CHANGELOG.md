@@ -8,6 +8,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 Nothing yet.
 
+## [1.6.0] — 2026-09-28
+
+### Added
+
+- **Live speed.** The popup now carries a line under today's figures that says what is moving *right
+  now* — `↓ 4.6 MB/s · ↑ 120 KB/s`, with a dot that goes quiet when nothing is — and the settings
+  page shows the same reading as a *Right now* line. A speed is bytes over time, so every batch of
+  counted bytes reports the span it covers: the clock starts with the batch's first byte rather than
+  with the timer that writes it, and the reading is those bytes over those spans. That is what makes
+  a transfer that is still going read its own rate instead of a fraction of it, and a transfer that
+  has slowed down read the slower number as its fast batches age out of the window. The window holds
+  the last ten seconds of counted bytes and the reading is recomputed on every draw — nothing is
+  sampled on a timer and no second listener decides what a byte is. Five seconds without a counted
+  byte and the line says *nothing moving*, rather than leaving the tail of a burst on screen as if it
+  were a speed.
+- The window lives in its own storage key, `proxySwitchTrafficRate`, holding four things per sample
+  — the two byte counts, the moment it was taken and the span it covers — for no longer than the
+  window itself. It is memory rather than configuration, so an exported settings file never carries
+  it, and *Reset counters* clears it together with the counters: a reading about bytes that no
+  longer exist anywhere is not a reading. `PRIVACY.md` says what is kept and for how long.
+
 ## [1.5.0] — 2026-09-27
 
 ### Added
@@ -241,6 +262,7 @@ so an existing configuration is untouched.
   touch `chrome.proxy` themselves. The offline preview answers a retry with a healthy status, so the
   whole path can be clicked through without installing anything.
 
+[1.6.0]: ../../releases/tag/v1.6.0
 [1.5.0]: ../../releases/tag/v1.5.0
 [1.4.0]: ../../releases/tag/v1.4.0
 [1.3.0]: ../../releases/tag/v1.3.0

@@ -5,11 +5,13 @@ import { STORAGE_KEY, createDefaultState, sanitizeState, serializeState } from '
 import { createFailoverRecord, noteProxyError, planFailover } from '../src/lib/failover.js';
 import {
   FAILOVER_KEY,
+  RATE_KEY,
   SERVER_HEALTH_KEY,
   STATUS_KEY,
   TRAFFIC_KEY,
   ensureState,
   loadFailover,
+  loadRate,
   loadServerHealth,
   loadState,
   loadStatus,
@@ -19,16 +21,18 @@ import {
   saveState,
   saveStatus,
   subscribe,
+  subscribeRate,
   subscribeServerHealth,
   subscribeStatus,
   subscribeTraffic,
   updateFailover,
+  updateRate,
   updateServerHealth,
   updateState,
   updateTraffic,
 } from '../src/lib/storage.js';
 import { noteServerHealth } from '../src/lib/server-health.js';
-import { createTraffic, noteTraffic, resetTraffic } from '../src/lib/traffic.js';
+import { createRate, createTraffic, noteRate, noteTraffic, resetRate, resetTraffic } from '../src/lib/traffic.js';
 
 /**
  * `chrome.storage.local` in memory, so the module's promise wrappers (and the
@@ -352,6 +356,43 @@ test('the counters are memory, not configuration', async () => {
     draft.settings.trafficMeter = false;
   });
   assert.equal((await loadTraffic()).down, 2, 'a settings write leaves the counters alone');
+});
+
+test('the live rate keeps its own window, written only when it moves', async () => {
+  const { writes } = fakeChrome();
+  const stamp = Date.now();
+
+  await updateRate((draft) => noteRate(draft, { down: 4096, at: stamp, ms: 1000 }));
+  const stored = await loadRate();
+  assert.equal(stored.samples.length, 1);
+  assert.deepEqual(await loadRate(), stored, 'the write must not alias the returned object');
+
+  // A batch that adds nothing is no write; the counters and the window are
+  // different keys, so a counter-only flush must not touch this one.
+  const before = writes.filter(([key]) => key === RATE_KEY).length;
+  await updateRate(() => {});
+  await updateTraffic((draft) => noteTraffic(draft, { up: 10, at: stamp }));
+  assert.equal(writes.filter(([key]) => key === RATE_KEY).length, before);
+});
+
+test('the rate subscription fires for the window key only', async () => {
+  fakeChrome();
+  await saveState(createDefaultState());
+
+  const seen = [];
+  const stop = subscribeRate((next) => seen.push(next));
+
+  await updateTraffic((draft) => noteTraffic(draft, { up: 5, at: 1000 }));
+  assert.equal(seen.length, 0, 'a counter write is not a window write');
+
+  await updateRate((draft) => noteRate(draft, { down: 2048, at: 2000, ms: 1000 }));
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0].samples.length, 1);
+
+  await updateRate((draft) => resetRate(draft));
+  assert.equal(seen.length, 2);
+  assert.deepEqual(seen[1], createRate());
+  stop();
 });
 
 test('traffic subscriptions fire for the counter key only', async () => {

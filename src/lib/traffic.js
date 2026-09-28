@@ -157,6 +157,19 @@ export function resetTraffic(record, now = Date.now()) {
 }
 
 /**
+ * Empties the rate's window. A reset that left a live speed standing would be
+ * a reading about bytes that no longer exist anywhere — the reset button clears
+ * the two records together.
+ *
+ * @param {object} record mutated in place
+ */
+export function resetRate(record) {
+  if (!record) return record;
+  record.samples = [];
+  return record;
+}
+
+/**
  * The declared body size in a header list, or null when there is none.
  *
  * Only plain decimal digits count. `*` (unknown), an empty value, a negative
@@ -284,5 +297,231 @@ export function describeTraffic(record, now = Date.now()) {
     totalDown: formatBytes(clean.downTotal),
     totalUp: formatBytes(clean.upTotal),
     since: clean.since,
+  };
+}
+
+/* ------------------------------------------------------------------ *
+ * The live rate — what is moving right now
+ * ------------------------------------------------------------------ */
+
+/**
+ * How much recent traffic the window keeps, and when it stops believing a
+ * reading.
+ *
+ * A speed is bytes divided by time, and the only honest way to get it is to
+ * divide the bytes that were counted by the time they were counted across —
+ * which is why every batch the worker writes carries the span it covers
+ * (`ms`, see `src/background.js`). Adding those spans up and dividing once
+ * gives the average speed of the last few seconds: a transfer that is still
+ * going reads its own rate rather than a fraction of it, and a transfer that
+ * has slowed down reads the slower number as the fast batches age out of the
+ * window.
+ *
+ * Nothing here is sampled on a timer. The worker stamps a batch when it writes
+ * one and the reading is recomputed on every draw, so the number stays honest
+ * between writes without a second source of truth.
+ */
+export const RATE_WINDOW_MS = 10_000;
+
+/** No sample newer than this means nothing is moving: the UI says so, not 0 B/s. */
+export const RATE_IDLE_MS = 5_000;
+
+/** The shortest span a sample may claim, so a short batch cannot divide by ~zero. */
+export const RATE_MIN_SPAN_MS = 200;
+
+/**
+ * The longest span a sample may claim. A batch that says it covered more than
+ * the window is a batch from a worker that slept: its bytes are recent, but a
+ * span we cannot trust must not be allowed to dilute a reading.
+ */
+export const RATE_MAX_SPAN_MS = RATE_WINDOW_MS;
+
+/** The ceiling a reading can claim. Past this it is a corrupt value, not traffic. */
+export const RATE_MAX_BPS = 1e12;
+
+/** How many samples the window may hold. Far more than a five-second batch
+ * needs, and a bound on a record that a bug could otherwise grow forever. */
+export const RATE_MAX_SAMPLES = 32;
+
+/**
+ * @returns {object} an empty rate record: nothing has been seen lately.
+ */
+export function createRate() {
+  return { samples: [] };
+}
+
+/**
+ * One observation, made valid: the bytes a batch counted (`up`, `down`), the
+ * moment it finished counting them (`at`) and how long it was counting (`ms`).
+ *
+ * A sample that cannot say how long it took, or that counted nothing at all, is
+ * not a sample — it carries no speed, and adding it would only dilute the ones
+ * that do. `null` says so, and both the writer and the reader drop it.
+ *
+ * @param {object} raw
+ * @returns {{at: number, ms: number, up: number, down: number}|null}
+ */
+function sampleOf(raw) {
+  const at = Number(raw?.at);
+  const ms = Number(raw?.ms);
+  const up = bytes(raw?.up);
+  const down = bytes(raw?.down);
+
+  if (!Number.isFinite(at) || at <= 0) return null;
+  if (!Number.isFinite(ms) || ms <= 0) return null;
+  if (up <= 0 && down <= 0) return null;
+
+  return {
+    at: Math.round(at),
+    ms: Math.min(Math.max(Math.round(ms), RATE_MIN_SPAN_MS), RATE_MAX_SPAN_MS),
+    up,
+    down,
+  };
+}
+
+/**
+ * Coerces anything (old storage, a hand-edited value) into a valid record.
+ *
+ * Nothing is swept here against the wall clock — the stored record is *data*,
+ * and the window is applied on the *read* (`trafficRate` drops the samples by
+ * the age it is asked about). Sweeping inside sanitize would clamp every test
+ * that reads with an explicit `now` to the real clock, and more importantly
+ * would make the record mean different things depending on when it happened to
+ * be touched.
+ */
+export function sanitizeRate(raw) {
+  const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const samples = Array.isArray(source.samples) ? source.samples : [];
+
+  return { samples: samples.map(sampleOf).filter(Boolean).slice(-RATE_MAX_SAMPLES) };
+}
+
+/** Whether two records hold the same samples (a write that changes nothing is skipped). */
+export function sameRate(left, right) {
+  const a = sanitizeRate(left).samples;
+  const b = sanitizeRate(right).samples;
+
+  return (
+    a.length === b.length &&
+    a.every(
+      (sample, index) =>
+        sample.at === b[index].at &&
+        sample.ms === b[index].ms &&
+        sample.up === b[index].up &&
+        sample.down === b[index].down,
+    )
+  );
+}
+
+/**
+ * Records one batch: the bytes counted, and the span they were counted across.
+ * Mutated in place, like every record here. The window is swept first, so a
+ * record that sat idle while the worker slept does not drag old bytes into a
+ * reading, and a batch that counted nothing leaves no sample at all.
+ *
+ * @param {object} record mutated in place
+ * @param {{up?: number, down?: number, at?: number, ms?: number}} [observation]
+ */
+export function noteRate(record, observation = {}) {
+  if (!record) return record;
+
+  const at = Number(observation.at);
+  const stamp = Number.isFinite(at) && at > 0 ? at : Date.now();
+  sweep(record, stamp);
+
+  const sample = sampleOf({ ...observation, at: stamp });
+  if (sample) record.samples.push(sample);
+  if (record.samples.length > RATE_MAX_SAMPLES) {
+    record.samples = record.samples.slice(-RATE_MAX_SAMPLES);
+  }
+  return record;
+}
+
+/**
+ * Drops the samples the window no longer holds (in place, so callers share the
+ * sweep). "Holds" is read from the end of a sample's span, because that is the
+ * moment its bytes were last counted: a batch that finished just after the
+ * horizon was, as far as a reading is concerned, counted just now.
+ */
+function sweep(record, now) {
+  const horizon = Number(now) - RATE_WINDOW_MS;
+  record.samples = (Array.isArray(record.samples) ? record.samples : []).filter(
+    (sample) => Number(sample?.at) >= horizon,
+  );
+}
+
+/**
+ * The speed right now: bytes per second in each direction, or 0 for a
+ * direction the window holds nothing about.
+ *
+ * The arithmetic is one division — the bytes of every sample still in the
+ * window over the spans those bytes were counted across. That is what makes a
+ * sustained transfer read its own rate (its bytes and its spans grow together,
+ * so the ratio holds however many batches the window happens to hold) and a
+ * transfer that has slowed down read the slower number, because the fast
+ * batches drop out of the window on their own.
+ *
+ * @param {object|null} record a rate record
+ * @param {number} [now]
+ * @returns {{up: number, down: number, live: boolean, last: number}}
+ *   bytes per second per direction, whether anything is moving at all, and the
+ *   age in milliseconds of the newest sample (0 when there is none)
+ */
+export function trafficRate(record, now = Date.now()) {
+  // The window is applied on the read, against the clock the reader asks
+  // about: a record straight out of storage after the worker slept for an hour
+  // holds nothing, and a test reading with an explicit `now` gets exactly that
+  // moment's answer.
+  const stamp = Number.isFinite(now) ? Number(now) : Date.now();
+  const samples = sanitizeRate(record).samples.filter(
+    (sample) => stamp - sample.at <= RATE_WINDOW_MS && sample.at - stamp <= RATE_WINDOW_MS,
+  );
+  if (samples.length === 0) return { up: 0, down: 0, live: false, last: 0 };
+
+  let ms = 0;
+  let up = 0;
+  let down = 0;
+  for (const sample of samples) {
+    ms += sample.ms;
+    up += sample.up;
+    down += sample.down;
+  }
+
+  const speed = (total) => Math.min((total / ms) * 1000, RATE_MAX_BPS);
+  const newest = Math.max(...samples.map((sample) => sample.at));
+  const last = Math.max(0, Math.round(stamp - newest));
+
+  return {
+    up: speed(up),
+    down: speed(down),
+    // A window whose newest bytes are seconds old is not "moving slowly" —
+    // nothing has been counted lately, which is what idle means to a reader.
+    live: last <= RATE_IDLE_MS,
+    last,
+  };
+}
+
+/**
+ * What the UI shows for the rate, as ready-to-print parts.
+ *
+ * `idle` is the answer to "is anything moving?" the way a user asks it: not
+ * *were there bytes this second* but *has the meter seen anything lately*. A
+ * meter that saw a burst nine seconds ago is not streaming at 40 MB/s into the
+ * void; it is idle, and saying so beats a number that lies by precision.
+ *
+ * @param {object|null} rate a rate record
+ * @param {number} [now]
+ * @returns {{idle: boolean, down: string, up: string}}
+ */
+export function describeRate(rate, now = Date.now()) {
+  const { up, down, live } = trafficRate(rate, now);
+  const idle = !live;
+
+  return {
+    idle,
+    // An idle meter reads as zero: the window may still hold the tail of a
+    // burst, and printing it would claim a speed nothing is sustaining.
+    down: idle ? '0 B/s' : `${formatBytes(down)}/s`,
+    up: idle ? '0 B/s' : `${formatBytes(up)}/s`,
   };
 }

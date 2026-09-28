@@ -7,15 +7,18 @@
 import { applyDocumentLang, applyStaticText, resolveLang, t } from './lib/i18n.js';
 import { accentKey, applyAccent, applyTheme, resolveAccent, watchSystemTheme } from './lib/theme.js';
 import {
+  loadRate,
   loadServerHealth,
   loadState,
   loadStatus,
   loadTraffic,
   saveState,
   subscribe,
+  subscribeRate,
   subscribeServerHealth,
   subscribeStatus,
   subscribeTraffic,
+  updateRate,
   updateState,
   updateTraffic,
 } from './lib/storage.js';
@@ -28,7 +31,14 @@ import {
   serializeState,
 } from './lib/model.js';
 import { describeApplyProblem, requestReapply } from './lib/proxy.js';
-import { createTraffic, describeTraffic, resetTraffic } from './lib/traffic.js';
+import {
+  createRate,
+  createTraffic,
+  describeRate,
+  describeTraffic,
+  resetRate,
+  resetTraffic,
+} from './lib/traffic.js';
 import { createModeUi } from './lib/mode-ui.js';
 import { createServersUi } from './lib/servers-ui.js';
 import { createHealthUi } from './lib/health-ui.js';
@@ -50,6 +60,7 @@ const els = {
   probeToggle: el('probeToggle'),
   trafficToday: el('trafficToday'),
   trafficTotal: el('trafficTotal'),
+  trafficRate: el('trafficRate'),
   trafficToggle: el('trafficToggle'),
   trafficReset: el('trafficReset'),
   trafficMessage: el('trafficMessage'),
@@ -141,6 +152,10 @@ let applyStatus = null;
 let serverHealth = null;
 /** What the meter has counted (lib/traffic.js). */
 let traffic = null;
+/** The recent bytes the live rate reads its speed from (lib/traffic.js). */
+let rate = null;
+/** Ticks the Right-now line once a second while the page is open. */
+let rateTimer = 0;
 /** The line under the counters ("counters reset"), and its timer. */
 let trafficMessage = null;
 let trafficMessageTimer = 0;
@@ -226,6 +241,17 @@ function describeReading(down, up) {
   return `${t('traffic.down', lang, { value: down })} · ${t('traffic.up', lang, { value: up })}`;
 }
 
+/**
+ * The Right-now line, read fresh from the window each time — the same decay
+ * the popup's tick keeps honest, on the page that has room to name it.
+ */
+function renderRate() {
+  const { idle, down, up } = describeRate(rate ?? createRate());
+  els.trafficRate.classList.toggle('rate-idle', idle);
+  setText(els.trafficRate, t(idle ? 'traffic.rateIdle' : 'traffic.rate', lang, { down, up }));
+  els.trafficRate.title = idle ? t('traffic.rateIdleHint', lang) : '';
+}
+
 /** Says what just happened under the counters, for a few seconds. */
 function flashTraffic(text) {
   trafficMessage = text;
@@ -263,6 +289,7 @@ function render() {
   const reading = describeTraffic(traffic ?? createTraffic());
   setText(els.trafficToday, describeReading(reading.down, reading.up));
   setText(els.trafficTotal, describeReading(reading.totalDown, reading.totalUp));
+  renderRate();
 
   els.trafficMessage.textContent = trafficMessage ?? '';
   els.trafficMessage.classList.toggle('hidden', !trafficMessage);
@@ -401,10 +428,13 @@ function wire() {
 
   // The counters are not configuration, so this is a write to their own key and
   // not a settings change — the worker reads that record fresh for every batch it
-  // flushes, so a reset can never be overwritten by a batch counted earlier.
+  // flushes, so a reset can never be overwritten by a batch counted earlier. The
+  // rate's window goes with them: a reset that left a live speed standing would
+  // be a reading about bytes that no longer exist anywhere.
   els.trafficReset.addEventListener('click', async () => {
     if (!window.confirm(t('traffic.confirmReset', lang))) return;
     await updateTraffic((draft) => resetTraffic(draft));
+    await updateRate((draft) => resetRate(draft));
     flashTraffic(t('traffic.resetDone', lang));
   });
 
@@ -447,6 +477,12 @@ function wire() {
 }
 
 async function init() {
+  // The rate decays in real time; a tick keeps the line honest between the
+  // worker's writes. Cleared with the page, like any other timer here.
+  rateTimer = setInterval(() => {
+    if (state?.settings?.trafficMeter === true) renderRate();
+  }, 1000);
+
   const version = chrome.runtime.getManifest().version;
   els.version.textContent = version;
   els.versionBadge.textContent = `v${version}`;
@@ -455,6 +491,7 @@ async function init() {
   applyStatus = await loadStatus();
   serverHealth = await loadServerHealth();
   traffic = await loadTraffic();
+  rate = await loadRate();
   wire();
   render();
 
@@ -488,6 +525,10 @@ async function init() {
     traffic = next;
     render();
   });
+  subscribeRate((next) => {
+    rate = next;
+    renderRate();
+  });
 
   // The test-all pass announces each verdict as it is recorded; the row for
   // that server updates through the health record, this line just narrates.
@@ -496,5 +537,8 @@ async function init() {
     testAllUi.handleProgress(message);
   });
 }
+
+// A settings page can outlive its state; the tick must not.
+window.addEventListener('unload', () => clearInterval(rateTimer));
 
 init();

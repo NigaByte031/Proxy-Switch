@@ -159,13 +159,18 @@ test('the traffic meter counts in the worker, and asks for nothing new', () => {
   // the bytes are batched, and the extension's own probes are not your traffic
   assert.match(worker, /TRAFFIC_FLUSH_MS/);
   assert.match(worker, /updateTraffic\(\(draft\) => noteTraffic/);
+  // the speed the pages show is the same batch, stamped with the span it covers
+  assert.match(worker, /updateRate\(\(draft\) => noteRate\(draft, \{ up, down, at, ms \}\)\)/);
+  assert.match(worker, /pendingSince/);
   assert.match(worker, /if \(!meterOn \|\| isProbeUrl\(details\?\.url\)\) return;/);
   // …and the setting is honoured, which only the worker knows about
   assert.match(worker, /meterOn = meterRuns\(state\)/);
 
-  // a page may show the counters and reset them, but never read a request
+  // a page may show the counters and the speed and reset them, but never read a
+  // request and never write a sample of its own
   for (const page of ['src/popup.js', 'src/options.js']) {
     assert.ok(!read(page).includes('webRequest'), `${page} must not observe requests`);
+    assert.ok(!read(page).includes('noteRate('), `${page} must not write a rate sample`);
   }
 
   // the permission was already there: the meter adds no new warning

@@ -14,11 +14,13 @@ import {
   watchSystemTheme,
 } from './lib/theme.js';
 import {
+  loadRate,
   loadServerHealth,
   loadState,
   loadStatus,
   loadTraffic,
   subscribe,
+  subscribeRate,
   subscribeServerHealth,
   subscribeStatus,
   subscribeTraffic,
@@ -26,7 +28,7 @@ import {
 } from './lib/storage.js';
 import { describeApplyProblem, describeBadge, describeStatus } from './lib/proxy.js';
 import { createModeUi } from './lib/mode-ui.js';
-import { createTraffic, describeTraffic } from './lib/traffic.js';
+import { createRate, createTraffic, describeRate, describeTraffic } from './lib/traffic.js';
 import { createServersUi } from './lib/servers-ui.js';
 import { createHealthUi } from './lib/health-ui.js';
 import { createTestAllUi } from './lib/test-all-ui.js';
@@ -57,6 +59,9 @@ const els = {
   trafficUp: el('trafficUp'),
   trafficDownMetric: el('trafficDownMetric'),
   trafficUpMetric: el('trafficUpMetric'),
+  rateRow: el('rateRow'),
+  rateDot: el('rateDot'),
+  rateText: el('rateText'),
   bypassInfo: el('bypassInfo'),
   editBypass: el('editBypass'),
 };
@@ -68,6 +73,10 @@ let applyStatus = null;
 let serverHealth = null;
 /** What the meter has counted (lib/traffic.js). */
 let traffic = null;
+/** The recent bytes the live rate reads its speed from (lib/traffic.js). */
+let rate = null;
+/** Ticks the speed line once a second while the popup is open. */
+let rateTimer = 0;
 let lang = 'en';
 let transientWarning = null;
 let warningTimer = 0;
@@ -151,6 +160,18 @@ function setText(node, value) {
   if (node && node.textContent !== value) node.textContent = value;
 }
 
+/**
+ * The speed line, read fresh from the window each time. Called by every
+ * render *and* by the one-second tick below: storage only changes when the
+ * worker flushes a batch, but the decay keeps moving between flushes, and a
+ * speed that freezes between them would lie the other way.
+ */
+function renderRate() {
+  const { idle, down, up } = describeRate(rate ?? createRate());
+  els.rateDot.dataset.idle = String(idle);
+  setText(els.rateText, t(idle ? 'traffic.rateIdle' : 'traffic.rate', lang, { down, up }));
+}
+
 function render() {
   lang = resolveLang(state.settings.language, navigator.language);
   applyDocumentLang(lang);
@@ -231,7 +252,10 @@ function render() {
       down: reading.totalDown,
       up: reading.totalUp,
     });
+
+    renderRate();
   }
+  els.rateRow.classList.toggle('hidden', !meterOn);
 
   modeUi.render(state, lang);
   serversUi.render(state, lang);
@@ -240,6 +264,12 @@ function render() {
 }
 
 function wire() {
+  // The rate decays in real time; a tick keeps the line honest between the
+  // worker's writes. One timer for the popup's whole life, cleared with it.
+  rateTimer = setInterval(() => {
+    if (state?.settings?.trafficMeter === true) renderRate();
+  }, 1000);
+
   els.masterToggle.addEventListener('change', () => {
     const enabled = els.masterToggle.checked;
     commit((draft) => {
@@ -286,6 +316,7 @@ async function init() {
   applyStatus = await loadStatus();
   serverHealth = await loadServerHealth();
   traffic = await loadTraffic();
+  rate = await loadRate();
   wire();
   render();
   subscribe((next) => {
@@ -311,6 +342,10 @@ async function init() {
     traffic = next;
     render();
   });
+  subscribeRate((next) => {
+    rate = next;
+    renderRate();
+  });
 
   // The test-all pass announces each verdict as it is recorded; this page only
   // narrates (the verdict itself reaches the rows through the health record).
@@ -326,5 +361,8 @@ async function init() {
     if (state) applyTheme(state.settings.theme);
   });
 }
+
+// The popup dies with its DOM: the tick has nothing left to render.
+window.addEventListener('unload', () => clearInterval(rateTimer));
 
 init();

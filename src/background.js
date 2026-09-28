@@ -24,6 +24,7 @@ import {
   updateFailover,
   updateServerHealth,
   updateState,
+  updateRate,
   updateTraffic,
 } from './lib/storage.js';
 import {
@@ -62,7 +63,7 @@ import {
   testAllEligible,
 } from './lib/server-probe.js';
 import { PROBE_TARGETS, probe, probeHost } from './lib/health.js';
-import { meterRuns, noteTraffic, requestBytes, responseBytes } from './lib/traffic.js';
+import { meterRuns, noteRate, noteTraffic, requestBytes, responseBytes } from './lib/traffic.js';
 import { resolveAuthCredentials } from './lib/auth.js';
 import { resolveLang, t } from './lib/i18n.js';
 
@@ -546,38 +547,61 @@ const TRAFFIC_FLUSH_MS = 5000;
 
 /** Whether the meter may count at all — kept current by `runSync()`. */
 let meterOn = false;
-/** The bytes seen since the last write, and the timer that will write them. */
+/**
+ * The batch in hand: the bytes seen since the last write, when its first byte
+ * arrived, and the timer that will write it.
+ */
 let pendingUp = 0;
 let pendingDown = 0;
+let pendingSince = 0;
 let flushTimer = 0;
 
 /**
  * Writes the batch that has piled up. The bytes are taken out of the counters
  * *before* the write, so a failed write loses that batch rather than counting it
  * twice on the next flush.
+ *
+ * The same batch is stamped into the live rate's window, so the speed the pages
+ * show is the speed of the very bytes just counted — one observation, two
+ * readers, and no second listener deciding on its own what a byte is. The
+ * batch also reports how long it took, because a speed is bytes over time: the
+ * span begins with the batch's first byte, never with the last flush.
  */
 async function flushTraffic() {
   if (flushTimer) {
     clearTimeout(flushTimer);
     flushTimer = 0;
   }
-  if (pendingUp <= 0 && pendingDown <= 0) return;
+  if (pendingUp <= 0 && pendingDown <= 0) {
+    pendingSince = 0;
+    return;
+  }
 
   const up = pendingUp;
   const down = pendingDown;
+  const since = pendingSince;
   pendingUp = 0;
   pendingDown = 0;
+  pendingSince = 0;
+  const at = Date.now();
+  const ms = since > 0 ? at - since : 0;
 
   try {
-    await updateTraffic((draft) => noteTraffic(draft, { up, down, at: Date.now() }));
+    await updateTraffic((draft) => noteTraffic(draft, { up, down, at }));
+    await updateRate((draft) => noteRate(draft, { up, down, at, ms }));
   } catch (error) {
     console.warn('[proxy-switch] the traffic counters could not be written', error);
   }
 }
 
-/** Adds one observation to the batch in hand, and arms the timer if it is idle. */
+/**
+ * Adds one observation to the batch in hand, and arms the timer if it is idle.
+ * The batch's clock starts with its first byte, so the span it reports is the
+ * time those bytes really took rather than the length of the timer.
+ */
 function countTraffic(up, down) {
   if (up <= 0 && down <= 0) return;
+  if (!pendingSince) pendingSince = Date.now();
   pendingUp += up;
   pendingDown += down;
 

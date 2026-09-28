@@ -52,6 +52,12 @@ part of it is ever sent anywhere. The counters are deliberately kept out of an e
 file, and uninstalling the extension removes them with everything else. *Count traffic* on the
 settings page switches the whole thing off.
 
+The live speed the popup and the settings page show comes from the same observation, and adds one
+more piece of memory: a sample per batch of counted bytes — the two byte counts, the moment it was
+taken and the span it covers — kept for ten seconds and swept as it is read, so what sits on the
+device is the last few seconds of counting and nothing older. It is not sent anywhere either, and
+*Reset counters* clears it together with the counters.
+
 Two other pieces of traffic are yours, not the extension's: Chrome downloads the PAC script URL
 you entered, and your browsing travels through the proxy server you configured. (A PAC script built
 from your own domain list is not downloaded at all — it is handed to Chrome as text, and no copy of

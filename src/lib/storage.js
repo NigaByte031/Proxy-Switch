@@ -17,7 +17,7 @@ import {
   sameServerHealth,
   sanitizeServerHealth,
 } from './server-health.js';
-import { createTraffic, sameTraffic, sanitizeTraffic } from './traffic.js';
+import { createRate, createTraffic, sameRate, sameTraffic, sanitizeRate, sanitizeTraffic } from './traffic.js';
 
 /** Key holding the outcome of the last `chrome.proxy.settings.set`. */
 export const STATUS_KEY = 'proxySwitchApplyStatus';
@@ -43,6 +43,13 @@ export const SERVER_HEALTH_KEY = 'proxySwitchServerHealth';
  * and nobody wants a restore to bring back somebody else's byte counts.
  */
 export const TRAFFIC_KEY = 'proxySwitchTraffic';
+
+/**
+ * Key holding the recent bytes the live rate reads its speed from — a short
+ * sliding window, swept on every read, so it holds only the last few seconds.
+ * Memory twice over: it is not configuration, and it is not even history.
+ */
+export const RATE_KEY = 'proxySwitchTrafficRate';
 
 function store() {
   if (typeof chrome === 'undefined' || !chrome.storage?.local) return null;
@@ -276,6 +283,47 @@ export function subscribeTraffic(callback) {
   return changeListener((changes) => {
     if (!changes[TRAFFIC_KEY]) return;
     callback(sanitizeTraffic(changes[TRAFFIC_KEY].newValue));
+  });
+}
+
+/* ------------------------------------------------------------------ *
+ * The live rate's window
+ * ------------------------------------------------------------------ */
+
+/** @returns {Promise<object>} the stored window, or an empty one. */
+export async function loadRate() {
+  const area = store();
+  if (!area) return createRate();
+  const result = await area.get(RATE_KEY);
+  return sanitizeRate(result?.[RATE_KEY]);
+}
+
+/**
+ * Queued read–modify–write of the window — `updateState` for this key.
+ *
+ * The worker stamps each batch of bytes as it counts them (see
+ * `src/background.js`), and every read sweeps the window against the current
+ * clock, so samples can never outlive the span they belong to.
+ *
+ * @param {(draft: object) => any} mutator
+ */
+export function updateRate(mutator) {
+  return enqueue(async () => {
+    const stored = await loadRate();
+    const draft = structuredClone(stored);
+    mutator(draft);
+    const clean = sanitizeRate(draft);
+    const area = store();
+    if (area && !sameRate(stored, clean)) await area.set({ [RATE_KEY]: clean });
+    return clean;
+  });
+}
+
+/** Subscribes to window changes (the pages redraw the speed when it moves). */
+export function subscribeRate(callback) {
+  return changeListener((changes) => {
+    if (!changes[RATE_KEY]) return;
+    callback(sanitizeRate(changes[RATE_KEY].newValue));
   });
 }
 

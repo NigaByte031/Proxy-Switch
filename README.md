@@ -69,6 +69,11 @@ bilingual — English and Persian (فارسی) with full RTL support — and eve
   says so next to the numbers. Counting happens on your device, only while the proxy is on, and the
   counters live in their own storage key, so an exported settings file never carries them. *Count
   traffic* on the settings page turns it off.
+- **Live speed** — under today's figures the popup shows what is moving right now (`↓ 4.6 MB/s ·
+  ↑ 120 KB/s`) beside a dot that goes quiet when nothing is, and the settings page has the same
+  reading as *Right now*. Every batch of counted bytes reports the span it covers, so a transfer
+  that is still going reads its own rate rather than a fraction of it, and one that has stopped
+  reads *nothing moving* instead of leaving the tail of a burst on screen as if it were a speed.
 - **Keyboard shortcuts** — `Alt+Shift+P` turns the proxy on or off, `Alt+Shift+D` goes direct.
 - **Bilingual UI** — switch language from the popup; Persian is rendered RTL.
 - **Theme** — automatic (follows your operating system), light or dark. Set it on the settings

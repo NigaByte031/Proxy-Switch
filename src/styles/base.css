@@ -1131,6 +1131,46 @@ label {
   unicode-bidi: plaintext;
 }
 
+/* The Right-now line: brighter while something is moving, muted when idle. */
+.rate-live:not(.rate-idle) {
+  color: var(--ok);
+}
+
+.rate-live.rate-idle {
+  color: var(--muted);
+}
+
+/* The popup's speed line sits under the counters, small and quiet — the
+   reading is the news, the dot is whether anything is moving at all. */
+.rate-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 0;
+  padding-block-start: 9px;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.rate-dot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 20%, transparent);
+}
+
+.rate-dot[data-idle="true"] {
+  background: var(--muted);
+  box-shadow: none;
+}
+
+.rate-text {
+  color: var(--muted);
+  unicode-bidi: plaintext;
+}
+
 /* ---------------------------------------------------------------- *
  * Server search
  *
