@@ -6,7 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **Screenshots in the README**, taken from the offline preview pages rather than drawn: both
+  READMEs now open with the popup and the settings page, English for one and Persian for the other.
+  They are retaken with `npm run shots` (`tools/screenshots.mjs`), which drives a headless Chrome
+  over the DevTools protocol — Node's own WebSocket does the talking, so there is still nothing to
+  install — and frames each page at the size its content needs. The preview stub grew a `?demo=1`
+  seed for it: three servers with verdicts, today's counters and a speed that keeps moving, so the
+  pictures show the interface with something in it. `tests/docs.test.mjs` fails the suite when a
+  picture a README points at is missing or is not a PNG.
 
 ## [1.6.0] — 2026-09-28
 

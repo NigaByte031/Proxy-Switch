@@ -48,5 +48,7 @@ jobs:
             The same archive is what the Chrome Web Store developer dashboard wants, so it can also
             be uploaded there as-is.
 
+            ![The popup: the master switch, the server in use, today's traffic and the live speed](https://raw.githubusercontent.com/${{ github.repository }}/main/docs/screenshots/popup.png)
+
             Everything in this version is written up in
             [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md).

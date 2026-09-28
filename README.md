@@ -10,6 +10,16 @@ bilingual — English and Persian (فارسی) with full RTL support — and eve
 
 [فارسی](README.fa.md)
 
+## Screenshots
+
+<img src="docs/screenshots/popup.png" width="380" alt="The popup: the master switch, the server in use, today's traffic and the live speed">
+
+<img src="docs/screenshots/settings.png" width="780" alt="The settings page: proxy mode, the traffic meter with the live speed, and the servers with their last verdicts">
+
+Both pages open without installing anything — see
+[Try the UI without installing](#try-the-ui-without-installing) — and these pictures are taken from
+them by `npm run shots`, so they are the interface itself rather than a drawing of it.
+
 ## Features
 
 - **Four modes in one click** — system proxy, direct (no proxy), a saved server, or a PAC script.
@@ -100,7 +110,7 @@ bilingual — English and Persian (فارسی) with full RTL support — and eve
 ```bash
 git clone https://github.com/NigaByte031/Proxy-Switch.git
 cd Proxy-Switch
-npm run package     # writes dist/proxy-switch-v1.4.0.zip (optional)
+npm run package     # writes dist/proxy-switch-v<version>.zip (optional)
 ```
 
 Then load the repository folder itself with **Load unpacked** — the manifest points at `src/`, so
@@ -172,12 +182,13 @@ The extension has **no content scripts** and injects nothing into pages.
 
 ## Development
 
-Requirements: Node.js 20+ (only for the tests, the preview generator and packaging — the extension
-itself has zero dependencies and no build step).
+Requirements: Node.js 22+ (only for the tests, the preview generator, the screenshots and
+packaging — the extension itself has zero dependencies and no build step).
 
 ```bash
 npm test                 # unit tests (state, proxy config, i18n coverage, manifest, zip writer)
 npm run preview          # regenerate the offline preview pages
+npm run shots           # retake docs/screenshots/*.png (needs the preview server running)
 npm run package          # build dist/proxy-switch-v<version>.zip for the Web Store
 ```
 

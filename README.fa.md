@@ -6,6 +6,15 @@
 
 [English](README.md)
 
+## تصاویر
+
+<img src="docs/screenshots/popup.fa.png" width="380" alt="پاپ‌آپ: کلید اصلی، سرور فعال، ترافیک امروز و سرعت لحظه‌ای">
+
+<img src="docs/screenshots/settings.fa.png" width="780" alt="صفحهٔ تنظیمات: حالت پروکسی، شمارندهٔ ترافیک با سرعت لحظه‌ای و فهرست سرورها با آخرین نتیجه">
+
+هر دو صفحه بدون نصب هم باز می‌شوند (بخش «امتحان کردن رابط بدون نصب») و همین تصویرها با
+`npm run shots` از خودشان گرفته می‌شوند — یعنی خودِ رابط‌اند، نه طرحی از آن.
+
 ## امکانات
 
 - **چهار حالت با یک کلیک** — پروکسی سیستمی، مستقیم، یکی از سرورهای ذخیرهشده، یا فایل PAC.
@@ -169,6 +178,7 @@ cd Proxy-Switch
 ```bash
 npm test              # آزمونهای واحد
 npm run preview       # بازسازی صفحههای پیشنمایش
+npm run shots         # گرفتن دوبارهٔ تصویرهای docs/screenshots (سرور پیش‌نمایش باید بالا باشد)
 npm run package       # ساخت فایل dist/proxy-switch-v<version>.zip
 ```
 
@@ -180,7 +190,7 @@ npm run package       # ساخت فایل dist/proxy-switch-v<version>.zip
 
 ## انتشار
 
-- [ ] با `npm run package` فایل `dist/proxy-switch-v1.4.0.zip` را بسازید و آن را در پنل
+- [ ] با `npm run package` فایل `dist/proxy-switch-v<version>.zip` را بسازید و آن را در پنل
       توسعه‌دهندگان Chrome Web Store بارگذاری کنید (آیکون ۱۲۸×۱۲۸ از قبل موجود است).
 - [ ] برچسب انتشار بزنید: `git tag v1.4.0 && git push origin v1.4.0`. کارِ
       [گردش‌کار انتشار](.github/workflows/release.yml) برچسبی را که با نسخهٔ `manifest.json`

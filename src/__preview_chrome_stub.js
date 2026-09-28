@@ -269,4 +269,120 @@
     });
   };
 
+  /*
+   * A demo seed, for pictures and for poking at the UI: `?demo=1` (or
+   * `?demo=fa`) fills the stores with a plausible setup — three servers with
+   * verdicts, today's counters, and a speed that keeps moving — before the
+   * page's own scripts read them, so `README.md` can show the real interface
+   * rather than an empty list. Nothing here runs unless it is asked for, and
+   * this file is never part of a release build.
+   */
+  var demo = new URLSearchParams(location.search).get('demo');
+  if (demo) seedDemo(demo === 'fa' ? 'fa' : 'en');
+
+  function seedDemo(language) {
+    var now = Date.now();
+    var MB = 1024 * 1024;
+    var GB = 1024 * MB;
+    var minutesAgo = function (minutes) {
+      return now - minutes * 60 * 1000;
+    };
+    var date = new Date(now);
+    var day =
+      date.getFullYear() +
+      '-' +
+      String(date.getMonth() + 1).padStart(2, '0') +
+      '-' +
+      String(date.getDate()).padStart(2, '0');
+
+    globalThis.chrome.storage.local.set({
+      proxySwitchState: {
+        version: 1,
+        settings: {
+          enabled: true,
+          mode: 'fixed_servers',
+          activeProfileId: 'demo-frankfurt',
+          backgroundProbe: true,
+          trafficMeter: true,
+          language: language,
+          theme: 'auto',
+          accent: 'emerald',
+        },
+        profiles: [
+          {
+            id: 'demo-frankfurt',
+            name: 'Frankfurt',
+            scheme: 'https',
+            host: 'de1.example.net',
+            port: 8443,
+            username: 'demo',
+            password: '',
+          },
+          {
+            id: 'demo-amsterdam',
+            name: 'Amsterdam',
+            scheme: 'socks5',
+            host: 'nl1.example.net',
+            port: 1080,
+            username: '',
+            password: '',
+          },
+          {
+            id: 'demo-backup',
+            name: 'Backup',
+            scheme: 'http',
+            host: 'backup.example.net',
+            port: 3128,
+            username: '',
+            password: '',
+          },
+        ],
+      },
+      proxySwitchApplyStatus: {
+        ok: true,
+        failed: null,
+        levelOfControl: 'controlled_by_this_extension',
+        at: now,
+      },
+      proxySwitchServerHealth: {
+        'demo-frankfurt': { ok: true, at: minutesAgo(2), ms: 42 },
+        'demo-amsterdam': { ok: true, at: minutesAgo(6), ms: 118 },
+        'demo-backup': { ok: false, at: minutesAgo(11), ms: null },
+      },
+      proxySwitchTraffic: {
+        day: day,
+        up: 48.3 * MB,
+        down: 2.4 * GB,
+        upTotal: 1.6 * GB,
+        downTotal: 41.2 * GB,
+        since: now - 30 * 24 * 60 * 60 * 1000,
+        at: now,
+      },
+      proxySwitchTrafficRate: {
+        samples: [{ at: now, ms: 1000, up: 120 * 1024, down: 4.6 * MB }],
+      },
+    });
+
+    // The speed is the one reading that has to keep moving to look like itself,
+    // so the demo feeds the window a fresh sample every second — the same shape
+    // the worker writes, one batch over one second.
+    var tick = 0;
+    setInterval(function () {
+      tick += 1;
+      var at = Date.now();
+      var held = (readAll().proxySwitchTrafficRate || {}).samples || [];
+      var samples = held.filter(function (entry) {
+        return at - entry.at <= 8000;
+      });
+      var wobble = 1 + 0.15 * Math.sin(tick / 3);
+      samples.push({
+        at: at,
+        ms: 1000,
+        up: Math.round(120 * 1024 * wobble),
+        down: Math.round(4.6 * MB * wobble),
+      });
+      globalThis.chrome.storage.local.set({ proxySwitchTrafficRate: { samples: samples } });
+    }, 1000);
+  }
+
 })();
