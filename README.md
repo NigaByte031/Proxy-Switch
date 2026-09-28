@@ -103,7 +103,7 @@ them by `npm run shots`, so they are the interface itself rather than a drawing 
 | Chrome, Edge, Brave, Opera, Vivaldi | 116+ | `proxy-switch-vX.Y.Z.zip` |
 | Firefox (desktop) | 140+ (ESR) | `proxy-switch-vX.Y.Z-firefox.zip` |
 
-Both archives go out with every [release](../../releases) and hold the same extension: the Firefox
+Every [release](../../releases) from v1.6.1 on carries both archives[^firefox-first], and they hold the same extension: the Firefox
 one swaps `manifest.json` for `manifest.firefox.json`, which runs the same code as an event page
 (Firefox has no extension service worker — see
 [MDN](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/manifest.json/background))
@@ -119,6 +119,8 @@ Two honest differences on the Firefox side:
   [addons.mozilla.org](https://addons.mozilla.org) for a permanent install. Firefox for Android is
   not a target — a proxy the operating system routes anyway is not something an extension can move
   there.
+
+[^firefox-first]: v1.6.1 is the first release with a Firefox archive; older tags are Chrome-only.
 
 ## Install
 
