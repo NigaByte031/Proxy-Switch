@@ -42,15 +42,15 @@ jobs:
           files: dist/*.zip
           generate_release_notes: true
           body: |
-          **Download `proxy-switch-${{ github.ref_name }}.zip`** for Chrome, Edge, Brave and Opera,
-          or `proxy-switch-${{ github.ref_name }}-firefox.zip` for Firefox (unzip it, then open
-          `chrome://extensions`, turn on **Developer mode** and click **Load unpacked**; an
-          unsigned Firefox build loads from `about:debugging` instead). Requires Chrome 116 or
-          Firefox 140 or newer; the extension works offline, keeps everything on the device and
-          sends nothing anywhere.
+            **Download `proxy-switch-${{ github.ref_name }}.zip`** for Chrome, Edge, Brave and
+            Opera, or `proxy-switch-${{ github.ref_name }}-firefox.zip` for Firefox (unzip it, then
+            open `chrome://extensions`, turn on **Developer mode** and click **Load unpacked**; an
+            unsigned Firefox build loads from `about:debugging` instead). Requires Chrome 116 or
+            Firefox 140 or newer; the extension works offline, keeps everything on the device and
+            sends nothing anywhere.
 
-          Both archives are also what the store dashboards want — Chrome Web Store and
-          [addons.mozilla.org](https://addons.mozilla.org) — so either can be uploaded as-is.
+            Both archives are also what the store dashboards want — Chrome Web Store and
+            [addons.mozilla.org](https://addons.mozilla.org) — so either can be uploaded as-is.
 
             ![The popup: the master switch, the server in use, today's traffic and the live speed](https://raw.githubusercontent.com/${{ github.repository }}/main/docs/screenshots/popup.png)
 
