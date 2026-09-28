@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [1.6.1] — 2026-09-28
+
 ### Added
 
 - **Screenshots in the README**, taken from the offline preview pages rather than drawn: both
@@ -281,6 +285,7 @@ so an existing configuration is untouched.
   touch `chrome.proxy` themselves. The offline preview answers a retry with a healthy status, so the
   whole path can be clicked through without installing anything.
 
+[1.6.1]: ../../releases/tag/v1.6.1
 [1.6.0]: ../../releases/tag/v1.6.0
 [1.5.0]: ../../releases/tag/v1.5.0
 [1.4.0]: ../../releases/tag/v1.4.0
