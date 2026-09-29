@@ -5,12 +5,9 @@ import { PAC_DIRECTIVE, buildPacScript, proxyChain, proxyDirective } from '../sr
 import { createProfile, sanitizeDomainRules } from '../src/lib/model.js';
 
 /**
- * The generated PAC script is a contract with Chrome, so these tests run it the
- * way Chrome does: the script is evaluated here and `FindProxyForURL()` is
- * called for real. The handful of PAC-standard helpers it may use are shimmed
- * exactly as the specification defines them (`shExpMatch` is a glob,
- * `isPlainHostName` is "no dot"), so what the tests see is what the proxy
- * resolver sees.
+ * The generated PAC script is a contract with Chrome, so it is evaluated and
+ * `FindProxyForURL()` is called for real. The helpers it may use are shimmed as the
+ * spec defines them (`shExpMatch` is a glob, `isPlainHostName` is "no dot").
  */
 
 const PAC_HELPERS = {
@@ -97,8 +94,8 @@ test('the bypass list still wins, and <local> means dot-less names', () => {
 });
 
 test('a routed site never falls back to a direct connection', () => {
-  // The single most dangerous mistake this feature could make: sending the
-  // sites the user listed straight to the network when the server is down.
+  // The most dangerous mistake this feature could make: sending the listed sites
+  // straight to the network when the server is down.
   for (const host of ['example.com', 'api.example.com']) {
     const answer = ask(scriptFor(['example.com']), { host });
     assert.equal(answer, 'PROXY proxy.example.com:8080', host);
@@ -174,9 +171,7 @@ test('typed rules are cleaned up before they reach the script', () => {
     '',
     'wiki.example.net',
   ]);
-
-  // the pasted URL became a host, the duplicate lost (case-insensitively), the
-  // comment and the blank line went away
+  // the pasted URL became a host, the duplicate lost, the comment and blank line gone
   assert.deepEqual(
     sanitizeDomainRules(['https://Example.COM/private?x=1#frag', ' example.com ', '# x', 'wiki.example.net']),
     ['Example.COM', 'wiki.example.net'],
@@ -214,8 +209,7 @@ test('the override sends the probes to one server and moves nothing else', () =>
 
   // What the check is for: the probe itself goes to the server being tested …
   assert.equal(ask(script, { host: 'www.gstatic.com' }), 'SOCKS5 home.example.net:1080');
-  // … and everything the user configured is exactly where it was, including a
-  // listed site (the chain), a bypassed one and an unlisted one.
+  // … and everything the user configured is exactly where it was.
   assert.equal(ask(script, { host: 'www.example.com' }), 'PROXY proxy.example.com:8080; SOCKS5 home.example.net:1080');
   assert.equal(ask(script, { host: 'safe.example.com' }), 'DIRECT');
   assert.equal(ask(script, { host: 'elsewhere.test' }), 'DIRECT');
@@ -223,9 +217,8 @@ test('the override sends the probes to one server and moves nothing else', () =>
   // Exact host only: a subdomain of a probe endpoint is not a probe.
   assert.equal(ask(script, { host: 'notgstatic.com' }), 'DIRECT');
   assert.equal(ask(script, { host: 'www.gstatic.com.evil.test' }), 'DIRECT');
-
-  // Half an override is no override: a script that looks like it diverts a
-  // check while diverting nothing is worse than one that plainly does not.
+  // Half an override is no override: it would look like it diverts a check while
+  // diverting nothing.
   const incomplete = buildPacScript({
     servers: [WORK],
     domains: ['example.com'],

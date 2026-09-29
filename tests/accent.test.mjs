@@ -89,9 +89,7 @@ test('applyAccent writes the palette onto <html>, next to data-theme', () => {
   assert.equal(applyAccent('rose', {}), 'rose');
 });
 
-/* ------------------------------------------------------------------ *
- * The palettes in the stylesheet
- * ------------------------------------------------------------------ */
+/* The palettes in the stylesheet. */
 
 const CSS = read('src/styles/base.css');
 const LIGHT = block(CSS, ':root {');
@@ -108,8 +106,7 @@ test('base.css ships one palette block per accent, in both themes', () => {
     for (const [theme, source] of Object.entries(paletteOf(accent))) {
       const declared = tokens(source);
       assert.ok(declared.length >= 8, `${accent}/${theme} only repaints ${declared.length} tokens`);
-      // a palette may only repaint tokens the base palettes already define, so
-      // no accent can introduce a colour the rest of the sheet does not know
+      // a palette may only repaint tokens the base palettes already define
       const known = tokens(theme === 'light' ? LIGHT : DARK);
       for (const token of declared) {
         assert.ok(known.includes(token), `${accent}/${theme}: ${token} is unknown to the ${theme} palette`);
@@ -117,9 +114,8 @@ test('base.css ships one palette block per accent, in both themes', () => {
     }
   }
 
-  // The shipped palette is written out twice on purpose — the emerald swatch has
-  // to be emerald even while the product wears another colour — so the copy is
-  // held to the base palette, token for token.
+  // The shipped palette is written out twice on purpose, so the copy is held to the
+  // base palette, token for token.
   for (const [theme, base] of Object.entries({ light: LIGHT, dark: DARK })) {
     const shipped = paletteOf(DEFAULT_ACCENT)[theme];
     for (const token of tokens(shipped)) {
@@ -167,8 +163,7 @@ test('every palette is readable: light softs are light, dark ones are dark', () 
 });
 
 test('a swatch paints itself with the palette it offers', () => {
-  // the palette blocks are keyed off the attribute wherever it appears, which is
-  // what lets the picker reuse them instead of copying hex values
+  // the blocks are keyed off the attribute, so the picker reuses them
   for (const accent of ACCENTS) {
     assert.match(
       CSS,
@@ -181,9 +176,7 @@ test('a swatch paints itself with the palette it offers', () => {
   assert.match(options, /\.swatch-dot\s*\{[^}]*var\(--brand-2\)/s);
 });
 
-/* ------------------------------------------------------------------ *
- * The pages
- * ------------------------------------------------------------------ */
+/* The pages. */
 
 test('the settings page offers a swatch per palette and saves the choice', () => {
   const html = read('src/options.html');

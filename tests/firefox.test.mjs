@@ -15,11 +15,9 @@ const firefox = JSON.parse(read('manifest.firefox.json'));
 const pkg = JSON.parse(read('package.json'));
 
 /**
- * One extension, two manifests. The Firefox one exists because Firefox has no
- * extension service worker at all (MDN, `manifest.json/background`: "not
- * supported, see Firefox bug 1573659"), so the same `src/background.js` runs
- * there as an event page — everything else is required to stay identical, or
- * the two stores would be shipping two different programs under one name.
+ * One extension, two manifests: Firefox has no extension service worker, so the same
+ * `src/background.js` runs there as an event page. Everything else has to stay
+ * identical, or the two stores would ship two different programs under one name.
  */
 test('the Firefox manifest is the Chrome one, except where the browsers differ', () => {
   assert.equal(firefox.manifest_version, 3);
@@ -33,9 +31,7 @@ test('the Firefox manifest is the Chrome one, except where the browsers differ',
   assert.equal(firefox.options_page, manifest.options_page);
   assert.deepEqual(firefox.permissions, manifest.permissions, 'the permission set is the product');
   assert.deepEqual(firefox.host_permissions, manifest.host_permissions);
-
-  // The store listing is the one wording that may differ: it names its own
-  // browser, and nothing else about the sentence moves.
+  // The store listing is the one wording that may differ: it names its own browser.
   assert.equal(firefox.description.replace('Firefox', 'Chrome'), manifest.description);
   assert.ok(firefox.description.includes('Firefox'), 'the Firefox listing must name Firefox');
 });
@@ -45,9 +41,7 @@ test('the background script is an event page, not a service worker', () => {
   assert.equal(firefox.background.type, 'module', 'the entry point uses import statements');
   assert.equal(firefox.background.service_worker, undefined, 'Firefox refuses service workers in MV3');
   assert.notEqual(firefox.background.persistent, true, 'MV3 event pages may not be persistent');
-
-  // …and the Chrome manifest is left alone: Chrome runs a service worker and
-  // has no use for the event-page fallback, so its manifest keeps saying so.
+  // Chrome runs a service worker and has no use for the event-page fallback.
   assert.equal(manifest.background.scripts, undefined);
   assert.equal(manifest.background.service_worker, 'src/background.js');
   assert.equal(firefox.minimum_chrome_version, undefined, 'a Chrome floor means nothing to Firefox');
@@ -57,26 +51,20 @@ test('the background script is an event page, not a service worker', () => {
 test('the Gecko id, the Firefox floor and the data-consent declaration are in place', () => {
   const gecko = firefox.browser_specific_settings?.gecko;
   assert.ok(gecko, 'AMO needs browser_specific_settings.gecko');
-  // An email-shaped id (anything@your-domain) rather than a bare string: it is
-  // what ties future versions to this listing, and it cannot be changed later.
+  // An email-shaped id ties future versions to this listing and cannot be changed.
   assert.match(gecko.id, /^[a-z0-9-]+@([a-z0-9-]+\.)+[a-z]{2,}$/i);
-
-  // 140 is not a preference, it is the oldest version that honours every key
-  // this manifest uses: `options_page` and `webRequestAuthProvider` arrived in
-  // 126, and `data_collection_permissions` — which AMO requires from every new
-  // extension — in 140 (addons-linter says both). Firefox 140 is the ESR line.
+  // 140 is the oldest version that honours every key here: `webRequestAuthProvider`
+  // arrived in 126 and `data_collection_permissions` (required by AMO) in 140.
   assert.equal(gecko.strict_min_version, '140.0');
-
-  // Since November 2025 AMO refuses a new extension that has not said what it
-  // collects. The answer here is the whole point of the extension: nothing —
-  // settings, servers and counters stay in local storage and never leave.
+  // AMO refuses a new extension that has not declared what it collects; the answer
+  // is nothing — servers, settings and counters stay on this device.
   assert.deepEqual(gecko.data_collection_permissions, { required: ['none'] });
 });
 
 test('the proxy-error listener speaks both browsers\' dialect', () => {
   const worker = read('src/background.js');
-  // Firefox renamed `proxy.onProxyError` (deprecated) to `proxy.onError`;
-  // Chrome only has the old name.
+  // Firefox renamed `proxy.onProxyError` (deprecated) to `proxy.onError`; Chrome
+  // only has the old name.
   assert.match(worker, /chrome\.proxy\?\.onError \?\? chrome\.proxy\?\.onProxyError/);
 });
 
@@ -101,9 +89,8 @@ test('the Firefox package is the same tree under a different manifest', () => {
   try {
     const { target, entries } = buildPackage({ root: ROOT, firefox: true, out: join(directory, 'x.zip') });
     assert.equal(basename(target), 'x.zip', 'an explicit destination is honoured');
-
-    // The default name is the contract with the release workflow and with
-    // whoever downloads it: the two archives must not collide.
+    // The default name is the contract with the release workflow: the two archives
+    // must not collide.
     const natural = buildPackage({ root: ROOT, firefox: true });
     assert.equal(
       basename(natural.target),

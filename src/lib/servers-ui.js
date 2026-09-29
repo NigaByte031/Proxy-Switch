@@ -1,18 +1,11 @@
 /**
- * Shared "servers" UI: the search box, the profile list and the add/edit form.
- * Both the popup and the settings page use the same markup, so the behaviour
- * lives here once.
+ * Shared "servers" UI: the search box, the profile list and the add/edit form, used
+ * by both the popup and the settings page. A row also says what the extension has
+ * seen about that server (`lib/server-health.js`), when it has looked at all.
  *
- * A row also says what the extension has seen about that server — its last
- * verdict and how old it is (`lib/server-health.js`), when there is one.
- *
- * Two interaction decisions are worth spelling out:
- *   - Deleting is confirmed *in the row* instead of with `window.confirm`. A
- *     native dialog freezes the whole popup (and is dismissed by clicking
- *     outside it), which made "delete" feel like a trap.
- *   - Escape/Enter are handled here, once, in the order the user expects:
- *     a pending delete is cancelled first, then an open form is closed, then a
- *     search box is emptied.
+ * Deleting is confirmed *in the row* rather than with `window.confirm` (a native
+ * dialog freezes the whole popup and is dismissed by clicking outside it), and Escape
+ * unwinds in the order the user expects: pending delete, open form, search box.
  */
 
 import {
@@ -68,9 +61,7 @@ export function createServersUi({
   const errorEl = formEl?.querySelector('#formError');
   const cancelBtn = formEl?.querySelector('#formCancel');
 
-  /* ---------------------------------------------------------------- *
-   * Small DOM helpers
-   * ---------------------------------------------------------------- */
+  /* Small DOM helpers. */
 
   /** Finds a rendered row by profile id — no id is ever pasted into a selector. */
   function rowFor(id) {
@@ -83,8 +74,8 @@ export function createServersUi({
 
   /**
    * One server's last verdict, said as the row says it: the state, then how old
-   * it is. The dot in front carries the tone (styles/base.css); the words carry
-   * the meaning, so it reads the same without colour.
+   * it is. The dot carries the tone (styles/base.css), the words the meaning, so
+   * it reads the same without colour.
    */
   function healthBadge(health, lang) {
     const badge = document.createElement('span');
@@ -126,9 +117,7 @@ export function createServersUi({
     return button;
   }
 
-  /* ---------------------------------------------------------------- *
-   * The list
-   * ---------------------------------------------------------------- */
+  /* The list. */
 
   function buildRow(profile, state, lang) {
     const active =
@@ -150,8 +139,7 @@ export function createServersUi({
 
       const text = document.createElement('p');
       text.className = 'profile-confirm-text';
-      // The name is repeated inside the question, so the row still says what it
-      // is about to remove.
+      // The name is repeated inside the question, so the row says what it removes.
       text.textContent = t('profiles.confirmDelete', lang, { name: profile.name });
       text.title = profile.name;
 
@@ -182,8 +170,7 @@ export function createServersUi({
 
     main.append(name, detail);
 
-    // What the extension has seen about this server, if it has looked at all:
-    // never looked at is not a thing to say, it is the absence of one.
+    // "Never looked at" is not a thing to say, it is the absence of one.
     const health = describeServerVerdict(getHealth?.() ?? null, profile.id);
     if (health) main.append(healthBadge(health, lang));
 
@@ -262,21 +249,17 @@ export function createServersUi({
     }
   }
 
-  // A list can stay on screen (the popup is often left open, and the settings
-  // page is a tab), so the ages are kept honest on a timer of their own.
+  // A list can stay on screen for a long time, so the ages are kept honest on a
+  // timer of their own.
   const healthTimer = setInterval(refreshHealth, HEALTH_TICK_MS);
-  // Node (the tests) keeps its event loop alive for a live interval; a browser
-  // timer is a number and has nothing to release.
+  // Node (the tests) keeps its event loop alive for a live interval.
   healthTimer?.unref?.();
 
-  /* ---------------------------------------------------------------- *
-   * Searching
-   * ---------------------------------------------------------------- */
+  /* Searching. */
 
   function setQuery(next) {
     query = String(next ?? '');
-    // Typing in the search box is a change of mind: drop a half-asked delete
-    // question instead of leaving it attached to a row that may no longer show.
+    // Typing is a change of mind: drop a half-asked delete question.
     pendingDeleteId = null;
     if (searchInput && searchInput.value !== query) searchInput.value = query;
     renderList(getState(), getLang());
@@ -298,9 +281,7 @@ export function createServersUi({
     focusSearch();
   });
 
-  /* ---------------------------------------------------------------- *
-   * Deleting (confirmed inside the row)
-   * ---------------------------------------------------------------- */
+  /* Deleting (confirmed inside the row). */
 
   function askDelete(profile) {
     pendingDeleteId = profile.id;
@@ -328,9 +309,7 @@ export function createServersUi({
     });
   }
 
-  /* ---------------------------------------------------------------- *
-   * The add / edit form
-   * ---------------------------------------------------------------- */
+  /* The add / edit form. */
 
   function renderForm(state, lang) {
     if (!formEl) return;
@@ -373,8 +352,7 @@ export function createServersUi({
     formEl.classList.add('hidden');
     formEl.reset?.();
     renderForm(state, lang);
-    // Back to the button that opened it, so the keyboard user is not dropped
-    // at the top of the page.
+    // Back to the button that opened it, so the keyboard user is not dropped here.
     addBtn?.focus?.();
   }
 
@@ -408,8 +386,7 @@ export function createServersUi({
   });
 
   addBtn?.addEventListener('click', () => {
-    // Clicking again while a blank form is open simply starts over, which beats
-    // a dead button the user cannot explain.
+    // Clicking again while a form is open starts over, which beats a dead button.
     openForm(getState(), getLang());
   });
   cancelBtn?.addEventListener('click', () => closeForm(getState(), getLang()));
@@ -446,9 +423,7 @@ export function createServersUi({
     closeForm(getState(), getLang());
   });
 
-  /* ---------------------------------------------------------------- *
-   * Keyboard shortcuts — registered once, in the order the user expects
-   * ---------------------------------------------------------------- */
+  /* Keyboard shortcuts — registered once, in the order the user expects. */
 
   document.addEventListener('keydown', (event) => {
     if (event.defaultPrevented) return;
@@ -462,8 +437,7 @@ export function createServersUi({
       return;
     }
 
-    // "/" jumps to the search box, the way it does in most app lists. It stays
-    // plain text while a form control has the keyboard.
+    // "/" jumps to the search box; it stays plain text inside a form control.
     if (event.key === '/' && !event.metaKey && !event.ctrlKey && !event.altKey) {
       const tag = event.target?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;

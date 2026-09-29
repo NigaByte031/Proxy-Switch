@@ -258,9 +258,7 @@ test('formatProfileAddress never leaks the password', () => {
   assert.equal(formatProfileAddress(null), '');
 });
 
-/* ------------------------------------------------------------------ *
- * Searching the server list
- * ------------------------------------------------------------------ */
+/* Searching the server list. */
 
 const searchable = () =>
   sanitizeState({

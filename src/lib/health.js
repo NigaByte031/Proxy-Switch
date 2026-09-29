@@ -2,15 +2,14 @@
  * "Does traffic actually flow?" check.
  *
  * The probe is a plain `fetch` from an extension page, so it travels through
- * whatever proxy mode is currently applied: a working server answers in
- * milliseconds, a broken one fails or hangs. Everything in this file is pure —
- * `fetch` is injected — so Node can test the decision logic without a browser.
+ * whatever proxy mode is currently applied. Everything here is pure — `fetch` is
+ * injected — so the decision logic can be tested without a browser.
  */
 
 /**
- * Small, cache-free endpoints that answer with an empty `204`. Google's is the
- * one Chrome itself uses for captive-portal detection; Cloudflare's is the same
- * idea on a different network, so one of them usually gets through.
+ * Small, cache-free endpoints that answer with an empty `204`. Google's is the one
+ * Chrome itself uses for captive-portal detection; Cloudflare's is the same idea
+ * on a different network, so one of them usually gets through.
  */
 export const PROBE_TARGETS = [
   'https://www.gstatic.com/generate_204',
@@ -21,10 +20,9 @@ export const PROBE_TARGETS = [
 export const PROBE_TIMEOUT_MS = 6000;
 
 /**
- * Only a `204` proves the route: the probe endpoints answer `204` and nothing
- * else. Any other status means the response was fabricated on the way — a
- * captive portal's `302` to its login page (followed by `redirect: 'follow'`
- * into a `200`), a firewall's `200` block page — so it fails the probe.
+ * Only a `204` proves the route: the endpoints answer `204` and nothing else. Any
+ * other status means the response was fabricated on the way — a captive portal's
+ * login page, a firewall's block page — so it fails the probe.
  */
 const REACHABLE_STATUSES = new Set([204]);
 
@@ -58,7 +56,7 @@ export function formatDuration(ms) {
 
 /**
  * One timed request. Never throws — an unreachable target is a result, not an
- * error, because "it did not answer" is exactly what we are trying to find out.
+ * error: "it did not answer" is what we are trying to find out.
  *
  * @returns {Promise<{url: string, ok: boolean, ms: number, status: number|null, error: string|null}>}
  */

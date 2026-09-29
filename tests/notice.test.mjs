@@ -6,9 +6,8 @@ import { createDefaultState, sanitizeState } from '../src/lib/model.js';
 import { MESSAGES } from '../src/lib/i18n.js';
 
 /**
- * The extension's only unprompted message: a failover switch moved the whole
- * browser to another server, and the user is told which one — without opening
- * anything. The wording is pure, so what the worker will show is testable here.
+ * The extension's only unprompted message: a failover switch moved the whole browser
+ * to another server. The wording is pure, so what the worker will show is testable here.
  */
 
 const PROFILE = { id: 'p2', name: 'Work' };
@@ -44,8 +43,7 @@ test('the notification offers the way back to the server that failed', () => {
   const notice = buildSwitchNotice(stateWith(), PROFILE, previous, 'en');
 
   assert.equal(notice.button, 'Back to Home');
-  // the body is a question ("where am I now?"), the button is the answer: the
-  // server we came from
+  // the body asks a question, the button carries the answer
   assert.ok(notice.message.includes('Work'));
 
   for (const lang of ['en', 'fa']) {

@@ -29,9 +29,7 @@ const manualState = (settings = {}) =>
     profiles: SERVERS,
   });
 
-/* ------------------------------------------------------------------ *
- * What a probe proves
- * ------------------------------------------------------------------ */
+/* What a probe proves. */
 
 test('a probe in manual mode is a verdict about the active server', () => {
   assert.deepEqual(probeObservation(manualState(), { ok: true, ms: 143 }, T0), {
@@ -51,8 +49,7 @@ test('a probe in manual mode is a verdict about the active server', () => {
 });
 
 test('a verdict about nobody is dropped, not guessed', () => {
-  // every mode but manual hides which server the answer came from: the system
-  // proxy, a downloaded PAC script, or a chain where any hop may have answered
+  // every mode but manual hides which server the answer came from
   for (const mode of ['system', 'direct', 'pac_script']) {
     for (const routing of [false, true]) {
       assert.equal(
@@ -87,9 +84,7 @@ test('a broken clock or a missing latency cannot poison the record', () => {
   assert.ok(Number.isFinite(probeObservation(manualState(), { ok: true }, Number.NaN).at));
 });
 
-/* ------------------------------------------------------------------ *
- * The record
- * ------------------------------------------------------------------ */
+/* The record. */
 
 test('the record keeps verdicts, drops garbage and never aliases its input', () => {
   const record = createServerHealth();
@@ -137,9 +132,7 @@ test('a verdict that proves nothing is not recorded', () => {
   assert.deepEqual(record, { a: { ok: true, at: T0, ms: 100 } }, 'unchanged, so nothing was written');
 });
 
-/* ------------------------------------------------------------------ *
- * The order of the chain
- * ------------------------------------------------------------------ */
+/* The order of the chain. */
 
 test('proven-bad last, proven-good first and fastest among them', () => {
   const health = {
@@ -203,9 +196,7 @@ test('the list says which server answered, and how long ago', () => {
   assert.equal(silent.tone, 'warn');
   assert.deepEqual(silent.state, { key: 'health.serverFail' });
   assert.deepEqual(silent.age, { key: 'health.serverAge.now' });
-
-  // The words do not change when the verdict expires — only whether it still
-  // counts, which is exactly what the chain stops doing with it.
+  // The words do not change when the verdict expires — only whether it still counts.
   const old = describeServerVerdict(health, 'a', T0 + SERVER_HEALTH_TTL_MS + 1);
   assert.equal(old.current, false);
   assert.deepEqual(old.state, answered.state);

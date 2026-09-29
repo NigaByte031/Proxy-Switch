@@ -1,7 +1,7 @@
 /**
  * Settings page controller: language, theme, auto-auth, proxy mode, servers,
- * bypass list, and JSON backup/restore.
- * Like the popup it only writes state; the service worker applies it.
+ * bypass list, and JSON backup/restore. Like the popup it only writes state; the
+ * service worker applies it.
  */
 
 import { applyDocumentLang, applyStaticText, resolveLang, t } from './lib/i18n.js';
@@ -88,7 +88,7 @@ const swatches = [];
  * Draws the accent picker from ACCENTS, so the list on the page and the palette
  * blocks in `src/styles/base.css` are the same list. Every button carries its own
  * `data-accent`, which is what lets the swatch paint itself with the real tokens
- * of the palette it offers (see base.css) instead of a hand-copied colour.
+ * of the palette it offers instead of a hand-copied colour.
  */
 function buildAccentSwatches() {
   if (!els.accentSwatches || swatches.length) return;
@@ -98,8 +98,8 @@ function buildAccentSwatches() {
     button.type = 'button';
     button.className = 'swatch';
     button.dataset.accent = accent;
-    // A radio group, because exactly one palette is in force at a time — and the
-    // arrow keys walk it the way a native radio group does.
+    // A radio group: exactly one palette is in force at a time, and the arrow keys
+    // walk it the way a native radio group does.
     button.setAttribute('role', 'radio');
     button.setAttribute('aria-checked', 'false');
 
@@ -191,8 +191,8 @@ const healthUi = createHealthUi({
   getLang: () => lang,
 });
 
-// The pass runs in the service worker (only the worker may touch chrome.proxy);
-// this is the narration under the list, the same control the popup uses.
+// The pass runs in the service worker; this is the narration under the list, the
+// same control the popup uses.
 const testAllUi = createTestAllUi({
   buttonEl: el('testAllBtn'),
   resultEl: el('testAllResult'),
@@ -212,8 +212,7 @@ const serversUi = createServersUi({
   getState: () => state,
   getLang: () => lang,
   commit,
-  // Same list, same verdicts: what the worker orders the chain by is something
-  // the user can read here too.
+  // The same list the worker orders the chain by, readable here too.
   getHealth: () => serverHealth,
 });
 
@@ -229,8 +228,8 @@ function flash(text) {
 
 /**
  * Only touches the DOM when the text really changed: the panel is an `alert`
- * region, so writing the same sentence again would make a screen reader repeat
- * it on every unrelated state change.
+ * region, so writing the same sentence again would make a screen reader repeat it
+ * on every unrelated state change.
  */
 function setText(node, value) {
   if (node && node.textContent !== value) node.textContent = value;
@@ -242,8 +241,8 @@ function describeReading(down, up) {
 }
 
 /**
- * The Right-now line, read fresh from the window each time — the same decay
- * the popup's tick keeps honest, on the page that has room to name it.
+ * The Right-now line, read fresh from the window each time — the same decay the
+ * popup's tick keeps honest, on the page that has room to name it.
  */
 function renderRate() {
   const { idle, down, up } = describeRate(rate ?? createRate());
@@ -268,8 +267,7 @@ function render() {
   applyDocumentLang(lang);
   applyStaticText(document, lang);
 
-  // The theme and the brand hue are written onto <html>, where src/styles/base.css
-  // picks the two palettes up.
+  // Written onto <html>, where src/styles/base.css picks the palettes up.
   applyTheme(state.settings.theme);
   applyAccent(state.settings.accent);
   renderAccents();
@@ -283,9 +281,8 @@ function render() {
   els.probeToggle.checked = state.settings.backgroundProbe;
   els.trafficToggle.checked = state.settings.trafficMeter === true;
 
-  // Read-only figures for both windows of time the meter keeps. The labels come
-  // from the same keys the popup's two arrows are labelled with, so "today's
-  // download" is one sentence everywhere it is said.
+  // Both windows of time the meter keeps. The labels are the same keys the popup's
+  // arrows use, so "today's download" is one sentence everywhere.
   const reading = describeTraffic(traffic ?? createTraffic());
   setText(els.trafficToday, describeReading(reading.down, reading.up));
   setText(els.trafficTotal, describeReading(reading.totalDown, reading.totalUp));
@@ -301,8 +298,7 @@ function render() {
   els.dataMessage.textContent = message ?? '';
   els.dataMessage.classList.toggle('hidden', !message);
 
-  // The settings page is where a user comes to repair a mode that is not in
-  // force, so it explains the same thing the toolbar badge reports.
+  // Where a mode that is not in force gets repaired: it explains what the badge says.
   const problem = describeApplyProblem(applyStatus);
   els.applyPanel?.classList.toggle('hidden', !problem);
   if (problem) {
@@ -337,8 +333,8 @@ function downloadExport() {
 
 /**
  * Asks the service worker for another apply attempt. The worker stays the only
- * code that touches `chrome.proxy`, so this is a message; the answer comes back
- * with the same status the worker just stored.
+ * code that touches `chrome.proxy`, so this is a message, and the answer comes
+ * back with the status the worker just stored.
  */
 async function retryApply() {
   if (reapplying) return;
@@ -352,8 +348,7 @@ async function retryApply() {
     reapplying = false;
   }
 
-  // `flash` repaints, and `subscribeStatus` has usually shown the new status
-  // already — this line only says whether the retry worked.
+  // `subscribeStatus` has usually shown the new status; this says whether it worked.
   flash(
     status && !describeApplyProblem(status) ? t('msg.applied', lang) : t('msg.applyFailed', lang),
   );
@@ -390,8 +385,7 @@ function wire() {
     });
   });
 
-  // The worker does the switching (it owns `chrome.proxy`); this only says
-  // whether it may.
+  // The worker does the switching; this only says whether it may.
   els.failoverToggle.addEventListener('change', () => {
     const autoFailover = els.failoverToggle.checked;
     commit((draft) => {
@@ -399,8 +393,7 @@ function wire() {
     });
   });
 
-  // Same division of labour as above: the worker is the one that can announce
-  // a switch, this only says whether it may.
+  // Same division of labour: the worker announces, this says whether it may.
   els.notifyToggle.addEventListener('change', () => {
     const notifyFailover = els.notifyToggle.checked;
     commit((draft) => {
@@ -408,8 +401,7 @@ function wire() {
     });
   });
 
-  // The check itself runs in the worker, on its own timer; this only says
-  // whether it may (see `lib/server-probe.js`).
+  // The check runs in the worker on its own timer; this says whether it may.
   els.probeToggle.addEventListener('change', () => {
     const backgroundProbe = els.probeToggle.checked;
     commit((draft) => {
@@ -417,8 +409,7 @@ function wire() {
     });
   });
 
-  // Same division of labour once more: the worker counts, this says whether it
-  // may.
+  // Same division of labour again: the worker counts, this says whether it may.
   els.trafficToggle.addEventListener('change', () => {
     const trafficMeter = els.trafficToggle.checked;
     commit((draft) => {
@@ -426,11 +417,10 @@ function wire() {
     });
   });
 
-  // The counters are not configuration, so this is a write to their own key and
-  // not a settings change — the worker reads that record fresh for every batch it
-  // flushes, so a reset can never be overwritten by a batch counted earlier. The
-  // rate's window goes with them: a reset that left a live speed standing would
-  // be a reading about bytes that no longer exist anywhere.
+  // The counters are not configuration, so this writes their own key rather than
+  // the settings: the worker reads that record fresh for every batch it flushes, so
+  // a reset cannot be overwritten by an earlier batch. The rate's window goes with
+  // them — a live speed about bytes that no longer exist would be a lie.
   els.trafficReset.addEventListener('click', async () => {
     if (!window.confirm(t('traffic.confirmReset', lang))) return;
     await updateTraffic((draft) => resetTraffic(draft));
@@ -477,8 +467,7 @@ function wire() {
 }
 
 async function init() {
-  // The rate decays in real time; a tick keeps the line honest between the
-  // worker's writes. Cleared with the page, like any other timer here.
+  // The rate decays in real time; a tick keeps the line honest between writes.
   rateTimer = setInterval(() => {
     if (state?.settings?.trafficMeter === true) renderRate();
   }, 1000);
@@ -505,22 +494,19 @@ async function init() {
     render();
   });
 
-  // The worker repaints this after every apply attempt, including the ones it
-  // makes on its own while the page is open.
+  // Written by the worker after every apply attempt, including its own.
   subscribeStatus((next) => {
     applyStatus = next;
     render();
   });
 
-  // Verdicts arrive from the worker's background checks and from the test
-  // button on either page; the rows say so as soon as they do.
+  // Verdicts arrive from the background checks and the test button on either page.
   subscribeServerHealth((next) => {
     serverHealth = next;
     render();
   });
 
-  // The worker writes the counters in batches as requests are made, so the
-  // figures on this page move by themselves.
+  // The worker writes the counters in batches as requests are made.
   subscribeTraffic((next) => {
     traffic = next;
     render();
@@ -530,8 +516,7 @@ async function init() {
     renderRate();
   });
 
-  // The test-all pass announces each verdict as it is recorded; the row for
-  // that server updates through the health record, this line just narrates.
+  // The pass announces each verdict; the rows update through the health record.
   chrome.runtime.onMessage.addListener((message) => {
     if (message?.type !== TEST_ALL_PROGRESS_MESSAGE) return;
     testAllUi.handleProgress(message);

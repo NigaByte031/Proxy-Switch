@@ -21,30 +21,12 @@ import { buildSwitchNotice } from '../src/lib/notice.js';
 import { noteServerHealth, probeObservation, sanitizeServerHealth } from '../src/lib/server-health.js';
 
 /**
- * An outage, observed from the outside.
+ * An outage, observed from the outside: a burst of proxy errors, the streak, the probe
+ * through the active server, the switch, the announcement. The harness mirrors
+ * `considerFailover()` in `src/background.js` and injects the only two things the
+ * worker takes from the world — the clock and the network.
  *
- * `tests/failover.test.mjs` proves the policy one function at a time and
- * `tests/health.test.mjs` proves the probe; this file tells the whole story
- * the feature exists for — "the active server stopped answering and the
- * extension moved on" — by driving the loop the way the service worker does:
- * a burst of proxy errors, the streak, the probe through the active server,
- * the switch, and the announcement that tells the user which server that was.
- *
- * The harness mirrors `considerFailover()` in `src/background.js` line for
- * line (eligibility → strike → probe → switch, the same synchronous guard,
- * the same state write) and injects the only two things the worker takes from
- * the world: the clock and the network. Servers here are up or down; a probe
- * travels through the active server, exactly like real traffic, so a dead
- * server fails the very check that is supposed to prove it dead. No `chrome.*`
- * and no sockets are involved.
- *
- * Every check answers with a verdict:
- *
- *   - `busy`      another check (and its probe) is already running
- *   - `ineligible` the feature, the switch or the mode says no
- *   - `quiet`     not enough evidence yet — nothing was probed or switched
- *   - `healthy`   the probe answered: the errors were noise, streak forgotten
- *   - `switched`  the probe failed and the next server was activated
+ * A check answers with a verdict: `busy`, `ineligible`, `quiet`, `healthy`, `switched`.
  */
 
 /** A fixed clock: the policy is all about elapsed time, so nothing is "now". */
@@ -60,9 +42,8 @@ const PROFILES = [A, B, C];
 /**
  * @param {{profiles?: object[], activeId?: string, down?: string[], settings?: object,
  *          health?: object}} options
- *   `down` names the servers that are outage at the start; `health` is what the
- *   extension already knows about them (an earlier check, the test button, an
- *   outage that just happened).
+ *   `down` names the servers that are dead at the start; `health` is what the
+ *   extension already knows about them.
  */
 function createHarness({
   profiles = PROFILES,
@@ -76,9 +57,7 @@ function createHarness({
     profiles,
   });
   const record = createFailoverRecord();
-  // The verdicts the worker already had — a background check, the manual test
-  // button, an outage a moment ago. `considerFailover()` passes this record into
-  // the policy, which is why the harness holds it too.
+  // The verdicts the worker already had before this round started.
   const verdicts = sanitizeServerHealth(health);
   const live = new Set(profiles.map((profile) => profile.id).filter((id) => !down.includes(id)));
   const switches = [];
@@ -89,8 +68,8 @@ function createHarness({
   let gate = null;
   let now = T0;
 
-  // The proxy is applied to the whole browser, so probes take the same route
-  // as page traffic: through the active server. Down there means an error here.
+  // Probes take the same route as page traffic — through the active server.
+
   const fetchImpl = async () => {
     if (gate) await gate;
     if (!live.has(state.settings.activeProfileId)) {
@@ -110,8 +89,7 @@ function createHarness({
    * The "Back to <server>" button on the switch notification — mirrors
    * `undoSwitch()` in `src/background.js`.
    *
-   * @returns {string|null} the server that was activated, or null when the
-   *          offer has gone stale (the worker opens the server list instead)
+   * @returns {string|null} the server that was activated, or null when the offer has gone stale
    */
   function undo() {
     const target = failoverUndoTarget(record, state);
@@ -143,10 +121,8 @@ function createHarness({
       probeRuns += 1;
       const outcome = await probe({ fetchImpl });
 
-      // A probe through the active server is a verdict about that server
-      // (`probeObservation`, manual mode only), and where the round moves next
-      // is read back out of those verdicts — the worker does exactly this, in
-      // this order.
+      // A probe through the active server is a verdict about it (manual mode only),
+      // and the round reads those verdicts back to decide where to go next.
       const observation = probeObservation(state, outcome, now);
       if (observation) noteServerHealth(verdicts, observation);
 
@@ -170,8 +146,7 @@ function createHarness({
       state.settings.enabled = true;
       switches.push(nextId);
 
-      // ... and the switch is announced, so it does not happen behind the
-      // user's back (the worker also flashes the badge from the same decision).
+      // The switch is announced, so it does not happen behind the user's back.
       const notice = buildSwitchNotice(state, nextProfile, failedProfile, 'en');
       if (notice) notices.push(notice);
 
@@ -280,12 +255,11 @@ test('an outage moves to the server that proved itself, not the next line of the
     'the probe wrote a verdict about the server it was leaving',
   );
 
-  // The pause is about a moment, not about a server: while it runs, b is not
-  // even in the running — the switch above went to d, not to the list's b.
+  // The pause is about a moment: while it runs, b is not even in the running.
+
   assert.equal(nextFailoverTarget([A, B, C], 'a', [], { health: harness.health, now: T0 }), 'c');
 
-  // Once it is over, b is a candidate again, and it is ranked by its verdict:
-  // last, behind a server nobody has faulted.
+  // Once it is over, b is a candidate again — ranked last, behind an untested server.
   assert.equal(
     nextFailoverTarget([A, B, C, D], 'd', ['a'], {
       health: harness.health,
@@ -305,8 +279,7 @@ test('when every other server just failed, the round still moves', async () => {
     },
   });
 
-  // The pause is a preference, never a veto: with nowhere else to go the next
-  // line of the list is taken anyway — a dead server is the worse answer.
+  // With nowhere else to go, the next line of the list is taken anyway.
   assert.deepEqual(await harness.errors(3), ['quiet', 'quiet', 'switched']);
   assert.equal(harness.active, 'b');
   assert.deepEqual(harness.switches, ['b']);
@@ -315,11 +288,12 @@ test('when every other server just failed, the round still moves', async () => {
 test('the freshly chosen server keeps its chance: the cooldown holds the switch back', async () => {
   const harness = createHarness({ down: ['a', 'b'] });
 
-  await harness.errors(3); // a dies -> b
+  // a dies -> b
+  await harness.errors(3);
   assert.equal(harness.active, 'b');
 
-  // b is dead too and the streak completes again — but nothing may abandon a
-  // server this soon after choosing it, and no second probe runs either.
+  // b is dead too and the streak completes again, but the cooldown holds the
+  // switch back — and no second probe runs either.
   assert.deepEqual(await harness.errors(3), ['quiet', 'quiet', 'quiet']);
   assert.equal(harness.active, 'b');
   assert.equal(harness.probeRuns, 1, 'the cooldown holds back even the probe');
@@ -371,10 +345,11 @@ test('with failover off, an outage is only an ERR badge', async () => {
 test('a burst of proxy errors runs exactly one check', async () => {
   const harness = createHarness({ down: ['a'] });
 
-  await harness.errors(2); // the streak, minus the error that asks for a probe
+  // the streak, minus the error that asks for a probe
+  await harness.errors(2);
 
-  // A dead server fires its errors in a burst: the first one reaches the
-  // probe and freezes there, the rest must pile up behind the guard.
+  // A dead server fires its errors in a burst: the first reaches the probe and
+  // freezes there, the rest pile up behind the guard.
   const release = harness.hold();
   const pending = Array.from({ length: 4 }, () => harness.considerFailover());
   release();
@@ -417,22 +392,22 @@ test('an outage nobody could act on is not announced', async () => {
 test('the notification takes the user back to the server that failed', async () => {
   const harness = createHarness({ down: ['a'] });
 
-  await harness.errors(3); // a dies -> b, and the notification says so
+  // a dies -> b, and the notification says so
+  await harness.errors(3);
   assert.equal(harness.active, 'b');
   assert.equal(harness.notices[0].button, 'Back to a');
 
-  // the user clicks it: the browser goes back to the server it came from
+  // The user clicks it: the browser goes back to the server it came from.
   assert.equal(harness.undo(), 'a');
   assert.equal(harness.active, 'a');
   assert.equal(harness.state.settings.mode, 'fixed_servers');
 
-  // a is still dead — the server the user chose on purpose keeps its grace
-  // period, so the policy does not drag them straight back to b
+  // a is still dead, but a server the user chose on purpose keeps its grace period.
   assert.deepEqual(await harness.errors(3), ['quiet', 'quiet', 'quiet']);
   assert.equal(harness.active, 'a');
   assert.equal(harness.probeRuns, 1, 'the cooldown holds back even the probe');
 
-  // ... and once that is over, the same policy decides again
+  // Once that is over, the same policy decides again.
   harness.advance(FAILOVER_COOLDOWN_MS + 1);
   assert.deepEqual(await harness.errors(1), ['switched']);
   assert.equal(harness.active, 'b');
@@ -444,8 +419,7 @@ test('there is nothing to undo once the user has picked a server themselves', as
   await harness.errors(3);
   assert.equal(harness.active, 'b');
 
-  // the popup writes the same state an automatic switch writes, so the offer
-  // has to be checked against where the round thinks it left the user
+  // The popup writes the same state an automatic switch writes.
   harness.state.settings.activeProfileId = 'c';
   assert.equal(harness.undo(), null);
   assert.equal(harness.active, 'c', 'a stale offer must not move anything');
@@ -462,11 +436,12 @@ test('a user who turned the announcement off still gets the switch', async () =>
 test('once the new server answers, the bookkeeping starts over', async () => {
   const harness = createHarness({ down: ['a'] });
 
-  await harness.errors(3); // a dies -> b, b is healthy
+  // a dies -> b, b is healthy
+  await harness.errors(3);
   assert.equal(harness.active, 'b');
 
-  // The cooldown passes, errors keep coming from b — and the probe answers,
-  // so nothing switches and the whole round is forgotten.
+  // The cooldown passes and errors keep coming from b, but the probe answers:
+  // nothing switches and the round is forgotten.
   harness.advance(FAILOVER_COOLDOWN_MS + 1);
   assert.deepEqual(await harness.errors(3), ['quiet', 'quiet', 'healthy']);
   assert.equal(harness.active, 'b');

@@ -1,8 +1,7 @@
 /**
  * Shared "proxy mode" controls: the mode chips, the PAC URL row and the domain
  * list that replaces it (see `lib/pac.js`).
- * Used by both the popup and the settings page, which is why it lives here
- * instead of being duplicated in the two page scripts.
+ * Used by both the popup and the settings page.
  */
 
 import { formatDomainList, isValidPacUrl, parseDomainRules } from './model.js';
@@ -38,8 +37,7 @@ export function createModeUi({
 
     const isPac = mode === 'pac_script';
     if (pacPanelEl) pacPanelEl.classList.toggle('hidden', !isPac);
-    // One of the two sources is in charge at a time, so exactly one of them is
-    // on screen: the script the list builds, or the URL it downloads.
+    // Exactly one source is on screen: the script the list builds, or the URL.
     if (pacUrlRowEl) pacUrlRowEl.classList.toggle('hidden', routing);
     if (pacDomainsPanelEl) pacDomainsPanelEl.classList.toggle('hidden', !routing);
     if (pacDomainsToggleEl) pacDomainsToggleEl.checked = routing;
@@ -68,8 +66,8 @@ export function createModeUi({
   }
 
   async function saveDomains() {
-    // A line that cannot be a host is dropped rather than rejected: the list is
-    // read on every render, so what the user sees back is what will be used.
+    // A line that cannot be a host is dropped; the list is read on every render,
+    // so what the user sees back is what will be used.
     const domains = parseDomainRules(pacDomainsEl?.value ?? '');
     onError(null);
     await commit((draft) => {
@@ -83,7 +81,7 @@ export function createModeUi({
     if (!mode) return;
     commit((draft) => {
       draft.settings.mode = mode;
-      // Choosing a mode is an explicit "I want this" — turn the switch back on.
+      // Picking a mode is an explicit "I want this": turn the switch back on.
       draft.settings.enabled = true;
     });
   });

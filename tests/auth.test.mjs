@@ -128,8 +128,7 @@ test('only a running, manual-mode extension may auto-authenticate', () => {
 });
 
 test('the generated PAC routes through the active server, so its credentials are ours', () => {
-  // PAC mode normally borrows somebody else's script, but the one built from
-  // the domain list names this server — see lib/pac.js.
+  // The generated PAC script names this server (see lib/pac.js).
   const state = stateWith({ mode: 'pac_script', domainRouting: true });
   assert.deepEqual(resolveAuthCredentials(state, CHALLENGE), { username: 'user', password: 'pa:ss' });
   // and the rule stays narrow: another host still gets nothing
@@ -210,15 +209,12 @@ test('the server a background check is looking at may answer for itself', () => 
 
   // Manual mode volunteers nothing for a fallback server …
   assert.equal(resolveAuthCredentials(manual, challenge), null);
-  // … but a check is sending its own probe through exactly that server, so a
-  // private proxy does not look dead merely because its login was never offered.
+  // A check sends its own probe through that server, so its login may be offered.
   assert.deepEqual(resolveAuthCredentials(manual, challenge, 'p2'), {
     username: 'backup',
     password: 'b-pass',
   });
-
-  // The permission is about the check, not about dropping the rules: the active
-  // server still answers as itself, and an unnamed proxy still gets nothing.
+  // The permission is about the check, not about dropping the rules.
   assert.deepEqual(
     resolveAuthCredentials(manual, { isProxy: true, challenger: { host: 'active.example.com' } }, 'p2'),
     { username: 'active', password: 'a-pass' },

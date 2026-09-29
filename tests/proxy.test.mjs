@@ -186,9 +186,7 @@ test('the generated chain is ordered by the last verdicts about each server', ()
     chainOf(buildProxyConfig(state)),
     'PROXY a.example.com:8080; PROXY b.example.com:8080; PROXY c.example.com:8080',
   );
-
-  // the slow one is fine, the one that failed goes last — a fresh verdict,
-  // because one older than the TTL counts as nothing at all
+  // the slow one is fine, the one that failed goes last
   const at = Date.now();
   const health = {
     a: { ok: true, at, ms: 400 },
@@ -231,8 +229,8 @@ test('the check keeps the user\'s policy and moves only its own probes', () => {
 
   assert.equal(config.mode, 'pac_script');
   assert.equal(config.pacScript.mandatory, true, 'a script Chrome cannot parse must not go direct');
-  // The probe endpoints are what the script knows by name, and the chain the
-  // user configured is the one it names for everything else.
+  // The probe endpoints are what the script knows by name; the configured chain
+  // handles everything else.
   for (const target of PROBE_TARGETS) {
     assert.ok(config.pacScript.data.includes(new URL(target).hostname), target);
   }
@@ -247,9 +245,7 @@ test('the check keeps the user\'s policy and moves only its own probes', () => {
   const routed = buildProbeConfig(routing, manual.profiles[0], null);
   assert.match(routed.pacScript.data, /ALL_HOSTS = false/);
   assert.match(routed.pacScript.data, /"example\.com"/);
-
-  // Modes that are not ours to reproduce are left alone — a check must not
-  // replace the operating system's proxy to measure a server.
+  // Modes that are not ours to reproduce are left alone.
   for (const mode of ['system', 'direct']) {
     assert.equal(buildProbeConfig(withProfile({ settings: { mode } }), manual.profiles[0], null), null, mode);
   }
@@ -267,8 +263,8 @@ test('a config the browser no longer reports is not believed', () => {
   const current = (value) => ({ value, levelOfControl: 'controlled_by_this_extension' });
 
   assert.equal(isConfigApplied(current(config), config), true);
-  // Somebody applied something else while the probe was in flight: the answer
-  // is about that route, not about the server the check named.
+  // Somebody applied something else while the probe was in flight: the answer is
+  // about that route.
   assert.equal(isConfigApplied(current({ mode: 'system' }), config), false);
   assert.equal(isConfigApplied(current({ ...config, pacScript: { data: 'var B = 2;', mandatory: true } }), config), false);
   assert.equal(isConfigApplied(current({ ...config, pacScript: { data: 'var A = 1;' } }), config), false);
@@ -405,9 +401,7 @@ test('a badge flash is dropped once it expires or its server is gone', () => {
   assert.equal(activeSwitchFlash(flash, undefined, 999), null);
 });
 
-/* ------------------------------------------------------------------ *
- * Applying, and knowing whether it stuck
- * ------------------------------------------------------------------ */
+/* Applying, and knowing whether it stuck. */
 
 test('the control level Chrome reports decides whether the mode is in force', () => {
   for (const level of [null, undefined, 'controllable_by_this_extension', 'controlled_by_this_extension']) {

@@ -1,36 +1,11 @@
 /**
- * Domain routing: a PAC script generated from a list of domains, so that only
- * the sites you name go through your servers and everything else stays direct.
+ * Domain routing: a PAC script generated from a list of domains — only the sites
+ * you name go through your servers, everything else stays direct. `fixed_servers`
+ * cannot express that, its bypass list can only *exclude*.
  *
- * `fixed_servers` cannot express that — its bypass list can only *exclude*, and
- * a proxy for one protocol is a proxy for all of them. A PAC script can, and
- * Chrome accepts one as a string (`pacScript.data`), so no file has to be
- * written, downloaded or hosted: the script below is built from the settings,
- * lives in the extension's own proxy configuration and is pure text, which is
- * why it can be tested here by running it.
- *
- * Three decisions are deliberate and load-bearing:
- *
- *   - **A listed domain never falls back to `DIRECT`.** Handing a site the user
- *     asked to route through a server straight to the network would leak
- *     exactly the traffic the list exists for. When every server is down, the
- *     page fails loudly instead.
- *   - **The chain is every saved server.** A PAC script retries a chain per
- *     connection (`PROXY a:8080; PROXY b:8080`), which is the tolerance the
- *     fixed_servers mode gets from its own failover machinery — without it,
- *     domain routing would go dark whenever the one server it named died.
- *   - **Everything else is direct, silently.** That is the point of the list:
- *     it is an allow list, not a global switch.
- *
- * `bypassList` keeps its meaning too: those hosts never use a proxy, even if a
- * rule below matches them.
- *
- * The same generator produces the script a background check installs for a few
- * seconds (see `buildPacScript`'s `override` and `base` options and
- * `lib/server-probe.js`): identical policy, except that the extension's own
- * probe requests are handed to the one server being checked. Reusing this
- * generator is the point — the configuration in force during a check differs
- * from the user's only in where the checks themselves go.
+ * Three decisions are load-bearing: a listed domain never falls back to `DIRECT`,
+ * the chain is every saved server, everything else is direct — and `bypassList`
+ * keeps its meaning: those hosts never use a proxy, even when a rule matches.
  */
 
 import { sanitizeDomainRules } from './model.js';
@@ -56,9 +31,8 @@ export function proxyDirective(profile) {
 }
 
 /**
- * The servers the script is allowed to try, in order — the active one first,
- * then the rest of the list. `; ` is how a PAC script expresses "and then", and
- * Chrome walks the chain per connection.
+ * The servers the script may try, in order. `; ` is how a PAC script says "and
+ * then", and Chrome walks the chain per connection.
  *
  * @param {object[]} servers
  * @returns {string} `PROXY a:8080; SOCKS5 b:1080`, or '' when there is no server
@@ -86,15 +60,11 @@ export function proxyChain(servers) {
  * @param {string[]} [options.domains] the hosts the chain is for (the base
  *        policy is an allow list unless `base` says otherwise)
  * @param {string[]} [options.bypass] hosts that never use a proxy
- * @param {'listed'|'all'} [options.base] what the chain is for when no other
- *        rule matches: the listed hosts (domain routing), or every host —
- *        which is how manual mode behaves, where nothing is left direct
+ * @param {'listed'|'all'} [options.base] what the chain is for when no other rule
+ *        matches: the listed hosts, or every host (how manual mode behaves)
  * @param {{hosts?: string[], directive?: string}|null} [options.override] a
- *        directive handed to a few named hosts. This is how a background check
- *        (see `lib/server-probe.js`) sends *its own* probe to the server it is
- *        testing while the user's routing stays exactly as configured: the
- *        probes are the only thing that changes, so a server that is down
- *        cannot break a page the user is loading.
+ *        directive handed to a few named hosts — how a background check sends
+ *        *its own* probe to the server it is testing
  * @returns {string|null} the script, or null when there is nothing to route
  *          (no server, or no usable rule) — the caller then fails open
  */
@@ -105,9 +75,8 @@ export function buildPacScript({ servers, domains, bypass = [], base = 'listed',
   if (!chain) return null;
   if (rules.length === 0 && !routeEverything) return null;
 
-  // A rule the script must never guess about: an override without both halves
-  // is no override at all, rather than a script that diverts nothing while
-  // looking like it does.
+  // An override needs both halves, or it diverts nothing while looking like it
+  // does.
   const overrideHosts = (Array.isArray(override?.hosts) ? override.hosts : [])
     .map((host) => String(host ?? '').trim().toLowerCase())
     .filter(Boolean);
@@ -120,11 +89,11 @@ export function buildPacScript({ servers, domains, bypass = [], base = 'listed',
   const bypassRules = sanitizeDomainRules(bypass);
 
   const policy = routeEverything
-    ? '// Every host uses the proxy chain; the bypass list still wins, and a host\n// that is bypassed is never sent through a server.'
-    : '// The rules below are an allow list: only those hosts use the proxy chain,\n// everything else is direct, and a matched host is never sent direct even when\n// every server in the chain is unreachable (a leak would defeat the point of\n// listing it).';
+    ? '// Every host uses the proxy chain; the bypass list still wins.'
+    : '// The rules below are an allow list: only those hosts use the proxy chain.\n// A matched host is never sent direct, even when every server is unreachable\n// (a leak would defeat the point of listing it).';
 
   return `// Generated by Proxy Switch — ${rules.length} domain rule(s) through ${JSON.stringify(names)}.
-${policy}${overrides ? '\n// PLUS a handful of hosts below sent to one named server: the extension\n// checking that server with its own probe.' : ''}
+${policy}${overrides ? '\n// A few hosts below go to one named server: the extension probing it.' : ''}
 var PROXIES = ${JSON.stringify(chain)};
 var ROUTED = ${JSON.stringify(rules)};
 var BYPASSED = ${JSON.stringify(bypassRules)};
@@ -154,8 +123,7 @@ function anyMatch(host, rules) {
   return false;
 }
 
-// Exact host, no subdomains: these are the extension's own probe endpoints, not
-// part of any listing the user wrote.
+// Exact host, no subdomains: the extension's own probe endpoints.
 function isOverrideHost(host) {
   var value = String(host).toLowerCase().replace(/^\\[|\\]$/g, '').split(':')[0];
   for (var index = 0; index < OVERRIDE_HOSTS.length; index += 1) {
@@ -165,12 +133,11 @@ function isOverrideHost(host) {
 }
 
 function FindProxyForURL(url, host) {
-  // Checked first: a probe is the extension measuring one server, so it goes
-  // where the check asked for even if the bypass list mentions the host.
+  // A probe goes where the check asked for, bypass list or not.
   if (OVERRIDE !== '' && isOverrideHost(host)) return OVERRIDE;
-  // The bypass list is a promise: these hosts never see a proxy.
+  // Bypass list: these hosts never see a proxy.
   if (anyMatch(host, BYPASSED)) return 'DIRECT';
-  // The chain, not a single server: the next one is tried when the first fails.
+  // The chain: the next server is tried when the first one fails.
   if (ALL_HOSTS || anyMatch(host, ROUTED)) return PROXIES;
   return 'DIRECT';
 }

@@ -38,8 +38,8 @@
             </select>
           </div>
         </div>
-        <!-- The brand hue. The row is drawn from ACCENTS (options.js) so the
-             list and the palettes in styles/base.css cannot drift apart. -->
+        <!-- The brand hue, drawn from ACCENTS (options.js) so list and palettes
+             cannot drift apart. -->
         <div>
           <label data-i18n="accent.title"></label>
           <div
@@ -58,23 +58,21 @@
           <span data-i18n="options.auth"></span>
         </label>
         <p class="muted" data-i18n="options.authHint"></p>
-        <!-- Auto-failover: the service worker counts proxy errors, confirms
-             them with a probe and then moves to the next server (background.js). -->
+        <!-- Auto-failover: the worker counts proxy errors, confirms them and moves
+             on (background.js). -->
         <label class="check">
           <input id="failoverToggle" type="checkbox" />
           <span data-i18n="options.failover"></span>
         </label>
         <p class="muted" data-i18n="options.failoverHint"></p>
-        <!-- What the user is told when the worker moves to another server on
-             its own (a system notification, see background.js). -->
+        <!-- What the user is told when the worker moves server on its own. -->
         <label class="check">
           <input id="notifyToggle" type="checkbox" />
           <span data-i18n="options.notifyFailover"></span>
         </label>
         <p class="muted" data-i18n="options.notifyFailoverHint"></p>
-        <!-- Background checks: on a timer the worker sends its own probe to one
-             saved server at a time, so the recorded verdicts — and the order of
-             a generated PAC chain — stay recent (server-probe.js). -->
+        <!-- Background checks: on a timer the worker probes one saved server at a
+             time, keeping the verdicts recent (server-probe.js). -->
         <label class="check">
           <input id="probeToggle" type="checkbox" />
           <span data-i18n="options.backgroundProbe"></span>
@@ -96,8 +94,7 @@
           <p id="testResult" class="health-result hidden" role="status" aria-live="polite"></p>
         </div>
 
-        <!-- Why the toolbar badge says ERR, and a way to ask for another try
-             (filled by the service worker, see options.js). -->
+        <!-- Why the toolbar badge says ERR, and a way to ask for another try. -->
         <div id="applyPanel" class="warning apply-panel hidden" role="alert">
           <div class="apply-copy">
             <p id="applyTitle" class="apply-title"></p>
@@ -107,8 +104,7 @@
         </div>
 
         <div id="pacPanel" class="hidden">
-          <!-- Either the URL is downloaded, or the list below builds the script
-               (lib/pac.js). Never both, which is why the two rows hide each other. -->
+          <!-- Either the URL is downloaded, or the list below builds the script. -->
           <label class="check">
             <input id="pacDomainsToggle" type="checkbox" />
             <span data-i18n="field.domainRouting"></span>
@@ -140,9 +136,8 @@
 
       <section class="card">
         <h2 data-i18n="traffic.title"></h2>
-        <!-- The meter's counters (lib/traffic.js, counted in background.js).
-             They live in their own storage key, never in the settings, so what
-             is read here is not something a settings import can overwrite. -->
+        <!-- The meter's counters (lib/traffic.js), in their own storage key, never
+             in the settings: an import cannot overwrite them. -->
         <div class="traffic-readout">
           <div class="traffic-line">
             <span class="traffic-when" data-i18n="traffic.rightNow"></span>
@@ -158,8 +153,8 @@
           </div>
         </div>
         <p class="form-note" data-i18n="traffic.note"></p>
-        <!-- Counted in the service worker, on requests every page makes; the
-             switch says whether it may (background.js reads the setting). -->
+        <!-- Counted in the worker on requests every page makes; the switch says
+             whether it may. -->
         <label class="check">
           <input id="trafficToggle" type="checkbox" />
           <span data-i18n="traffic.enable"></span>
@@ -218,8 +213,7 @@
         <ul id="profileList" class="profile-list"></ul>
         <p id="profilesEmpty" class="empty hidden" data-i18n="profiles.empty"></p>
         <p id="profilesNoMatch" class="empty empty-search hidden" role="status"></p>
-        <!-- Filled by the "Test all servers" pass (lib/test-all-ui.js), the same
-             control the popup uses: progress while it runs, counts at the end. -->
+        <!-- Filled by the "Test all servers" pass: progress, then the counts. -->
         <p id="testAllResult" class="health-result hidden" role="status" aria-live="polite"></p>
 
         <form id="profileForm" class="form-grid hidden" novalidate>

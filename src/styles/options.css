@@ -38,9 +38,7 @@ body.options {
   margin: 0 auto;
 }
 
-/* ---------------------------------------------------------------- *
- * Hero header
- * ---------------------------------------------------------------- */
+/* Hero header. */
 
 .page-header {
   position: relative;
@@ -90,9 +88,7 @@ body.options {
   margin: 2px 0 0;
 }
 
-/* ---------------------------------------------------------------- *
- * Cards
- * ---------------------------------------------------------------- */
+/* Cards. */
 
 .page .card {
   padding: 18px;
@@ -109,13 +105,11 @@ body.options {
   background: var(--surface-2);
 }
 
-/* ---------------------------------------------------------------- *
- * Accent picker: one swatch per palette
+/* Accent picker: one swatch per palette.
  *
  * Each button carries its own `data-accent`, so the palette blocks in
  * styles/base.css apply to the button itself and the dot is painted with that
- * palette's real brand colours. The picker cannot drift from the product.
- * ---------------------------------------------------------------- */
+ * palette's real brand colours — the picker cannot drift from the product. */
 
 .swatches {
   display: flex;
@@ -179,8 +173,7 @@ body.options {
   transform: scale(1.06);
 }
 
-/* The tick is drawn in the palette's own contrast colour, so it stays legible
-   on the light palettes and the dark ones alike. */
+/* The tick is drawn in the palette's own contrast colour, legible in both modes. */
 .swatch-dot::after {
   content: "✓";
   display: block;
@@ -199,9 +192,7 @@ body.options {
   transform: scale(1);
 }
 
-/* ---------------------------------------------------------------- *
- * Apply status: why the toolbar badge says ERR, and a way to retry
- * ---------------------------------------------------------------- */
+/* Apply status: why the toolbar badge says ERR, and a way to retry. */
 
 .apply-panel {
   display: flex;
@@ -234,9 +225,7 @@ body.options {
   font-size: 12.5px;
 }
 
-/* ---------------------------------------------------------------- *
- * Server section head: "Test all" sits next to "Add server"
- * ---------------------------------------------------------------- */
+/* Server section head: "Test all" sits next to "Add server". */
 
 .section-actions {
   display: flex;
@@ -249,16 +238,13 @@ body.options {
   font-size: 12.5px;
 }
 
-/* The pass's narration lives under the list it is about, and reads as the
-   same state chip the single-server test wears (styles/base.css). */
+/* The pass's narration sits under the list, as the single-server test's chip. */
 #testAllResult {
   margin-top: 8px;
   max-width: 100%;
 }
 
-/* ---------------------------------------------------------------- *
- * Data message: a floating toast at the bottom of the window
- * ---------------------------------------------------------------- */
+/* Data message: a floating toast at the bottom of the window. */
 
 #dataMessage {
   position: fixed;

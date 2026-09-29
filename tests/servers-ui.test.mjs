@@ -5,17 +5,17 @@ import { createServersUi } from '../src/lib/servers-ui.js';
 import { SERVER_HEALTH_TTL_MS } from '../src/lib/server-health.js';
 
 /**
- * The list rows are shared by the popup and the settings page, and what they
- * now say about a server — its last verdict and how old it is — is the visible
- * half of the health record the worker orders the chain by. There is no DOM in
- * Node, so this file builds the smallest one that can answer the questions the
- * list asks: what a row's text is, what tone it wears, and what a click commits.
+ * The list rows are shared by the popup and the settings page, and what they say about
+ * a server is the visible half of the health record the worker orders the chain by.
+ * There is no DOM in Node, so this file builds the smallest one that can answer: what
+ * a row's text is, what tone it wears, what a click commits.
  */
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 function matches(node, selector) {
-  if (!selector.startsWith('.')) return false; // only class selectors are used
+  // only class selectors are used
+  if (!selector.startsWith('.')) return false;
   const name = selector.slice(1);
   const classes = String(node.className ?? '').split(/\s+/);
   return classes.includes(name) || node.classList.contains(name);
@@ -166,9 +166,7 @@ test('a row says which server answered, and how long ago', () => {
   const silent = badgeOf(listEl, 'b');
   assert.equal(silent.textContent, 'no answer · 2 min ago');
   assert.equal(silent.dataset.tone, 'warn');
-
-  // A server nobody has looked at says nothing: "unknown" is not a state the
-  // extension has an opinion about.
+  // A server nobody has looked at says nothing: "unknown" is not an opinion.
   assert.equal(badgeOf(listEl, 'c'), null);
 });
 
@@ -178,8 +176,7 @@ test('with nothing known at all, the list is the list it always was', () => {
 
   for (const id of ['a', 'b']) {
     assert.equal(badgeOf(listEl, id), null, id);
-    // …and the row is still a working button: the health line is added to the
-    // row, it does not replace anything (activate, edit, delete).
+    // …and the row is still a working button: the health line replaces nothing.
     const row = rowFor(listEl, id);
     assert.deepEqual(
       row.children.map((child) => child.tagName),
@@ -197,10 +194,7 @@ test('a verdict too old to order the chain is dimmed, not rewritten', () => {
   const { listEl, ui } = setup({ profiles: servers, health });
   assert.equal(badgeOf(listEl, 'a').dataset.tone, 'ok');
   assert.equal(badgeOf(listEl, 'a').textContent, 'answered in 42 ms · just now');
-
-  // The list re-reads the ages on its own timer; here that pass is simply asked
-  // for. The verdict is now older than the lifetime the chain uses, so it loses
-  // its colour — the words stay, the opinion of them does not.
+  // The list re-reads the ages on its own timer; here that pass is asked for.
   health.a.at = now - SERVER_HEALTH_TTL_MS - 60_000;
   ui.refreshHealth();
   assert.equal(badgeOf(listEl, 'a').dataset.tone, 'stale');

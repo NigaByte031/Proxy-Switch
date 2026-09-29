@@ -110,9 +110,8 @@ const healthUi = createHealthUi({
   getState: () => state,
 });
 
-// The pass itself runs in the service worker (only the worker may touch
-// chrome.proxy); this is the narration: progress while it runs, counts at the
-// end, under the list the verdicts are appearing on.
+// The pass runs in the service worker; this is the narration: progress while it
+// runs, counts at the end, under the list the verdicts appear on.
 const testAllUi = createTestAllUi({
   buttonEl: el('testAllBtn'),
   resultEl: el('testAllResult'),
@@ -132,8 +131,7 @@ const serversUi = createServersUi({
   getState: () => state,
   getLang: () => lang,
   commit,
-  // The rows say which servers the extension believes are working, so the same
-  // list the worker orders the chain by is visible here.
+  // The same list the worker orders the chain by.
   getHealth: () => serverHealth,
 });
 
@@ -153,18 +151,18 @@ function openOptions() {
 
 /**
  * Only touches the DOM when the text really changed. The status line is an
- * `aria-live` region, so writing the same string again would make a screen
- * reader repeat itself on every unrelated state change.
+ * `aria-live` region, so writing the same string again would make a screen reader
+ * repeat itself on every unrelated state change.
  */
 function setText(node, value) {
   if (node && node.textContent !== value) node.textContent = value;
 }
 
 /**
- * The speed line, read fresh from the window each time. Called by every
- * render *and* by the one-second tick below: storage only changes when the
- * worker flushes a batch, but the decay keeps moving between flushes, and a
- * speed that freezes between them would lie the other way.
+ * The speed line, read fresh from the window each time. Called by every render
+ * *and* by the one-second tick below: storage only changes when the worker flushes
+ * a batch, but the decay keeps moving between flushes, and a speed that froze
+ * between them would lie the other way.
  */
 function renderRate() {
   const { idle, down, up } = describeRate(rate ?? createRate());
@@ -181,21 +179,17 @@ function render() {
   els.langBtn.title = t('lang.switch', lang);
   els.langBtn.setAttribute('aria-label', els.langBtn.title);
 
-  // The button shows the theme that is showing and names it, so a click never
-  // lands on a theme the user did not expect (see nextTheme).
+  // The button shows and names the theme in force, so a click never surprises.
   els.themeBtn.textContent = themeIcon(state.settings.theme);
   els.themeBtn.title = `${t('theme.switch', lang)} · ${t(themeKey(state.settings.theme), lang)}`;
   els.themeBtn.setAttribute('aria-label', els.themeBtn.title);
 
-  // The theme and the brand hue are written onto <html>, where src/styles/base.css
-  // picks the two palettes up. The popup has no picker of its own: a popup is
-  // the wrong place to choose a colour, so it only wears what the settings page
-  // saved.
+  // Written onto <html>, where src/styles/base.css picks the palettes up. The popup
+  // has no picker of its own: it wears what the settings page saved.
   applyTheme(state.settings.theme);
   applyAccent(state.settings.accent);
 
-  // A proxy that is not really in force outranks the mode: pill, card and warning
-  // line all say what the toolbar badge says instead of contradicting it.
+  // A proxy not really in force outranks the mode: every indicator says so.
   const problem = describeApplyProblem(applyStatus);
   const problemText = problem
     ? `${t(problem.title.key, lang, problem.title.params)} — ${t(
@@ -218,14 +212,13 @@ function render() {
   setText(els.statusDetail, t(status.detail.key, lang, status.detail.params));
   els.statusDot.className = `dot is-${status.tone}`;
 
-  // The card wears the colour of the active mode (emerald for a server, indigo
-  // for PAC, slate for the system proxy) and turns amber when something is
-  // missing, so the popup can be read at a glance.
+  // The card wears the colour of the active mode, and amber when something is
+  // missing, so the popup reads at a glance.
   els.statusCard.dataset.tone = problem || status.tone === 'warn' ? 'warn' : badge.tone;
   els.masterToggle.checked = state.settings.enabled;
 
-  // A short-lived message ("that PAC URL is not valid") takes the line for a few
-  // seconds; the apply problem stays until it is fixed.
+  // A short-lived message takes the line for a few seconds; an apply problem stays
+  // until it is fixed.
   const warning = transientWarning ?? problemText;
   els.warning.textContent = warning ?? '';
   els.warning.classList.toggle('hidden', !warning);
@@ -235,10 +228,8 @@ function render() {
     ? t('field.bypassSummary', lang, { count })
     : t('field.bypassNone', lang);
 
-  // The meter is the one thing in the popup that moves while it is open. The
-  // row is hidden when counting is off, so the popup never shows a number that
-  // is not being kept up to date; each figure is labelled with its direction,
-  // because the arrows next to them are decoration.
+  // The row is hidden when counting is off, so the popup never shows a number that
+  // is not being kept up to date; the arrows are decoration, hence the labels.
   const meterOn = state.settings.trafficMeter === true;
   els.trafficRow.classList.toggle('hidden', !meterOn);
   if (meterOn) {
@@ -264,8 +255,7 @@ function render() {
 }
 
 function wire() {
-  // The rate decays in real time; a tick keeps the line honest between the
-  // worker's writes. One timer for the popup's whole life, cleared with it.
+  // The rate decays in real time; the tick keeps the line honest between writes.
   rateTimer = setInterval(() => {
     if (state?.settings?.trafficMeter === true) renderRate();
   }, 1000);
@@ -277,9 +267,8 @@ function wire() {
     });
   });
 
-  // The frosted header only draws its hairline once content slides under it.
-  // Scroll events do not bubble, so the listener sits on `document` in the
-  // capture phase: that catches the viewport as well as any inner scroller.
+  // The frosted header only draws its hairline once content slides under it. Scroll
+  // events do not bubble, so the listener sits on `document` in the capture phase.
   const header = els.header;
   if (header) {
     const sync = () => {
@@ -323,21 +312,18 @@ async function init() {
     state = next;
     render();
   });
-  // A background check or the test button can add a verdict while the popup is
-  // open; the list is the place it shows up.
+  // A background check or the test button can add a verdict while the popup is open.
   subscribeServerHealth((next) => {
     serverHealth = next;
     render();
   });
-  // The service worker writes this after every apply attempt, including the ones
-  // that happen while the popup is already open.
+  // Written by the worker after every apply attempt, including while this page is open.
   subscribeStatus((next) => {
     applyStatus = next;
     render();
   });
 
-  // The meter writes in batches while pages load under this popup, so the
-  // figures follow along on their own.
+  // The meter writes in batches while pages load under this popup.
   subscribeTraffic((next) => {
     traffic = next;
     render();
@@ -347,8 +333,7 @@ async function init() {
     renderRate();
   });
 
-  // The test-all pass announces each verdict as it is recorded; this page only
-  // narrates (the verdict itself reaches the rows through the health record).
+  // The pass announces each verdict; the rows get it through the health record.
   if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage?.addListener) {
     chrome.runtime.onMessage.addListener((message) => {
       if (message?.type !== TEST_ALL_PROGRESS_MESSAGE) return;

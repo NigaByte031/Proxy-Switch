@@ -37,8 +37,7 @@ test('an empty window says nothing is moving', () => {
 
 test('a batch reads its own speed: its bytes over the span they were counted across', () => {
   const record = createRate();
-  // 2 MB counted across five seconds of traffic: 400 KB/s, whatever the window
-  // happens to be. The span comes from the worker (see `noteRate`).
+  // 2 MB counted across five seconds is 400 KB/s, whatever the window is.
   noteRate(record, { down: 2 * 1024 * 1024, at: now, ms: 5000 });
 
   const rate = trafficRate(record, now);
@@ -49,9 +48,8 @@ test('a batch reads its own speed: its bytes over the span they were counted acr
 });
 
 test('a sustained transfer reads its own rate at every moment', () => {
-  // One batch per second for the whole window, all at the same speed. The
-  // reading must not drift with how many batches the window happens to hold:
-  // this is the bug that dividing by the window span would introduce.
+  // One batch per second for the whole window: the reading must not drift with how
+  // many batches the window holds (the bug dividing by the window span would bring).
   const record = createRate();
   for (let i = 10; i >= 0; i -= 1) {
     noteRate(record, { down: 100_000, at: ago(i), ms: 1000 });
@@ -68,15 +66,11 @@ test('a stream that slows down reads the slower number once the fast batches age
   const record = createRate();
   noteRate(record, { down: 10 * 1024 * 1024, at: ago(6), ms: 1000 });
   noteRate(record, { down: 1024 * 1024, at: now, ms: 1000 });
-
-  // Both halves are in the window: the reading is neither of them, it is what
-  // was counted across both spans.
+  // Both halves are in the window: the reading is what was counted across both spans.
   const mixed = trafficRate(record, now);
   assert.ok(mixed.down > 1024 * 1024, `the fast batch still counts, got ${mixed.down}`);
   assert.ok(mixed.down < 10 * 1024 * 1024);
-
-  // Five seconds on, the fast batch has fallen out of the window and only the
-  // slow one is left: the reading is the speed that is still happening.
+  // Five seconds on, the fast batch has left the window: the reading is what remains.
   const settled = trafficRate(record, now + 5000);
   assert.equal(Math.round(settled.down), 1024 * 1024);
 });
@@ -89,9 +83,7 @@ test('a transfer that has stopped reads as idle rather than as its last speed', 
   assert.equal(fresh.idle, false);
   assert.equal(fresh.down, `${formatBytes(600_000)}/s`);
   assert.equal(fresh.up, `${formatBytes(60_000)}/s`);
-
-  // Past the idle threshold the window is not empty, but the meter has stopped
-  // calling the tail of a burst a speed.
+  // Past the idle threshold the window is not empty, but a burst's tail is not a speed.
   const stale = describeRate(record, now + RATE_IDLE_MS + 1200);
   assert.equal(stale.idle, true);
   assert.equal(stale.down, '0 B/s');
@@ -160,21 +152,21 @@ test('a reading is capped at what a byte count can claim', () => {
 });
 
 test('sanitizing keeps only the samples that can be read as a speed', () => {
+  // The first four claim no speed: no moment, no span, nothing counted, a
+  // negative count. Then the one that can, and two entries that are no record.
   const clean = sanitizeRate({
     samples: [
-      { at: 0, ms: 1000, down: 10 }, // no moment
-      { at: 1, ms: 0, down: 10 }, // no span
-      { at: 2, ms: 1000, up: 0, down: 0 }, // nothing counted
-      { at: 3, ms: 1000, down: -5 }, // nothing counted
-      { at: 4, ms: 1000, down: 1024 }, // kept
+      { at: 0, ms: 1000, down: 10 },
+      { at: 1, ms: 0, down: 10 },
+      { at: 2, ms: 1000, up: 0, down: 0 },
+      { at: 3, ms: 1000, down: -5 },
+      { at: 4, ms: 1000, down: 1024 },
       'junk',
       null,
     ],
   });
-
-  // Ageing out is the read's job (see `trafficRate`), not the record's: a well
-  // formed sample survives here, so a record means the same thing whenever it
-  // is touched.
+  // Ageing out is the read's job (`trafficRate`), not the record's: a well formed
+  // sample survives here.
   assert.deepEqual(clean.samples, [{ at: 4, ms: 1000, up: 0, down: 1024 }]);
 
   for (const raw of [null, undefined, 42, 'x', [], true, { samples: 'nope' }]) {
@@ -210,15 +202,13 @@ test('a reset empties the window', () => {
 
 test('a speed reads as a speed', () => {
   const record = createRate();
-  // 300 MB counted across one second — the kind of burst the user meant by
-  // "300 megabytes a second". Both directions belong to the same second, so
-  // they are the same sample: a batch is one observation of one span.
+  // 300 MB in one second — the burst the user meant by "300 megabytes a second".
+  // Both directions are one batch: one observation of one span.
   noteRate(record, { down: 300 * 1024 * 1024, up: 512 * 1024, at: now, ms: 1000 });
 
   const shown = describeRate(record, now);
   assert.equal(shown.idle, false);
-  // The arrows live in the string templates, not in describeRate — it returns
-  // the bare readings, and the UI composes them.
+  // The arrows live in the string templates, not in describeRate.
   assert.equal(shown.down, '300.0 MB/s');
   assert.equal(shown.up, '512.0 KB/s');
 });

@@ -102,9 +102,8 @@ test('a new day clears today and leaves the totals alone', () => {
     since: 0,
     at: 0,
   });
-
-  // Rolling twice in the same day is not a change, and a moment without a day
-  // must not wipe the counters it cannot place.
+  // Rolling twice in the same day is not a change, and a moment without a day must
+  // not wipe the counters it cannot place.
   assert.equal(rollTrafficDay(record, at(2026, 9, 27, 18)), false);
   assert.equal(rollTrafficDay(record, Number.NaN), false);
   assert.equal(record.day, '2026-09-27');
@@ -274,9 +273,8 @@ test('the reading shows today, and the totals whatever the day says', () => {
   assert.equal(yesterday.up, '500 B');
   assert.equal(yesterday.totalDown, '3.0 GB');
   assert.equal(yesterday.totalUp, '2.0 MB');
-
   // The record is only rewritten when something moves, so after a night with the
-  // browser closed the stored day is not today — and "today" must say zero.
+  // browser closed the stored day is not today — and "today" must read zero.
   const afterMidnight = describeTraffic(record, at(2026, 9, 27, 8));
   assert.equal(afterMidnight.current, false);
   assert.equal(afterMidnight.down, '0 B');

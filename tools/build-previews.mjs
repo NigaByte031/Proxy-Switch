@@ -1,11 +1,7 @@
 /**
- * Generates `src/__preview_*.html` from the real extension pages.
- *
- * The preview pages are byte-identical to the shipped markup plus one <script>
- * tag that installs the mocked `chrome.*` API, which means the UI can be tried
- * in any browser tab without installing the extension. Generating them (instead
- * of hand-maintaining copies) keeps the two in sync; tests/manifest.test.mjs
- * fails if somebody edits a preview by hand.
+ * Generates `src/__preview_*.html` from the real extension pages: identical markup
+ * plus one <script> tag that installs the mocked `chrome.*` API, so the UI can be
+ * tried in any browser tab without installing the extension.
  *
  * Usage: node tools/build-previews.mjs [--check]
  */

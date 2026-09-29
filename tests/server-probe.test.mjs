@@ -58,22 +58,19 @@ test('the check is off until it is asked for, or has nothing to keep', () => {
   state.settings.backgroundProbe = false;
   assert.equal(probeEligible(state), false, 'the setting is the one switch that turns it on');
 
-  // Manual mode without an active server has no route to reproduce, so a check
-  // would measure something that is not in force.
+  // No active server means no route to reproduce.
   const orphan = manualState(['a'], 'a');
   orphan.settings.activeProfileId = null;
   assert.equal(probeEligible(orphan), false);
 
-  // System and direct mode are not ours to re-create: a PAC script would
-  // replace the operating system's proxy, and a check must not do that.
+  // System and direct mode are not ours to re-create.
   for (const mode of ['system', 'direct']) {
     const other = manualState();
     other.settings.mode = mode;
     assert.equal(probeEligible(other), false, `${mode} must not be checked behind`);
   }
 
-  // A switched-off extension routes nothing, so there is no verdict to be right
-  // about — and it stays quiet until it is switched back on.
+  // A switched-off extension routes nothing, so there is nothing to be right about.
   const off = manualState();
   off.settings.enabled = false;
   assert.equal(probeEligible(off), false);
@@ -99,15 +96,13 @@ test('a pass skips servers whose verdict is still fresh, and never repeats a loo
     b: { ok: false, at: T0, ms: null },
   };
 
-  // `c` has never been looked at, and `b`'s verdict has aged out; `a` was just
-  // looked at, so it is left alone.
+  // `c` has never been looked at, `b`'s verdict aged out; `a` was just looked at.
   assert.deepEqual(
     probeCandidates(servers, health, now).map((entry) => entry.id),
     ['c', 'b'],
   );
 
-  // Every verdict recent: the pass has nothing to do — and applying nothing is
-  // the point of returning an empty list rather than a fallback.
+  // Every verdict recent: the pass has nothing to do, hence the empty list.
   const allFresh = {
     a: { ok: true, at: now - 1, ms: 40 },
     b: { ok: true, at: now - 2, ms: 90 },
@@ -125,8 +120,7 @@ test('the oldest verdict is taken again before a newer one', () => {
     c: { ok: false, at: T0 + 2000, ms: null },
   };
 
-  // All three have aged out; the two oldest go first, `c` waits for the next
-  // pass — being the newest verdict is worth something even here.
+  // All three aged out; the two oldest go first, `c` waits for the next pass.
   assert.deepEqual(
     probeCandidates(servers, health, now).map((entry) => entry.id),
     ['b', 'a'],
@@ -154,9 +148,8 @@ test('a verdict is about the server that was checked, and nothing else', () => {
   const verdict = probeVerdict(target, { ok: true, ms: 12.6 }, T0);
   assert.deepEqual(verdict, { id: 'b', ok: true, at: T0, ms: 13 });
 
-  // A failure has no speed to speak of, and no outcome is no verdict at all:
-  // recording "failed" for a check that never ran would demote a server nobody
-  // has looked at.
+  // A failure has no speed, and no outcome is no verdict: "failed" for a check that
+  // never ran would demote a server nobody has looked at.
   assert.deepEqual(probeVerdict(target, { ok: false, ms: 900 }, T0), {
     id: 'b',
     ok: false,
@@ -169,16 +162,13 @@ test('a verdict is about the server that was checked, and nothing else', () => {
 });
 
 test('a pass is what keeps the chain in the order that works', () => {
-  // The promise of the whole feature, end to end at the policy level: what the
-  // checks find is what the generated chain is ordered by. The generated script
-  // itself is run for real in tests/pac.test.mjs; what is tested here is what a
-  // pass does to the order.
+  // End to end at the policy level: what the checks find is what the generated chain
+  // is ordered by. The generated script itself is run for real in pac.test.mjs.
   const state = manualState(['a', 'b'], 'b');
   state.settings.mode = 'pac_script';
   state.settings.domainRouting = true;
   state.settings.proxyDomains = ['example.com'];
-  // The chain is ordered against the real clock, so this scenario has to use it
-  // too — the tests above pin `now` instead.
+  // The chain is ordered against the real clock, so this scenario uses it too.
   const now = Date.now();
 
   const chainOf = (health) =>
@@ -187,16 +177,14 @@ test('a pass is what keeps the chain in the order that works', () => {
   // Nothing is known, so the chain is the list: the server in charge first.
   assert.equal(chainOf({}), '"PROXY b.example.com:8080; PROXY a.example.com:8080"');
 
-  // A scripted network: `b` is down, `a` answers quickly. Nothing has been
-  // looked at before, so the first pass takes both.
+  // A scripted network: `b` is down, `a` answers quickly. Nothing was looked at yet.
   const network = { a: { ok: true, ms: 90 }, b: { ok: false, ms: null } };
   const health = {};
   const first = probeCandidates(state.profiles, health, now);
   assert.deepEqual(first.map((entry) => entry.id), ['a', 'b']);
 
   for (const target of first) {
-    // The check hands its own probe to the server it named — the rest of the
-    // user's configuration is the same script it always was.
+    // The check hands its own probe to the server it named; nothing else changes.
     const data = buildProbeConfig(state, target, health).pacScript.data;
     assert.ok(
       data.includes(`var OVERRIDE = ${JSON.stringify(proxyDirective(target))}`),
@@ -205,13 +193,11 @@ test('a pass is what keeps the chain in the order that works', () => {
     noteServerHealth(health, probeVerdict(target, network[target.id], now));
   }
 
-  // The server that answered now leads the chain, and the next pass has nothing
-  // to do because both verdicts are fresh.
+  // The server that answered leads the chain; the next pass has nothing to do.
   assert.equal(chainOf(health), '"PROXY a.example.com:8080; PROXY b.example.com:8080"');
   assert.deepEqual(probeCandidates(state.profiles, health, now + 60_000), []);
 
-  // Once the verdicts age out, the pass takes them again — and a recovered `b`
-  // that answers faster than `a` takes the lead back.
+  // Once the verdicts age out the pass takes them again, and a faster `b` leads.
   const later = now + PROBE_REFRESH_MS;
   assert.deepEqual(
     probeCandidates(state.profiles, health, later).map((entry) => entry.id),
@@ -235,15 +221,13 @@ test('the message constants name the pass and its progress', () => {
 });
 
 test('a test-all pass is allowed wherever a check may measure, whatever the setting', () => {
-  // The user just pressed the button: the background-probe switch is none of
-  // the pass's business — but the safety half is.
+  // The button was just pressed: the setting is not the pass's business, safety is.
   const state = manualState(['a', 'b'], 'a');
   state.settings.backgroundProbe = false;
   assert.equal(probeEligible(state), false, 'no network work on its own');
   assert.equal(testAllEligible(state), true, '…but a pass on request can be taken');
 
-  // System and direct have no routing to reproduce; a downloaded PAC script is
-  // somebody else's policy. No requirement is waived here, only the setting.
+  // No requirement is waived here, only the setting.
   for (const broken of [() => {
     const s = manualState();
     s.settings.mode = 'system';
@@ -272,8 +256,7 @@ test('a test-all pass is allowed wherever a check may measure, whatever the sett
 });
 
 test('the timing leaves room between two checks', () => {
-  // A verdict has to survive from one look to the next, or the chain would
-  // flicker back to list order in the gap — the whole point of the schedule.
+  // A verdict has to survive from one look to the next, or the chain flickers back.
   assert.ok(
     PROBE_REFRESH_MS + PROBE_INTERVAL_MINUTES * 60_000 < SERVER_HEALTH_TTL_MS,
     `${PROBE_REFRESH_MS} + ${PROBE_INTERVAL_MINUTES}min must fit inside ${SERVER_HEALTH_TTL_MS}`,

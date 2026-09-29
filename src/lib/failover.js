@@ -1,34 +1,11 @@
 /**
  * Auto-failover: when the active server stops answering, move to the next one.
+ * Plain functions over a record — no `chrome.*`, no timers, no network — mutated in
+ * place and stored as `proxySwitchFailover`: an MV3 worker dies between events.
  *
- * The whole policy is here as plain functions over a record — no `chrome.*`,
- * no timers, no network — so the service worker only feeds it one proxy error
- * at a time, runs the probe it asks for and performs the switch it suggests
- * (see `src/background.js`).
- *
- * The bookkeeping is a record that is passed in and mutated, never module
- * state: an MV3 worker is terminated between events, and a counter that only
- * exists while the worker happens to be awake would start from zero on every
- * single error. The record therefore lives in storage next to the state (see
- * `proxySwitchFailover` in `lib/storage.js`).
- *
- * Two rules keep the switch trustworthy:
- *
- *   - **An error alone is not evidence.** `onProxyError` also fires for a
- *     request that failed for reasons of its own, so a probe through the
- *     current server has to fail before anything is switched.
- *   - **A round visits every other server once and then stops.** When the
- *     whole network is down the extension reports `ERR` instead of flipping
- *     between broken servers forever.
- *
- * Where it moves *to* is the third rule, and it is the one the generated PAC
- * chain already uses: the server that was last proven good goes first (fastest
- * of those first), a server nobody has looked at comes next, and a server that
- * recently failed comes last — and, for a short while after failing, is not a
- * candidate at all (`FAILOVER_FAILED_COOLDOWN_MS`). The verdicts are the health
- * record (`lib/server-health.js`), which the worker passes in; with nothing
- * known about anybody this module still answers the way it always did, with the
- * next line of the list.
+ * Two rules keep a switch trustworthy: an error alone is not evidence (a probe
+ * through the current server has to fail first), and a round visits every other
+ * server once instead of flipping forever.
  */
 
 import { findProfile } from './model.js';
@@ -40,22 +17,17 @@ export const FAILOVER_STRIKES = 3;
 /**
  * Nothing switches this soon after a switch: the new server gets its chance.
  * This is about *switching*; for the pause a server earns by failing, see
- * `FAILOVER_FAILED_COOLDOWN_MS` below.
+ * `FAILOVER_FAILED_COOLDOWN_MS`.
  */
 export const FAILOVER_COOLDOWN_MS = 30_000;
 
 /**
  * How long a server that just failed is passed over while anything else is
- * available.
+ * available. A preference, never a veto: when every candidate is inside the
+ * window they all come back, because staying on a server already confirmed dead
+ * is the worse answer.
  *
- * The verdict a probe writes is about one moment, and a server that has just
- * died takes a burst of errors with it: picking it again seconds later is a
- * coin flip with the user's browsing as the stake. The window is short enough
- * to stay inside a round's idle period (`FAILOVER_IDLE_MS`, five minutes), so a
- * fresh round never starts out of options.
- *
- * It is a preference, never a veto: when the only way off a server that is
- * already confirmed dead is a server inside this window, it is chosen anyway.
+ * Shorter than `FAILOVER_IDLE_MS`, so a fresh round never starts out of options.
  */
 export const FAILOVER_FAILED_COOLDOWN_MS = 2 * 60_000;
 
@@ -80,9 +52,9 @@ export function createFailoverRecord() {
 }
 
 /**
- * Coerces anything (old storage, a hand-edited value) into a valid record.
- * Strikes are capped at the threshold: a counter that grew while nobody was
- * watching must not turn into an instant switch when the worker wakes up.
+ * Coerces old storage or a hand-edited value into a valid record. Strikes are
+ * capped at the threshold, so a counter that grew while nobody was watching
+ * cannot become an instant switch when the worker wakes up.
  */
 export function sanitizeFailoverRecord(raw) {
   const base = createFailoverRecord();
@@ -106,7 +78,7 @@ export function sanitizeFailoverRecord(raw) {
   };
 }
 
-/** Whether two records say the same thing (timestamps do count — they are policy here). */
+/** Timestamps count here: they are policy. */
 export function sameFailoverRecord(left, right) {
   const a = sanitizeFailoverRecord(left);
   const b = sanitizeFailoverRecord(right);
@@ -147,12 +119,11 @@ export function failoverEligible(state) {
 /**
  * Where a round moves to: the healthiest server, not the next line of the list.
  *
- * The candidates are the list walked on from the active server and wrapped
- * around — the order a round has always used, and the order this function still
- * answers with when nothing is known about anybody. Servers already tried in
- * this round are out, and so is a server whose last verdict was a failure
- * (`FAILOVER_FAILED_COOLDOWN_MS`); what is left is ranked by
- * `orderServersByHealth`, so the same ranking decides this and the PAC chain.
+ * The candidates are the list walked on from the active server and wrapped around —
+ * the order this function answers with when nothing is known about anybody. Servers
+ * already tried this round are out, and so is one whose last verdict was a recent
+ * failure; what is left is ranked by `orderServersByHealth`, so the same ranking
+ * decides this and the PAC chain.
  *
  * @param {object[]} profiles in list order
  * @param {string|null} currentId the active server
@@ -176,8 +147,8 @@ export function nextFailoverTarget(profiles, currentId, tried = [], context = {}
   const now = Number.isFinite(context.now) ? context.now : Date.now();
   const known = sanitizeServerHealth(context.health);
 
-  // The pause is a preference, not a veto: when every candidate is inside it,
-  // they all come back — being stuck on a dead server is the worse answer.
+  // The pause is a preference, not a veto: when every candidate is inside it
+  // they all come back, because being stuck on a dead server is worse.
   const ready = candidates.filter((profile) => !justFailed(known, profile.id, now));
   const pool = ready.length ? ready : candidates;
 
@@ -186,8 +157,7 @@ export function nextFailoverTarget(profiles, currentId, tried = [], context = {}
 
 /**
  * Whether this server's last verdict was a failure recent enough to pause it.
- * The window is shorter than `SERVER_HEALTH_TTL_MS`, so a paused server always
- * has a verdict that still counts.
+ * Shorter than `SERVER_HEALTH_TTL_MS`, so a paused server's verdict still counts.
  */
 function justFailed(known, id, now) {
   const entry = known?.[id];
@@ -201,11 +171,9 @@ function isStale(record, now) {
 }
 
 /**
- * Records one proxy error and answers whether the route is now worth probing.
- *
- * Two situations throw the bookkeeping away first, because it describes a
- * world that no longer exists: a round that has gone quiet, and a server the
- * user picked by hand (anything but the one the last automatic switch chose).
+ * Records one proxy error and answers whether the route is now worth probing. A
+ * round that has gone quiet, or a server the user picked by hand, throws the
+ * bookkeeping away first.
  *
  * @param {FailoverRecord} record mutated in place, like an `updateState` mutator
  * @param {{now?: number, activeProfileId?: string|null, profiles?: object[], health?: object|null}} context
@@ -222,8 +190,7 @@ export function noteProxyError(record, context = {}) {
   }
 
   const eligible = profiles.length >= 2 && Boolean(activeProfileId);
-  // Capped, so once the streak is long enough further errors change nothing —
-  // and an unchanged record is not written to storage again.
+  // Capped: once the streak is long enough, further errors change nothing.
   if (eligible && record.strikes < FAILOVER_STRIKES) {
     record.strikes += 1;
     record.lastErrorAt = now;
@@ -241,9 +208,8 @@ export function noteProxyError(record, context = {}) {
 }
 
 /**
- * The switch itself — only ever called after a probe confirmed the active
- * server is really down. Marks the current server as tried, moves on to the
- * next one and starts the cooldown.
+ * The switch itself, only ever called after a probe confirmed the active server is
+ * down: marks it tried, moves on to the next one and starts the cooldown.
  *
  * @param {FailoverRecord} record mutated in place
  * @param {{now?: number, activeProfileId?: string|null, profiles?: object[], health?: object|null}} context
@@ -255,8 +221,7 @@ export function planFailover(record, context = {}) {
   const activeProfileId = context.activeProfileId ?? null;
   const profiles = Array.isArray(context.profiles) ? context.profiles : [];
 
-  // A probe is what gets here, so the verdicts the health record holds are the
-  // reason a server is picked (or passed over) — see `nextFailoverTarget`.
+  // A probe got here, so the health verdicts decide who is picked.
   const nextId = nextFailoverTarget(profiles, activeProfileId, record.tried, {
     now,
     health: context.health,
@@ -282,13 +247,10 @@ export function noteHealthy(record) {
 }
 
 /**
- * The server the last automatic switch moved *away* from, while that is still
- * the news — the target of "go back" on the switch notification.
- *
- * The round remembers it, so the worker needs no extra bookkeeping: `tried`
- * ends with the server that failed. It stops counting as soon as the round it
- * describes is over, which is exactly when the user (or the policy) has moved
- * on and going back is no longer the answer to that notification.
+ * The server the last automatic switch moved *away* from, while that is still the
+ * news — the target of "go back" on the switch notification. The round remembers
+ * it (`tried` ends with the server that failed), and it stops counting as soon as
+ * that round is over.
  *
  * @param {FailoverRecord} record
  * @param {object} state
@@ -297,8 +259,7 @@ export function noteHealthy(record) {
 export function failoverUndoTarget(record, state) {
   const clean = sanitizeFailoverRecord(record);
   const active = state?.settings?.activeProfileId ?? null;
-  // Only the server an automatic switch installed can undo one: if the user has
-  // picked another server since, this record describes a moment that is gone.
+  // Only a server an automatic switch installed can undo one.
   if (!clean.lastSwitchTo || clean.lastSwitchTo !== active) return null;
   const previousId = clean.tried[clean.tried.length - 1] ?? null;
   if (!previousId || previousId === active) return null;
@@ -307,12 +268,10 @@ export function failoverUndoTarget(record, state) {
 }
 
 /**
- * A switch the user asked for — the "go back" button on the notification.
- *
- * The round starts over (nothing is "already tried" for a server the user chose
- * on purpose), but the server they just went back to keeps the same grace
- * period an automatic switch gives one: if it is still dead the policy may move
- * on again, only not on the first three errors.
+ * A switch the user asked for — the "go back" button on the notification. The round
+ * starts over (nothing is "already tried" for a server the user chose on purpose),
+ * but the server they went back to keeps the grace period an automatic switch gives
+ * one.
  *
  * @param {FailoverRecord} record mutated in place
  * @param {{now?: number, activeProfileId?: string|null}} context

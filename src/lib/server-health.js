@@ -1,50 +1,29 @@
 /**
- * What the extension knows about each server: whether it last answered, and
- * how fast.
+ * What the extension knows about each server: whether it last answered, and how
+ * fast. One verdict per server, written only where something is *proved*: the probe
+ * confirming a failover, the manual **Test connection** button, the periodic check.
+ * The first travels through the active server, so it counts in manual mode only.
  *
- * The knowledge is deliberately small — one verdict per server — because it is
- * only ever written from places that *prove* something: the probe that confirms
- * a failover (`src/background.js`), the manual **Test connection** button, and
- * the periodic background check (`lib/server-probe.js`), which routes its own
- * probe through the server it is checking and therefore knows exactly whom the
- * answer belongs to.
- *
- * The first of those travels through the active server, and the rule for
- * attributing a verdict (`probeObservation`) therefore only fires in manual
- * mode, where the active server is the one and only hop traffic can be going
- * through. In PAC mode a chain hides which hop answered, and guessing would be
- * worse than not knowing.
- *
- * One thing is decided with it: the order of the chain in the generated PAC
- * script — `orderServersByHealth` puts the server that last proved it works
- * first (fastest of the healthy ones first), leaves servers nobody has looked
- * at in the order of the list, and pushes a server that last failed to the end.
- * Records expire (see `SERVER_HEALTH_TTL_MS`), so a verdict can neither promote
- * nor demote a server forever.
- *
- * Like the failover bookkeeping this lives in its own storage key, outside the
- * state: it is memory, not configuration, so it is never exported and never
- * written into a backup file.
+ * Records expire (see `SERVER_HEALTH_TTL_MS`), so a verdict can neither promote nor
+ * demote a server forever; like the failover bookkeeping they live in memory.
  */
 
 import { formatDuration } from './health.js';
 import { effectiveMode, findProfile } from './model.js';
 
 /**
- * How long a verdict counts. After that the server is simply unknown again.
- *
- * Long enough to outlive a background check (see `lib/server-probe.js`, which
- * re-takes a verdict after `PROBE_REFRESH_MS`), so a verdict cannot expire in
- * the gap between two checks and make the chain flicker back to list order.
+ * How long a verdict counts; after that the server is simply unknown again. Long
+ * enough to outlive a background check (`PROBE_REFRESH_MS`), so the chain cannot
+ * flicker back to list order between two checks.
  */
 export const SERVER_HEALTH_TTL_MS = 20 * 60_000;
 
-/** @returns {object} an empty record: nobody has been looked at yet. */
+/** An empty record: nobody has been looked at yet. */
 export function createServerHealth() {
   return {};
 }
 
-/** Coerces anything (old storage, a hand-edited value) into a valid record. */
+/** Coerces old storage or a hand-edited value into a valid record. */
 export function sanitizeServerHealth(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
 
@@ -53,9 +32,8 @@ export function sanitizeServerHealth(raw) {
     if (!id || !entry || typeof entry !== 'object') continue;
     const at = Number(entry.at);
     if (typeof entry.ok !== 'boolean' || !Number.isFinite(at) || at <= 0) continue;
-    // A failure has no speed to speak of, and `Number(null)` is 0 — a number
-    // that would outrank every real latency — so only a real, non-negative
-    // number survives, and only for a server that actually answered.
+    // `Number(null)` is 0, which would outrank every real latency, so only a real
+    // non-negative number survives, and only from a server that answered.
     const ms = typeof entry.ms === 'number' ? entry.ms : NaN;
     result[id] = {
       ok: entry.ok,
@@ -66,7 +44,7 @@ export function sanitizeServerHealth(raw) {
   return result;
 }
 
-/** Whether two records say the same thing (the timestamps do count — they are the TTL). */
+/** Timestamps count here: they are the TTL. */
 export function sameServerHealth(left, right) {
   const a = sanitizeServerHealth(left);
   const b = sanitizeServerHealth(right);
@@ -79,8 +57,8 @@ export function sameServerHealth(left, right) {
 
 /**
  * Records one verdict. The record is replaced wholesale (mutated in place, like
- * the failover record), so a server that is gone from the caller's world leaves
- * nothing behind.
+ * the failover record), so a server gone from the caller's world leaves nothing
+ * behind.
  *
  * @param {object} record mutated in place
  * @param {{id?: string, ok?: boolean, at?: number, ms?: number|null}} observation
@@ -109,14 +87,12 @@ export function noteServerHealth(record, observation = {}) {
  * @returns {{id: string, ok: boolean, at: number, ms: number|null}|null}
  */
 export function probeObservation(state, outcome, now = Date.now()) {
-  // Manual mode is the only one where "the active server" is the whole route:
-  // in every other mode the answer came from something else (the system proxy,
-  // a PAC script, a chain), so nothing about a saved server follows from it.
+  // Only in manual mode is the active server the whole route; elsewhere the
+  // answer came from a chain or a system proxy, so it proves nothing here.
   if (effectiveMode(state) !== 'fixed_servers') return null;
 
-  // No outcome, or an outcome that never answered either way, is no verdict at
-  // all — recording "failed" for a check that did not run would demote a server
-  // nobody has looked at.
+  // A check that did not run is no verdict: recording "failed" would demote a
+  // server nobody has looked at.
   if (!outcome || typeof outcome.ok !== 'boolean') return null;
 
   const profile = findProfile(state, state?.settings?.activeProfileId);
@@ -154,8 +130,7 @@ function verdictIn(known, id, now) {
 
 /**
  * How old a verdict is, said in words: "just now", "12 min ago", "3 h ago".
- * Minutes are the smallest unit worth showing — a check runs every few minutes,
- * so seconds would be noise.
+ * Minutes are the smallest unit worth showing.
  *
  * @param {number} ageMs
  * @returns {{key: string, params?: object}}
@@ -175,12 +150,11 @@ export function describeVerdictAge(ageMs) {
 
 /**
  * What the server list says about one server: the last verdict and its age, or
- * null when nobody has ever looked at it — a server the extension has no
- * opinion about says nothing rather than "unknown".
+ * null when nobody has ever looked at it — a server the extension has no opinion
+ * about says nothing rather than "unknown".
  *
- * The verdict is shown even once it is too old to order the chain, but its
- * `current` flag is false, so the list can dim it exactly when the chain stops
- * counting it. What you see and what the chain does stay the same thing.
+ * The verdict is shown even once it is too old to order the chain, but `current` is
+ * false, so the list dims it exactly when the chain stops counting it.
  *
  * @param {object|null} health the recorded verdicts
  * @param {string} id
@@ -207,8 +181,8 @@ export function describeServerVerdict(health, id, now = Date.now()) {
  *
  * Three groups, and nothing else moves: servers that recently answered (fastest
  * first), servers nobody has looked at (list order), and servers that recently
- * failed (list order, at the end). A verdict older than `SERVER_HEALTH_TTL_MS`
- * counts as no verdict at all, so the ranking is about *recent* health.
+ * failed (list order, at the end). An older verdict counts as no verdict at all, so
+ * the ranking is about *recent* health.
  *
  * @param {object[]} servers in list order
  * @param {object|null} health a health record
@@ -220,10 +194,8 @@ export function orderServersByHealth(servers, health, now = Date.now()) {
   const known = sanitizeServerHealth(health);
 
   const group = (entry) => (entry ? (entry.ok ? 0 : 2) : 1);
-  // Only a verdict that counts can speak: an expired one is unknown again, and
-  // an unknown server is compared by list position, not by a speed it no longer
-  // has. A failure has no speed either, which is why it never outranks a
-  // healthy one by being "fast".
+  // Only a verdict that counts can speak: an expired one is unknown again and is
+  // compared by list position. A failure has no speed either.
   const latency = (entry) => (entry?.ok ? entry.ms ?? Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER);
   const knownNow = (server) => verdictIn(known, server?.id, now);
 

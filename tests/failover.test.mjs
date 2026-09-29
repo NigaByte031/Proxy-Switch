@@ -112,19 +112,17 @@ test('the next target walks the list, wraps and skips what was tried', () => {
 });
 
 test('the next target is the healthiest server, not the next line of the list', () => {
-  // b is next in the list, but c is the one that was last seen answering — and
-  // it answered faster than b did when b was checked
+  // b is next in the list, but c was last seen answering — and faster.
   const health = {
     b: { ok: true, at: T0 - 60_000, ms: 300 },
     c: { ok: true, at: T0 - 60_000, ms: 90 },
   };
   assert.equal(nextFailoverTarget(PROFILES, 'a', [], { health, now: T0 }), 'c');
 
-  // a server that proved itself also outranks one nobody has looked at yet,
-  // even when the list would put the unknown one first
+  // A server that proved itself also outranks one nobody has looked at.
   assert.equal(nextFailoverTarget(PROFILES, 'c', [], { health, now: T0 }), 'b');
 
-  // ... but only while the verdict still counts: expired is unknown again
+  // But only while the verdict counts: expired is unknown again.
   const expired = { b: { ok: true, at: T0 - SERVER_HEALTH_TTL_MS - 1, ms: 10 } };
   assert.equal(
     nextFailoverTarget(PROFILES, 'c', [], { health: expired, now: T0 }),
@@ -132,7 +130,7 @@ test('the next target is the healthiest server, not the next line of the list', 
     'a verdict nobody counts any more is not a reason to prefer anybody',
   );
 
-  // and with nothing known at all, the walk is exactly what it always was
+  // With nothing known at all, the walk is what it always was.
   assert.equal(nextFailoverTarget(PROFILES, 'a', [], { now: T0 }), 'b');
   assert.equal(nextFailoverTarget(PROFILES, 'a', [], { health: null, now: T0 }), 'b');
 });
@@ -143,33 +141,29 @@ test('a server that just failed is passed over, and comes back when the pause is
   // b is next in the list and inside the pause: the round goes to c instead
   assert.equal(nextFailoverTarget(PROFILES, 'a', [], { health: failed, now: T0 }), 'c');
 
-  // The pause is what breaks a tie between two servers that both failed — the
-  // one that failed longer ago is the better guess, even though list order
-  // would reach for b first.
+  // The pause breaks a tie between two failed servers: the one that failed longer
+  // ago is the better guess, even though list order would reach for b first.
   const bothFailed = {
     b: { ok: false, at: T0 - 10_000, ms: null },
     c: { ok: false, at: T0 - 5 * 60_000, ms: null },
   };
   assert.equal(nextFailoverTarget(PROFILES, 'a', [], { health: bothFailed, now: T0 }), 'c');
 
-  // Once the pause has run out, b is an ordinary candidate again — still last
-  // after anything that answered, because that is what its verdict says.
+  // Once the pause has run out, b is an ordinary candidate again — still last.
   assert.equal(
     nextFailoverTarget(PROFILES, 'a', [], { health: failed, now: T0 + FAILOVER_FAILED_COOLDOWN_MS }),
     'c',
     'a failing server stays behind a server nobody has faulted',
   );
 
-  // The pause is a preference, never a veto: with b as the only way off a
-  // server that is already confirmed dead, the round takes it.
+  // The pause is a preference, never a veto: the only way off a dead server wins.
   assert.equal(
     nextFailoverTarget([A, B], 'a', [], { health: { b: { ok: false, at: T0 } }, now: T0 }),
     'b',
     'being stuck on a dead server is the worse answer',
   );
 
-  // And it cannot outlive the verdict it is based on: a failure nobody counts
-  // any more cannot pause anybody.
+  // It cannot outlive the verdict behind it.
   const ancient = { b: { ok: false, at: T0 - SERVER_HEALTH_TTL_MS - 1, ms: null } };
   assert.equal(
     nextFailoverTarget(PROFILES, 'a', [], { health: ancient, now: T0 }),
@@ -211,8 +205,7 @@ test('three proxy errors are needed before the route is worth a probe', () => {
   assert.equal(record.strikes, FAILOVER_STRIKES);
   assert.equal(record.lastErrorAt, T0 + 20);
 
-  // from here on nothing changes any more — and an unchanged record is not
-  // written to storage again, however many errors follow
+  // From here on nothing changes — and an unchanged record is not written again.
   const frozen = structuredClone(record);
   assert.equal(noteProxyError(record, { ...context, now: T0 + 30 }), true);
   assert.equal(noteProxyError(record, { ...context, now: T0 + 40 }), true);

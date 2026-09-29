@@ -5,15 +5,14 @@ import { createModeUi } from '../src/lib/mode-ui.js';
 import { createDefaultState, sanitizeState } from '../src/lib/model.js';
 
 /**
- * The mode chips, the PAC URL and the domain list are one control shared by the
- * popup and the settings page, so what it commits matters twice. There is no DOM
- * in Node, so this file builds the smallest one that can answer the questions
- * the control asks: is the element checked, what does its value say, was it
- * hidden, and what did a click commit.
+ * The mode chips, the PAC URL and the domain list are one control shared by the popup
+ * and the settings page, so what it commits matters twice. There is no DOM in Node, so
+ * this builds the smallest one that can answer what the control asks: is the element
+ * checked, what does its value say, was it hidden, what did a click commit.
  */
 
-// `mode-ui.js` reads `document.activeElement` to leave the field the user is
-// typing in alone; every test file runs in its own process, so a stub is enough.
+// `mode-ui.js` reads `document.activeElement` to leave the field the user is typing
+// in alone; a stub is enough here.
 globalThis.document = { activeElement: null };
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));

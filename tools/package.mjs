@@ -1,17 +1,9 @@
 /**
- * Builds the uploadable extension package: `dist/proxy-switch-v<version>.zip`,
- * or `dist/proxy-switch-v<version>-firefox.zip` with `--firefox`.
+ * Builds `dist/proxy-switch-v<version>.zip`, or the `-firefox.zip` variant with
+ * `--firefox`: the same tree with a different manifest at its root.
  *
- * Dependency-free on purpose (the repo installs nothing), so the ZIP writer is
- * implemented here. It writes stored/deflated entries, UTF-8 names and a normal
- * central directory — which is exactly what Chrome Web Store, AMO and `unzip`
- * expect.
- *
- * The two builds are the same tree with a different manifest at their root:
- * `manifest.firefox.json` runs the same `src/background.js` as an event page
- * (Firefox has no extension service worker, see MDN on `background`) and adds
- * the Gecko id AMO asks for. Everything else — files, permissions, code — is
- * identical, so there is one extension to maintain and two stores to feed.
+ * Dependency-free on purpose, so the ZIP writer (stored/deflated entries, UTF-8
+ * names, a normal central directory) is implemented here.
  *
  * Usage: node tools/package.mjs [--firefox] [--out <file>]
  */
@@ -30,11 +22,8 @@ export const PACKAGE_DIRS = ['icons', 'src'];
 export const EXCLUDE_PATTERNS = [/^__preview_/, /\.test\.mjs$/, /\.map$/];
 
 /**
- * Which manifest each build puts at the root of its archive: the archive is
- * named `manifest.json` in both cases, because that is what a store reads.
- *
  * @param {boolean} firefox
- * @returns {string}
+ * @returns {string} the manifest to place at the archive root, named `manifest.json` in both cases
  */
 export function manifestFor(firefox = false) {
   return firefox ? 'manifest.firefox.json' : 'manifest.json';
@@ -89,10 +78,12 @@ export function createZip(entries, { now = new Date() } = {}) {
     const method = useDeflate ? 8 : 0;
     const checksum = crc32(raw);
 
+    // Local file header: signature, version needed, UTF-8 names, method, time,
+    // date, checksum, compressed and raw sizes, name length — no extra field.
     const local = Buffer.alloc(30);
     local.writeUInt32LE(0x04034b50, 0);
-    local.writeUInt16LE(20, 4); // version needed to extract
-    local.writeUInt16LE(0x0800, 6); // UTF-8 file names
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(0x0800, 6);
     local.writeUInt16LE(method, 8);
     local.writeUInt16LE(time, 10);
     local.writeUInt16LE(date, 12);
@@ -100,13 +91,15 @@ export function createZip(entries, { now = new Date() } = {}) {
     local.writeUInt32LE(payload.length, 18);
     local.writeUInt32LE(raw.length, 22);
     local.writeUInt16LE(nameBuffer.length, 26);
-    local.writeUInt16LE(0, 28); // extra field length
+    local.writeUInt16LE(0, 28);
     localParts.push(local, nameBuffer, payload);
 
+    // Central directory record: version made by, then the same fields as the local
+    // header — with the extra field, comment, disk numbers and attributes left 0.
     const central = Buffer.alloc(46);
     central.writeUInt32LE(0x02014b50, 0);
-    central.writeUInt16LE(20, 4); // version made by
-    central.writeUInt16LE(20, 6); // version needed to extract
+    central.writeUInt16LE(20, 4);
+    central.writeUInt16LE(20, 6);
     central.writeUInt16LE(0x0800, 8);
     central.writeUInt16LE(method, 10);
     central.writeUInt16LE(time, 12);
@@ -115,11 +108,11 @@ export function createZip(entries, { now = new Date() } = {}) {
     central.writeUInt32LE(payload.length, 20);
     central.writeUInt32LE(raw.length, 24);
     central.writeUInt16LE(nameBuffer.length, 28);
-    central.writeUInt16LE(0, 30); // extra
-    central.writeUInt16LE(0, 32); // comment
-    central.writeUInt16LE(0, 34); // disk number
-    central.writeUInt16LE(0, 36); // internal attributes
-    central.writeUInt32LE(0, 38); // external attributes
+    central.writeUInt16LE(0, 30);
+    central.writeUInt16LE(0, 32);
+    central.writeUInt16LE(0, 34);
+    central.writeUInt16LE(0, 36);
+    central.writeUInt32LE(0, 38);
     central.writeUInt32LE(offset, 42);
     centralParts.push(central, nameBuffer);
 
@@ -127,15 +120,17 @@ export function createZip(entries, { now = new Date() } = {}) {
   }
 
   const centralDirectory = Buffer.concat(centralParts);
+  // End of central directory: signature, no spanning disk, the entry counts, the
+  // size and offset of the central directory — no archive comment.
   const end = Buffer.alloc(22);
   end.writeUInt32LE(0x06054b50, 0);
-  end.writeUInt16LE(0, 4); // disk number
-  end.writeUInt16LE(0, 6); // disk with central directory
+  end.writeUInt16LE(0, 4);
+  end.writeUInt16LE(0, 6);
   end.writeUInt16LE(entries.length, 8);
   end.writeUInt16LE(entries.length, 10);
   end.writeUInt32LE(centralDirectory.length, 12);
   end.writeUInt32LE(offset, 16);
-  end.writeUInt16LE(0, 20); // comment length
+  end.writeUInt16LE(0, 20);
 
   return Buffer.concat([...localParts, centralDirectory, end]);
 }

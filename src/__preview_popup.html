@@ -44,11 +44,8 @@
         <button id="testBtn" class="ghost-btn" type="button" data-i18n="health.action">Test connection</button>
         <p id="testResult" class="health-result hidden" role="status" aria-live="polite"></p>
       </div>
-      <!-- The meter (lib/traffic.js, counted in background.js): what is moving
-           right now, and what has gone down and up today. The speed line is
-           read once a second while the popup is open — it decays on its own
-           between writes — and each figure carries its own label for a screen
-           reader. -->
+      <!-- The meter (lib/traffic.js): what is moving now, and what has gone down
+           and up today. -->
       <div id="trafficRow" class="traffic-row">
         <span id="trafficDownMetric" class="traffic-metric">
           <span class="traffic-arrow" aria-hidden="true">↓</span>
@@ -81,8 +78,7 @@
 
     <!-- Sits right under the mode chips, so the PAC URL is never off-screen. -->
     <section id="pacPanel" class="hidden">
-      <!-- Either the URL is downloaded, or the list below builds the script
-           (lib/pac.js). Never both, which is why the two rows hide each other. -->
+      <!-- Either the URL is downloaded, or the list below builds the script. -->
       <label class="check">
         <input id="pacDomainsToggle" type="checkbox" />
         <span data-i18n="field.domainRouting"></span>
@@ -157,8 +153,7 @@
       <ul id="profileList" class="profile-list"></ul>
       <p id="profilesEmpty" class="empty hidden" data-i18n="profiles.empty"></p>
       <p id="profilesNoMatch" class="empty empty-search hidden" role="status"></p>
-      <!-- Filled by the "Test all servers" pass (lib/test-all-ui.js): progress
-           while it runs, the count of ok/failed/skipped when it ends. -->
+      <!-- Filled by the "Test all servers" pass: progress, then the counts. -->
       <p id="testAllResult" class="health-result hidden" role="status" aria-live="polite"></p>
 
       <form id="profileForm" class="card form-grid hidden" novalidate>

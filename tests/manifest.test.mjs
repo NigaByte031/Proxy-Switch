@@ -45,8 +45,7 @@ test('the extension requests a minimal, documented permission set', () => {
 
 test('every element a page script looks up exists in its own page', () => {
   // `el('id')` returns null rather than throwing, so a renamed input would only
-  // show up as a control that silently does nothing. The shared mode control
-  // reaches the popup and the settings page the same way.
+  // show up as a control that silently does nothing.
   for (const [script, page] of [
     ['src/popup.js', 'src/popup.html'],
     ['src/options.js', 'src/options.html'],
@@ -64,17 +63,15 @@ test('every element a page script looks up exists in its own page', () => {
 });
 
 test('the settings page explains the notification it asks for', () => {
-  // `notifications` exists only for the automatic-switch message, so the page
-  // that lists the permissions has to justify it like all the others.
+  // `notifications` exists only for the automatic-switch message.
   const html = read('src/options.html');
   assert.match(html, /data-i18n="options\.perm\.notifications"/);
   assert.match(html, /id="notifyToggle"/);
 });
 
 test('the settings page explains the timer it asks for', () => {
-  // `alarms` exists only for the periodic background check, so the page that
-  // lists the permissions justifies it like the others — and the switch that
-  // turns it on lives there too.
+  // `alarms` exists only for the periodic background check, and the switch that
+  // turns it on lives on the page that lists the permission.
   const html = read('src/options.html');
   assert.match(html, /data-i18n="options\.perm\.alarms"/);
   assert.match(html, /id="probeToggle"/);
@@ -96,8 +93,7 @@ test('the background check is a timer in the worker, and only while it is on', (
   assert.match(worker, /probeEligible\(state\)/);
   // … and a check never leaves its own configuration applied
   assert.match(worker, /isConfigApplied\(await readProxySettings\(\), config\)/);
-  // a failover must not run against the check's temporary route, and the check
-  // itself is the only writer of the config it installs
+  // a failover must not run against the check's temporary route
   assert.match(worker, /if \(confirming \|\| checking\) return;/);
   assert.match(worker, /checkingProfileId/);
   // and the pages never schedule or apply anything themselves
@@ -107,9 +103,8 @@ test('the background check is a timer in the worker, and only while it is on', (
 });
 
 test('the server list shows what the extension has seen, in both pages', () => {
-  // The verdicts are read from storage and handed to the shared list, which is
-  // the only place a row is built — so the popup and the settings page cannot
-  // disagree about which server answered.
+  // The verdicts are read from storage and handed to the shared list, which is the
+  // only place a row is built.
   for (const page of ['src/popup.js', 'src/options.js']) {
     const source = read(page);
     assert.match(source, /loadServerHealth\(/, `${page} must load the verdicts`);
@@ -165,9 +160,7 @@ test('the traffic meter counts in the worker, and asks for nothing new', () => {
   assert.match(worker, /if \(!meterOn \|\| isProbeUrl\(details\?\.url\)\) return;/);
   // …and the setting is honoured, which only the worker knows about
   assert.match(worker, /meterOn = meterRuns\(state\)/);
-
-  // a page may show the counters and the speed and reset them, but never read a
-  // request and never write a sample of its own
+  // a page may show and reset the counters, never read a request or write a sample
   for (const page of ['src/popup.js', 'src/options.js']) {
     assert.ok(!read(page).includes('webRequest'), `${page} must not observe requests`);
     assert.ok(!read(page).includes('noteRate('), `${page} must not write a rate sample`);

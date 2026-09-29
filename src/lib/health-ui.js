@@ -1,10 +1,7 @@
 /**
- * Shared "Test connection" control: one button, one result line.
- * Both the popup and the settings page use it, so the button state, the
- * "testing…" label and the result text only exist once.
- *
- * The request is made by the page itself, which means it goes through the proxy
- * mode that is currently applied — that is the whole point of the test.
+ * Shared "Test connection" control: one button, one result line, used by both the
+ * popup and the settings page. The request is made by the page itself, so it goes
+ * through the proxy mode that is currently applied — the point of the test.
  */
 
 import { describeProbe, probe } from './health.js';
@@ -13,10 +10,9 @@ import { noteServerHealth, probeObservation } from './server-health.js';
 import { updateServerHealth } from './storage.js';
 
 /**
- * Remembers what the test proved — and about which server (`probeObservation`
- * decides, and says "nobody" in every mode but manual). Nothing happens when
- * the state is unknown or there is nothing to attribute; recording a verdict
- * must never be the reason a test fails.
+ * Remembers what the test proved, and about which server (`probeObservation`
+ * decides, and says "nobody" in every mode but manual). Recording a verdict must
+ * never be the reason a test fails.
  */
 async function rememberVerdict(state, outcome) {
   const observation = probeObservation(state, outcome);
@@ -67,8 +63,8 @@ export function createHealthUi({ buttonEl, resultEl, getLang, getState = null })
     resultEl.classList.remove('hidden');
     resultEl.classList.toggle('is-ok', view.tone === 'ok');
     resultEl.classList.toggle('is-warn', view.tone !== 'ok');
-    // The raw reason (a browser message such as "net::ERR_PROXY_CONNECTION_FAILED"
-    // or "timeout") stays untranslated and lives in the tooltip.
+    // The raw reason ("net::ERR_PROXY_CONNECTION_FAILED", "timeout") stays
+    // untranslated and lives in the tooltip.
     if (outcome.error) resultEl.title = String(outcome.error);
     else resultEl.removeAttribute('title');
   }
@@ -82,8 +78,8 @@ export function createHealthUi({ buttonEl, resultEl, getLang, getState = null })
 
     try {
       outcome = await probe();
-      // The button is also a look at the active server, which is what the chain
-      // of a generated PAC script is ordered by.
+      // The button is also a look at the active server, which orders the chain of
+      // a generated PAC script.
       await rememberVerdict(getState?.() ?? null, outcome);
     } finally {
       running = false;

@@ -1,8 +1,6 @@
 /**
- * Turns extension state into a `chrome.proxy` configuration and describes it
- * for the UI. `buildProxyConfig`/`describeStatus`/`describeApplyProblem` are pure
- * (and tested); `applyProxy` and `readProxySettings` are the only functions that
- * talk to Chrome.
+ * Turns extension state into a `chrome.proxy` configuration and describes it for
+ * the UI. Everything except `applyProxy`/`readProxySettings` is pure.
  */
 
 import { effectiveMode, findProfile, missingRequirement, routingChain } from './model.js';
@@ -46,8 +44,7 @@ export function buildProxyConfig(state, health = null) {
     }
 
     case 'pac_script': {
-      // A generated script (see `lib/pac.js`) wins over the URL while it is
-      // switched on: it is the one the settings page is showing the list for.
+      // A generated script wins over the URL while domain routing is on.
       if (state.settings.domainRouting) {
         // Proven first, unknown next, proven-bad last — see `orderServersByHealth`.
         const servers = orderServersByHealth(routingChain(state), health);
@@ -58,9 +55,8 @@ export function buildProxyConfig(state, health = null) {
         });
         // No server, or nothing to route: fail open like every other mode.
         if (!data) return { mode: 'direct' };
-        // `mandatory` because a generated script that Chrome ever failed to
-        // parse must not quietly turn into a direct connection for the very
-        // hosts the list was written for.
+        // `mandatory`: a script that Chrome fails to parse must not quietly turn
+        // into a direct connection for the very hosts the list was written for.
         return { mode: 'pac_script', pacScript: { data, mandatory: true } };
       }
 
@@ -81,12 +77,8 @@ export function buildProxyConfig(state, health = null) {
  *
  * It is the user's own policy — the chain for the listed domains, or everything
  * through the active server in manual mode — with exactly one difference: the
- * extension's own probe requests are handed to `target`. Nothing else moves, so
- * the check can neither break a page the user is loading nor send one byte of
- * their traffic somewhere it was not already going.
- *
- * `mandatory: true` for the same reason the real one has it: a script Chrome
- * failed to parse must not quietly turn into a direct connection.
+ * extension's own probe requests are handed to `target`. Nothing else moves, so a
+ * check can neither break a page nor send traffic somewhere it was not going.
  *
  * @param {object} state
  * @param {object} target the saved server to check
@@ -104,8 +96,7 @@ export function buildProbeConfig(state, target, health = null) {
   if (mode === 'fixed_servers') {
     const active = findProfile(state, state.settings.activeProfileId);
     if (!active) return null;
-    // Manual mode sends everything through the active server (the bypass list
-    // being the only exception), which is what `base: 'all'` reproduces.
+    // Manual mode sends everything through the active server, i.e. base 'all'.
     const data = buildPacScript({ servers: [active], base: 'all', bypass, override });
     return data ? { mode: 'pac_script', pacScript: { data, mandatory: true } } : null;
   }
@@ -120,14 +111,13 @@ export function buildProbeConfig(state, target, health = null) {
     return data ? { mode: 'pac_script', pacScript: { data, mandatory: true } } : null;
   }
 
-  // System and direct mode have no policy of ours to keep (a PAC script would
-  // replace the operating system's proxy), so there is nothing to check behind.
+  // System and direct mode have no policy of ours to keep.
   return null;
 }
 
 /**
  * What the toolbar icon shows: the four characters plus a tone the caller turns
- * into a colour. Shared with the popup so the badge and the "state pill" in the
+ * into a colour. Shared with the popup, so the badge and the "state pill" in the
  * status card can never disagree.
  *
  * @param {object} state
@@ -135,8 +125,7 @@ export function buildProbeConfig(state, target, health = null) {
  * @returns {{text: 'SYS'|'ON'|'PAC'|'OFF'|'ERR', tone: 'system'|'manual'|'pac'|'off'|'error'}}
  */
 export function describeBadge(state, problem = null) {
-  // A proxy that could not be applied is the one thing the badge must never
-  // hide behind a reassuring mode name.
+  // A failed apply must never hide behind a reassuring mode name.
   if (problem) return { text: 'ERR', tone: 'error' };
 
   if (!state?.settings?.enabled) return { text: 'OFF', tone: 'off' };
@@ -154,16 +143,13 @@ export function describeBadge(state, problem = null) {
   }
 }
 
-/**
- * How long the toolbar icon keeps showing the server an automatic switch
- * landed on. Long enough to be noticed, short enough to be news.
- */
+/** How long the badge keeps showing the server an automatic switch landed on. */
 export const SWITCH_FLASH_MS = 8000;
 
 /**
  * The label the badge wears while a switch is news: the first letters of the
- * server name — `ON` says that a proxy is in force, never *which* server is.
- * The hover title carries the full name.
+ * server name — `ON` says a proxy is in force, never *which* server is. The hover
+ * title carries the full name.
  *
  * @param {{name?: string}|null} profile the server that took over
  * @returns {{text: string, tone: 'manual'}}
@@ -177,11 +163,9 @@ export function describeSwitchBadge(profile) {
 }
 
 /**
- * Whether an armed badge flash still belongs on the icon.
- *
- * Two things end it: its own expiry (a worker that was terminated before its
- * timer fired must not leave the badge lying), and the user picking a server
- * by hand — that choice is newer news, so the badge goes back to the mode.
+ * Whether an armed badge flash still belongs on the icon. Two things end it: its
+ * own expiry (a worker terminated before its timer fired must not leave the
+ * badge lying), and the user picking a server by hand — newer news.
  *
  * @param {{badge: object, profileId: string, until: number}|null} flash
  * @param {object} state
@@ -288,18 +272,16 @@ export function describeStatus(state) {
   };
 }
 
-/* ------------------------------------------------------------------ *
- * Applying — and knowing whether it stuck
- * ------------------------------------------------------------------ */
+/* Applying — and knowing whether it stuck. */
 
 function proxySettings() {
   return typeof chrome !== 'undefined' ? chrome.proxy?.settings : null;
 }
 
 /**
- * `chrome.proxy.settings.set` resolves even when it did not take effect: another
- * extension, or a policy, may own the proxy settings. These are the values of
- * `levelOfControl` that mean "what we asked for is in force".
+ * `chrome.proxy.settings.set` resolves even when it did not take effect — another
+ * extension, or a policy, may own the proxy settings. These `levelOfControl`
+ * values mean "what we asked for is in force".
  */
 const OURS = new Set(['controllable_by_this_extension', 'controlled_by_this_extension']);
 
@@ -315,8 +297,8 @@ export function applyFailureReason(error) {
 }
 
 /**
- * Turns an apply attempt into something the UI can show — or null when
- * everything is in order.
+ * Turns an apply attempt into something the UI can show, or null when everything
+ * is in order.
  *
  * @param {{failed?: string|null, levelOfControl?: string|null}|null} outcome
  * @returns {{tone: 'warn', title: {key: string, params?: object}, detail: {key: string, params?: object}}|null}
@@ -362,9 +344,8 @@ export async function applyProxy(state, health = null) {
 
 /**
  * Applies an already-built config and reads back what the browser thinks
- * happened, so a silent no-op is noticed. `applyProxy` is this plus "build the
- * config from the state"; a background check applies the config it built for
- * its own window the same way (see `buildProbeConfig`).
+ * happened, so a silent no-op is noticed. `applyProxy` is this plus building the
+ * config from the state; a background check uses it for its own window.
  */
 export async function applyProxyConfig(config) {
   const settings = proxySettings();
@@ -396,10 +377,9 @@ export function isConfigApplied(current, config) {
 }
 
 /**
- * Message the settings page sends to ask for another apply attempt.
- *
- * Only the service worker may touch `chrome.proxy` (the project's single-writer
- * rule), so a retry is a message and not a call.
+ * Message the settings page sends to ask for another apply attempt. Only the
+ * worker may touch `chrome.proxy` (the project's single-writer rule), so a retry
+ * is a message and not a call.
  */
 export const REAPPLY_MESSAGE = 'proxy-switch:reapply';
 

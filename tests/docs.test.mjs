@@ -9,12 +9,8 @@ const read = (path) => readFileSync(join(ROOT, path), 'utf8');
 
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
-/**
- * The READMEs are the shop window, and a picture that 404s is worse than no
- * picture: this fails the suite when a screenshot is renamed, deleted or
- * replaced with something that is not a PNG. Both the HTML form (`<img src=`)
- * and the markdown form (`![alt](path)`) count, because a README may use either.
- */
+/** A picture that 404s is worse than no picture: a screenshot a README points at
+ *  must exist and be a real PNG. Both `<img src=` and markdown links count. */
 test('every picture a README points at is there, and is a PNG', () => {
   for (const readme of ['README.md', 'README.fa.md']) {
     const text = read(readme);
@@ -32,11 +28,7 @@ test('every picture a README points at is there, and is a PNG', () => {
   }
 });
 
-/**
- * …and that they can be taken again: the pictures are only worth trusting while
- * the thing that produces them still exists, pointing at a page that still
- * seeds the data they show.
- */
+/** …and that they can be taken again: the tool that produces them still exists. */
 test('the screenshots are reproducible from the repo alone', () => {
   const scripts = JSON.parse(read('package.json')).scripts;
   assert.match(scripts.shots ?? '', /tools\/screenshots\.mjs/);

@@ -27,11 +27,8 @@ export const LANGUAGES = ['auto', 'en', 'fa'];
 export const THEMES = ['auto', 'light', 'dark'];
 
 /**
- * Accepted values of the accent setting: which hue the interface wears.
- *
- * The list is the contract between the picker on the settings page and the
- * palette blocks in `src/styles/base.css` (one `:root[data-accent='…']` block
- * each). "emerald" is the shipped look, so an upgrade changes nothing.
+ * Accepted values of the accent setting. Each one has a `:root[data-accent=…]`
+ * palette block in `src/styles/base.css`; "emerald" is the shipped look.
  */
 export const ACCENTS = ['emerald', 'ocean', 'violet', 'amber', 'rose'];
 
@@ -56,21 +53,13 @@ export function createDefaultState() {
       autoAuth: true,
       autoFailover: true,
       notifyFailover: true,
-      // Periodic background checks: the worker looks at one server at a time so
-      // the recorded verdicts (and with them the order of a generated PAC
-      // chain) stay recent — see `lib/server-probe.js`. Off by default because
-      // it is the one setting that makes the extension do network work on its
-      // own, on a timer the user did not press.
+      // Periodic background checks (see `lib/server-probe.js`). Off by default:
+      // the one setting that makes network requests the user did not press for.
       backgroundProbe: false,
-      // PAC mode can take its script from a URL or from the list below, which is
-      // turned into a PAC script on the fly (see `lib/pac.js`).
+      // PAC script from a URL, or generated from the list below (see `lib/pac.js`).
       domainRouting: false,
-      // The traffic meter (see `lib/traffic.js`): counts what each request and
-      // response declared its size to be, while the proxy is on. On by default,
-      // because a counter nobody can see is a counter nobody asked for — it
-      // sends nothing anywhere and the whole record stays on this device, so the
-      // only reason to turn it off is that observing every request is work the
-      // worker would otherwise not do.
+      // Traffic meter (see `lib/traffic.js`): counts declared sizes while the
+      // proxy is on. Nothing leaves the device.
       trafficMeter: true,
       proxyDomains: [],
       language: 'auto',
@@ -96,7 +85,7 @@ export function missingRequirement(state) {
   const mode = effectiveMode(state);
   if (mode === 'fixed_servers' && !findProfile(state, state.settings.activeProfileId)) return 'profile';
   if (mode === 'pac_script') {
-    // A generated PAC needs a server to route through as well as rules to route.
+    // A generated PAC needs a server to route through, not just rules.
     if (state.settings.domainRouting) {
       if (!findProfile(state, state.settings.activeProfileId)) return 'profile';
       if ((state.settings.proxyDomains ?? []).length === 0) return 'domains';
@@ -113,12 +102,9 @@ export function findProfile(state, id) {
 }
 
 /**
- * The servers that may be routed through, in order: the one in charge first,
- * then every other saved server in list order.
- *
- * Both things that name servers use it — the generated PAC chain
- * (`lib/pac.js`) and answering a proxy challenge for any of them
- * (`lib/auth.js`) — so the order can never disagree with itself.
+ * The servers that may be routed through, in order: the active one first, then the
+ * rest in list order. Shared by `lib/pac.js` and `lib/auth.js`, so the two can never
+ * disagree.
  *
  * @returns {object[]}
  */
@@ -140,9 +126,7 @@ export function newId() {
   return `p_${Date.now().toString(36)}${idCounter.toString(36)}`;
 }
 
-/* ------------------------------------------------------------------ *
- * Host / port helpers
- * ------------------------------------------------------------------ */
+/* Host / port helpers. */
 
 /** Strips scheme, path, query and embedded credentials from pasted input. */
 export function normalizeHost(raw) {
@@ -160,16 +144,14 @@ export function isValidHost(host) {
   const value = String(host ?? '');
   if (!value || value.length > 253) return false;
   if (isBracketedIpv6(value)) return true;
-  // The port lives in its own field, so a bare colon here is always a mistake.
-  // Spaces, paths and userinfo are rejected as well; unicode hosts stay allowed.
+  // The port lives in its own field, so a bare colon is always a mistake.
   if (/[:\s@/\\]/.test(value)) return false;
   return true;
 }
 
 /**
- * The form has separate host and port fields, but people paste `host:8080`.
- * Splits that back into the two fields without touching the port field when
- * it is already filled in.
+ * People paste `host:8080`; split that back into the two fields, leaving an
+ * already filled port field alone.
  */
 export function splitHostPort(rawHost, rawPort) {
   const host = normalizeHost(rawHost);
@@ -201,9 +183,7 @@ export function isValidPacUrl(url) {
   return /^https?:\/\/\S+$/i.test(String(url ?? '').trim());
 }
 
-/* ------------------------------------------------------------------ *
- * Pasted proxy URLs
- * ------------------------------------------------------------------ */
+/* Pasted proxy URLs. */
 
 function decodeComponent(value) {
   try {
@@ -214,9 +194,8 @@ function decodeComponent(value) {
 }
 
 /**
- * Reads a proxy the way people paste them, so a whole
- * `socks5://user:pass@host:1080` line can fill the form in one go. Every part is
- * optional: `host:8080` and a bare `host` work too.
+ * Reads a pasted proxy URL, so `socks5://user:pass@host:1080` fills the whole
+ * form in one go. Every part is optional; `host:8080` works too.
  *
  * @returns {{scheme: string|null, host: string, port: string, username: string, password: string}|null}
  */
@@ -255,9 +234,7 @@ export function parseProxyUrl(raw) {
   return { scheme, host, port, username, password };
 }
 
-/* ------------------------------------------------------------------ *
- * Profiles
- * ------------------------------------------------------------------ */
+/* Profiles. */
 
 export function createProfile(draft = {}) {
   return {
@@ -332,17 +309,14 @@ export function formatProfileAddress(profile) {
 }
 
 /**
- * Filtering a handful of servers is pure data work, so it lives here next to
- * the rest of the profile helpers (and can be unit tested without a DOM).
- * Below this many servers the list is short enough to scan, and the search
- * box would only add noise to the popup.
+ * Below this many servers the list is short enough to scan, and a search box
+ * would only add noise to the popup.
  */
 export const PROFILE_SEARCH_THRESHOLD = 4;
 
 /**
- * Everything a search box is allowed to match a row against, lower-cased.
- * Passwords are deliberately absent: they are invisible in the list, so a
- * hidden password must never decide which rows show up.
+ * Everything a search box may match a row against, lower-cased. Passwords are
+ * absent on purpose: a hidden value must not decide which rows show up.
  */
 export function profileSearchText(profile) {
   return [profile?.name, profile?.host, profile?.scheme, profile?.port, profile?.username]
@@ -352,12 +326,8 @@ export function profileSearchText(profile) {
 }
 
 /**
- * Filters the server list for the search box.
- *
- * Every whitespace-separated term has to appear somewhere in the row, so
- * "work http" and "http work" both find `http://proxy.work.example.com:8080`
- * while `socks5 1080` narrows a mixed list down to one server.
- * A blank query is not a filter at all and returns the list untouched.
+ * The server list, filtered for the search box. Every whitespace-separated term
+ * has to appear somewhere in the row; a blank query leaves the list untouched.
  */
 export function filterProfiles(profiles, query) {
   const list = Array.isArray(profiles) ? profiles : [];
@@ -373,8 +343,8 @@ export function filterProfiles(profiles, query) {
 }
 
 /**
- * Whether the server list should show its search box: a long list, or a query
- * the user is already typing (which must stay visible until it is cleared).
+ * Whether the list should show its search box: a long list, or a query the user
+ * is already typing (which must stay visible until it is cleared).
  */
 export function shouldShowSearch(profileCount, query = '') {
   return Number(profileCount) >= PROFILE_SEARCH_THRESHOLD || String(query ?? '').trim() !== '';
@@ -389,21 +359,14 @@ export function uniqueProfileName(profiles, base) {
   return `${base} ${index}`;
 }
 
-/* ------------------------------------------------------------------ *
- * Bypass list
- * ------------------------------------------------------------------ */
-
-/* ------------------------------------------------------------------ *
- * Domains routed through the proxy
- * ------------------------------------------------------------------ */
+/* Domains routed through the proxy. */
 
 /** `#` starts a comment, so a list can explain itself. */
 export const DOMAIN_COMMENT = '#';
 
 /**
- * One typed rule, cleaned up the way people type them: a whole
- * `https://example.com/path` line becomes `example.com`, and anything that is
- * not a host at all (a port, a space, a stray word) is dropped.
+ * One typed rule, cleaned up: `https://example.com/path` becomes `example.com`,
+ * and anything that cannot be a host is dropped.
  *
  * @returns {string|null} the rule, or null when it can never match a host
  */
@@ -413,14 +376,11 @@ export function normalizeDomainRule(raw) {
     .trim();
   if (!line) return null;
 
-  // A pasted URL is a rule with the interesting part buried in it, so it is
-  // reduced to its host. A pattern is *not* run through that: `*.example.com`
-  // and `shop?.example.com` are hosts already, and reading them as URLs would
-  // quietly turn them into "example.com" and "shop" — the wrong sites.
+  // A pasted URL is reduced to its host, but a pattern is already a host:
+  // reading `*.example.com` as a URL would turn it into "example.com".
   const pasted = /^[a-z][a-z0-9+.-]*:\/\//i.test(line) || line.includes('/');
   const rule = pasted ? normalizeHost(line) : line;
-  // ... and a rule has to be something, not just punctuation that happens to
-  // survive the host check.
+  // A rule has to contain something, not just punctuation.
   if (!rule || !isValidHost(rule) || !/[\p{L}\p{N}]/u.test(rule)) return null;
   return rule;
 }
@@ -447,9 +407,7 @@ export function formatDomainList(list) {
   return sanitizeDomainRules(list).join('\n');
 }
 
-/* ------------------------------------------------------------------ *
- * Bypass list
- * ------------------------------------------------------------------ */
+/* Bypass list. */
 
 export function parseBypassList(text) {
   const seen = new Set();
@@ -467,9 +425,7 @@ export function formatBypassList(list) {
   return (Array.isArray(list) ? list : []).join('\n');
 }
 
-/* ------------------------------------------------------------------ *
- * Persistence helpers
- * ------------------------------------------------------------------ */
+/* Persistence helpers. */
 
 function sanitizeProfile(raw) {
   if (!raw || typeof raw !== 'object') return null;
@@ -489,8 +445,8 @@ function sanitizeProfile(raw) {
 }
 
 /**
- * Coerces anything (old state, hand-edited storage, imported file) into a valid
- * state object. Unknown fields are dropped, broken values fall back to defaults.
+ * Coerces old state, hand-edited storage or an imported file into a valid state
+ * object: unknown fields are dropped, broken values fall back to defaults.
  */
 export function sanitizeState(raw) {
   const base = createDefaultState();

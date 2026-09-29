@@ -35,8 +35,8 @@ import { noteServerHealth } from '../src/lib/server-health.js';
 import { createRate, createTraffic, noteRate, noteTraffic, resetRate, resetTraffic } from '../src/lib/traffic.js';
 
 /**
- * `chrome.storage.local` in memory, so the module's promise wrappers (and the
- * write queue around them) can be exercised exactly as they run in Chrome.
+ * `chrome.storage.local` in memory, so the promise wrappers (and the write queue
+ * around them) run exactly as they do in Chrome.
  */
 function fakeChrome() {
   const data = new Map();
@@ -345,9 +345,7 @@ test('the counters are memory, not configuration', async () => {
   fakeChrome();
   await saveState(createDefaultState());
   await updateTraffic((draft) => noteTraffic(draft, { up: 1, down: 2, at: 1000 }));
-
-  // A backup carries what the user configured — never a byte count, and never a
-  // counter that a restore could bring back from somebody else's machine.
+  // A backup carries what the user configured — never a byte count.
   const exported = JSON.stringify(serializeState(await loadState()));
   assert.ok(!exported.includes('upTotal'), 'the export must not carry the counters');
   assert.ok(!exported.includes('proxySwitchTraffic'));
@@ -366,9 +364,8 @@ test('the live rate keeps its own window, written only when it moves', async () 
   const stored = await loadRate();
   assert.equal(stored.samples.length, 1);
   assert.deepEqual(await loadRate(), stored, 'the write must not alias the returned object');
-
   // A batch that adds nothing is no write; the counters and the window are
-  // different keys, so a counter-only flush must not touch this one.
+  // different keys.
   const before = writes.filter(([key]) => key === RATE_KEY).length;
   await updateRate(() => {});
   await updateTraffic((draft) => noteTraffic(draft, { up: 10, at: stamp }));

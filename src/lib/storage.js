@@ -1,13 +1,9 @@
 /**
- * Thin promise wrapper around `chrome.storage.local`.
+ * Promise wrapper around `chrome.storage.local`.
  *
- * Everything lives in `local` (never `sync`) on purpose: server entries can
- * hold credentials and those must not travel to other devices.
- *
- * Two keys live here: the state itself and the result of the last attempt to
- * apply it, which is what lets the popup explain a badge that shows `ERR`.
- * The other three — the failover record, the server verdicts and the traffic
- * counters — are documented next to their own sections.
+ * `local`, never `sync`: server entries hold credentials, and those must not
+ * travel to other devices. Each key outside the state itself is memory rather
+ * than configuration, and is documented next to its section.
  */
 
 import { STORAGE_KEY, createDefaultState, sanitizeState } from './model.js';
@@ -23,31 +19,27 @@ import { createRate, createTraffic, sameRate, sameTraffic, sanitizeRate, sanitiz
 export const STATUS_KEY = 'proxySwitchApplyStatus';
 
 /**
- * Key holding the auto-failover bookkeeping (strikes, servers already tried in
- * this round, cooldown clock). It sits outside the state on purpose: it is
- * internal memory, not configuration, so it must not be exported or reset
- * with the settings.
+ * Auto-failover bookkeeping (strikes, servers tried, cooldown clock). Outside
+ * the state on purpose: memory, not configuration, so it is never exported.
  */
 export const FAILOVER_KEY = 'proxySwitchFailover';
 
 /**
- * Key holding what was last proven about each server (answered? how fast?),
- * which decides the order of the chain in the generated PAC script. Memory,
- * not configuration, for the same reason as the failover record above.
+ * What was last proven about each server (answered? how fast?), which orders the
+ * chain in the generated PAC script. Memory, not configuration.
  */
 export const SERVER_HEALTH_KEY = 'proxySwitchServerHealth';
 
 /**
- * Key holding the traffic counters: what the meter has added up today and in
- * total. Memory as well — a backup file carries what the user *configured*,
- * and nobody wants a restore to bring back somebody else's byte counts.
+ * Traffic counters: what the meter has added up today and in total. Memory as
+ * well — a backup carries what the user configured, not their byte counts.
  */
 export const TRAFFIC_KEY = 'proxySwitchTraffic';
 
 /**
- * Key holding the recent bytes the live rate reads its speed from — a short
- * sliding window, swept on every read, so it holds only the last few seconds.
- * Memory twice over: it is not configuration, and it is not even history.
+ * The recent bytes the live rate reads its speed from: a short sliding window,
+ * swept on every read, so it holds only the last few seconds. Memory twice over
+ * — not configuration, and not even history.
  */
 export const RATE_KEY = 'proxySwitchTrafficRate';
 
@@ -94,12 +86,9 @@ export async function ensureState() {
 }
 
 /**
- * Reads the current state, and writes the result of mutating a copy of it.
- *
- * Every writer in the extension goes through this, and writes are queued, so
- * two quick actions in one page ("flip the switch" then "pick a server") can no
- * longer both start from the same snapshot and lose the first one. Different
- * pages still run in different JavaScript contexts; there the queue is per page.
+ * Reads the state and writes back the result of mutating a copy of it. Writes
+ * are queued, so two quick actions in one page cannot both start from the same
+ * snapshot and lose the first one.
  *
  * @param {(draft: object) => void} mutator mutates a copy of the current state
  */
@@ -125,9 +114,7 @@ function enqueue(task) {
   return run;
 }
 
-/* ------------------------------------------------------------------ *
- * Applying status
- * ------------------------------------------------------------------ */
+/* Applying status. */
 
 /** Coerces anything stored into an apply-status record, or null. */
 export function sanitizeApplyStatus(raw) {
@@ -167,9 +154,7 @@ export async function saveStatus(status) {
   return clean;
 }
 
-/* ------------------------------------------------------------------ *
- * Failover bookkeeping
- * ------------------------------------------------------------------ */
+/* Failover bookkeeping. */
 
 /** @returns {Promise<object>} the persisted failover record, or a fresh one. */
 export async function loadFailover() {
@@ -180,14 +165,10 @@ export async function loadFailover() {
 }
 
 /**
- * Queued read–modify–write of the failover record — `updateState` for the
- * other key. `mutator` gets a copy, may mutate it and may return anything;
- * that return value is what the promise resolves with (the decision to probe,
- * the server to switch to).
- *
- * A record that did not change is not written again, so the long tail of a
- * burst of `onProxyError` events — the streak already reached the threshold —
- * costs no storage traffic at all.
+ * Queued read–modify–write of the failover record. `mutator` gets a copy and
+ * its return value becomes the promise's (the decision to probe, the server to
+ * switch to). An unchanged record is not written again, so the long tail of a
+ * burst of `onProxyError` events costs no storage traffic at all.
  *
  * @param {(draft: object) => any} mutator
  */
@@ -203,9 +184,7 @@ export function updateFailover(mutator) {
   });
 }
 
-/* ------------------------------------------------------------------ *
- * Server health
- * ------------------------------------------------------------------ */
+/* Server health. */
 
 /** @returns {Promise<object>} the stored health record, or an empty one. */
 export async function loadServerHealth() {
@@ -216,9 +195,8 @@ export async function loadServerHealth() {
 }
 
 /**
- * Queued read–modify–write of the health record — `updateState` for the state,
- * `updateFailover` for the other record. Nothing is rewritten when the verdicts
- * did not change, so a repeated failure costs no storage traffic.
+ * Queued read–modify–write of the health record. Verdicts that did not change
+ * are not written again, so a repeated failure costs no storage traffic.
  *
  * @param {(draft: object) => any} mutator
  */
@@ -245,9 +223,7 @@ export function subscribeServerHealth(callback) {
   });
 }
 
-/* ------------------------------------------------------------------ *
- * Traffic counters
- * ------------------------------------------------------------------ */
+/* Traffic counters. */
 
 /** @returns {Promise<object>} the stored counters, or an empty record. */
 export async function loadTraffic() {
@@ -258,11 +234,9 @@ export async function loadTraffic() {
 }
 
 /**
- * Queued read–modify–write of the counters — `updateState` for this key.
- *
- * The worker batches the bytes it observes and calls this once per batch (see
- * `src/background.js`), so a busy page load is one write rather than a hundred.
- * A batch that would not change the record is not written at all.
+ * Queued read–modify–write of the counters. The worker batches the bytes it
+ * observes and calls this once per batch, so a busy page load is one write
+ * rather than a hundred.
  *
  * @param {(draft: object) => any} mutator
  */
@@ -286,9 +260,7 @@ export function subscribeTraffic(callback) {
   });
 }
 
-/* ------------------------------------------------------------------ *
- * The live rate's window
- * ------------------------------------------------------------------ */
+/* The live rate's window. */
 
 /** @returns {Promise<object>} the stored window, or an empty one. */
 export async function loadRate() {
@@ -299,11 +271,9 @@ export async function loadRate() {
 }
 
 /**
- * Queued read–modify–write of the window — `updateState` for this key.
- *
- * The worker stamps each batch of bytes as it counts them (see
- * `src/background.js`), and every read sweeps the window against the current
- * clock, so samples can never outlive the span they belong to.
+ * Queued read–modify–write of the window. The worker stamps each batch of bytes
+ * as it counts them, and every read sweeps the window against the current clock,
+ * so a sample can never outlive the span it belongs to.
  *
  * @param {(draft: object) => any} mutator
  */

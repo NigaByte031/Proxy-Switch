@@ -1,18 +1,16 @@
 /**
  * Tiny two-language i18n layer (English + Persian) with RTL support.
  *
- * The extension needs the language to change *live* (and to be switchable from
- * the popup), which the built-in `chrome.i18n` API cannot do, so the strings
- * live here instead. The module is dependency-free and testable in Node.
+ * The language has to change *live* (and be switchable from the popup), which the
+ * built-in `chrome.i18n` API cannot do, so the strings live here instead.
  */
 
 export const SUPPORTED_LANGS = ['en', 'fa'];
 export const DEFAULT_LANG = 'en';
 
 /**
- * i18n key suffix per proxy mode. The three names differ on purpose:
- * `fixed_servers` and `pac_script` are chrome.proxy internals, the UI calls
- * them "Manual" and "PAC".
+ * i18n key suffix per proxy mode. `fixed_servers` and `pac_script` are chrome.proxy
+ * internals; the UI calls them "Manual" and "PAC".
  */
 export const MODE_KEY_SUFFIX = {
   system: 'system',
@@ -484,9 +482,9 @@ export function missingKeys() {
 }
 
 /**
- * Looks a key up and fills `{placeholder}` tokens from `params`.
- * Unknown keys fall back to English first and then to the key itself, so a
- * missing translation shows up as an obvious marker instead of a blank label.
+ * Looks a key up and fills `{placeholder}` tokens from `params`. Unknown keys fall
+ * back to English and then to the key itself, so a missing translation shows up as
+ * an obvious marker instead of a blank label.
  */
 export function t(key, lang = DEFAULT_LANG, params) {
   const dict = MESSAGES[lang] ?? MESSAGES[DEFAULT_LANG];

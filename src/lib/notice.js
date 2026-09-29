@@ -2,40 +2,35 @@
  * The one message the extension ever brings up on its own: "you are on a
  * different server now".
  *
- * A failover switch happens while nobody is looking at the popup, and the
- * toolbar badge says no more than `ON` — without this, the extension would
- * quietly change how the whole browser reaches the network. The wording is
- * built here, from the state and the server that took over, so it stays pure
- * (and testable): the service worker only hands the result to
- * `chrome.notifications` (see `src/background.js`).
+ * A failover switch happens while nobody is looking at the popup, and the badge
+ * says no more than `ON` — without this, the extension would quietly change how the
+ * whole browser reaches the network. The wording is built here, so it stays pure:
+ * the worker only hands the result to `chrome.notifications`.
  */
 
 import { t } from './i18n.js';
 
 /**
- * Notification id. Only one switch is worth showing, so a later one replaces
- * the notification still on screen instead of stacking a second one on top.
+ * Notification id. Only one switch is worth showing, so a later one replaces the
+ * notification still on screen instead of stacking a second one on top.
  */
 export const SWITCH_NOTICE_ID = 'proxy-switch:failover';
 
 /**
  * Whether this state wants to hear about automatic switches. The setting only
- * exists to be turned off, so anything but an explicit `false` means yes —
- * including a state that predates the setting.
+ * exists to be turned off, so anything but an explicit `false` means yes.
  */
 export function wantsSwitchNotice(state) {
   return state?.settings?.notifyFailover !== false;
 }
 
 /**
- * Builds the notification for a switch, or null when there is nothing to show
- * (no server, or the user turned the notification off).
+ * Builds the notification for a switch, or null when there is nothing to show (no
+ * server, or the user turned the notification off).
  *
- * The notification is also the way back: with a server to go back to it grows
- * a button (`{button: true}` in the result — `chrome.notifications` wants the
- * title, the caller decides what a click means), and clicking the body opens
- * the server list either way. A switch that cannot be undone is still worth
- * reporting, so a missing `from` only costs the button.
+ * The notification is also the way back: with a server to go back to it grows a
+ * button (the caller decides what a click means), and clicking the body opens the
+ * server list either way. A missing `from` only costs the button.
  *
  * @param {object} state
  * @param {{name?: string}|null} to the server that took over

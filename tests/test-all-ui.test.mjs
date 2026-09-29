@@ -13,10 +13,9 @@ import {
 import { createDefaultState } from '../src/lib/model.js';
 
 /**
- * The pass itself runs in the service worker; what is tested here is what the
- * page does with the answers: the button state, the progress line, the final
- * summary — and what it says when the pass cannot run at all. The DOM is the
- * smallest fake that can answer the questions the control asks.
+ * The pass itself runs in the worker; what is tested here is what the page does with
+ * the answers: the button state, the progress line, the final summary, and what it says
+ * when the pass cannot run at all.
  */
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -148,9 +147,7 @@ test('a running pass disables the button and counts down the list', async () => 
   assert.equal(resultEl.textContent, '1 worked · 1 no answer · 0 skipped');
   assert.equal(resultEl.classList.contains('is-warn'), false, 'something worked, so the tone is ok');
   assert.equal(resultEl.classList.contains('is-ok'), true);
-
-  // A message from a pass this page did not start (or that already ended) is
-  // ignored, not appended to the summary on the screen.
+  // A message from a pass this page did not start is ignored, not appended.
   assert.equal(ui.handleProgress({ done: 2, total: 3, ok: true }), false);
   assert.equal(resultEl.textContent, '1 worked · 1 no answer · 0 skipped');
 });
@@ -191,7 +188,8 @@ test('a second press while one runs does nothing', async () => {
     runtime: {
       sendMessage: async () => {
         calls += 1;
-        return new Promise(() => {}); // never answers
+        // never answers
+        return new Promise(() => {});
       },
     },
   };

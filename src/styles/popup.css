@@ -48,9 +48,8 @@ body.popup {
   }
 }
 
-/* ---------------------------------------------------------------- *
- * Header: stays put and frosts whatever scrolls under it.
- * ---------------------------------------------------------------- */
+    /* Header: stays put and frosts whatever scrolls under it. */
+
 
 .app-header {
   display: flex;
@@ -95,9 +94,8 @@ body.popup {
   font-size: 16px;
 }
 
-/* ---------------------------------------------------------------- *
- * Status card: the whole card takes the colour of the current mode.
- * ---------------------------------------------------------------- */
+    /* Status card: the whole card takes the colour of the current mode. */
+
 
 .status-card {
   --tone: var(--accent);
@@ -166,9 +164,8 @@ body.popup {
   pointer-events: none;
 }
 
-/* ---------------------------------------------------------------- *
- * Footer
- * ---------------------------------------------------------------- */
+    /* Footer. */
+
 
 .app-footer {
   display: flex;
@@ -204,9 +201,8 @@ body.popup {
   gap: 6px;
 }
 
-/* ---------------------------------------------------------------- *
- * Server section head: "Test all" sits next to "Add server"
- * ---------------------------------------------------------------- */
+    /* Server section head: "Test all" sits next to "Add server". */
+
 
 .section-actions {
   display: flex;
@@ -219,8 +215,8 @@ body.popup {
   font-size: 12.5px;
 }
 
-/* The pass's narration lives under the list it is about, and reads as the
-   same state chip the single-server test wears (styles/base.css). */
+    /* The pass's narration sits under the list, as the single-server test's chip. */
+
 #testAllResult {
   margin-top: 8px;
   max-width: 100%;

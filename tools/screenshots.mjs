@@ -1,21 +1,12 @@
 /**
- * Regenerates the pictures in `docs/screenshots/`.
- *
- * The README's screenshots are of the *real* interface: this drives a headless
- * Chrome over the DevTools protocol against the offline preview pages (see
- * `tools/preview-server.mjs` and `src/__preview_chrome_stub.js`), so they can be
- * taken again after any UI change instead of going stale. The pages are seeded
- * with `?demo=1`, which is what puts a plausible server list, today's counters
- * and a moving speed on screen.
- *
- * Node's own WebSocket does the talking, so there is nothing to install:
+ * Regenerates `docs/screenshots/` by driving a headless Chrome over the DevTools
+ * protocol against the offline preview pages, seeded with `?demo=1`:
  *
  *   PORT=4331 node tools/preview-server.mjs &   # serve the preview pages
  *   node tools/screenshots.mjs                  # write docs/screenshots/*.png
  *   node tools/screenshots.mjs --only popup     # just one page
  *
- * `CHROME_PATH` overrides the browser it looks for. Nothing here runs in CI —
- * it is a development tool, and there is no Chrome on a CI runner.
+ * `CHROME_PATH` overrides the browser it looks for. Nothing here runs in CI.
  */
 
 import { spawn } from 'node:child_process';
@@ -55,10 +46,7 @@ const SHOTS = [
     width: 780,
     scale: 1.25,
     lang: 'en',
-    /**
-     * The settings page is long: frame it from the top down to the end of the
-     * Traffic card, so the picture stops where the thing it shows stops.
-     */
+    /** Frame it from the top down to the end of the Traffic card. */
     frame: `(() => {
       const card = document.getElementById('trafficMessage').closest('section');
       return { y: 0, height: Math.ceil(card.getBoundingClientRect().bottom + window.scrollY + 28) };
@@ -102,10 +90,7 @@ async function waitForChrome() {
   throw new Error('Chrome never opened its debugging port.');
 }
 
-/**
- * A DevTools protocol session on one tab: `send()` per command, `once()` per
- * event, both answered by the message loop that runs while the browser works.
- */
+/** A DevTools protocol session on one tab: `send()` per command, `once()` per event. */
 async function openSession(webSocketUrl) {
   const socket = new WebSocket(webSocketUrl);
   const pending = new Map();
@@ -158,9 +143,8 @@ async function openSession(webSocketUrl) {
 /** One picture: lay the page out at `width`, frame it, then capture that frame. */
 async function capture(session, shot) {
   const url = `${BASE}/${shot.page}?demo=${shot.lang}`;
-
-  // Lay out the page at the width it really has (a sticky header and the media
-  // queries both depend on it), then let the clip below do the scaling.
+  // Lay the page out at the width it really has (the sticky header and the media
+  // queries depend on it), then let the clip below do the scaling.
   await session.send('Emulation.setDeviceMetricsOverride', {
     width: shot.width,
     height: 900,
@@ -171,8 +155,8 @@ async function capture(session, shot) {
   const loaded = session.once('Page.loadEventFired');
   await session.send('Page.navigate', { url });
   await loaded;
-  // The pages read their store asynchronously, and the demo moves the speed
-  // every second: give both a moment before believing the screen.
+  // The pages read their store asynchronously and the demo moves the speed every
+  // second: give both a moment before believing the screen.
   await sleep(1600);
 
   const measured = await session.send('Runtime.evaluate', {
@@ -247,9 +231,8 @@ async function main() {
 
     session = await openSession(target.webSocketDebuggerUrl);
     await session.send('Page.enable');
-    // A picture for a white page: the app follows the operating system by
-    // default, and a headless browser would otherwise pick whichever theme it
-    // feels like that day.
+    // A picture for a white page: the app follows the operating system by default,
+    // and a headless browser would otherwise pick a theme of its own.
     await session.send('Emulation.setEmulatedMedia', {
       features: [{ name: 'prefers-color-scheme', value: 'light' }],
     });

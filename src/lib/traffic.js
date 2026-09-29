@@ -1,39 +1,19 @@
 /**
- * The traffic meter: how much has gone down and up, counted on this device.
+ * Traffic counters (today and total) and the live rate. Pure — no `chrome.*`
+ * here; the listeners and the storage writes live in `src/background.js`.
  *
- * Chrome hands an extension no byte counts — a `webRequest` observer sees that
- * a request happened, not how large it was — so the meter adds up what the
- * browser *declares* before it moves the bytes: the `Content-Length` of a
- * request and of its response. That makes the numbers a floor rather than a
- * total: a streamed video, an event stream or a chunked page arrives without a
- * declared size and is not counted. The UI therefore says what it measured
- * instead of pretending to know, and the note beside it lists what is missing.
- *
- * Everything here is pure — record, arithmetic, header parsing and formatting —
- * so the bookkeeping can be tested in Node. The listeners, the batching and the
- * storage writes live in `src/background.js`, which is the only context that
- * may see a request at all.
- *
- * Like the failover record and the server verdicts, the counters are memory
- * rather than configuration: they live in their own storage key, they are never
- * written into an exported settings file, and a reset does not touch anything
- * the user configured.
+ * Only sizes a request or its response declares (`Content-Length`) are counted,
+ * so the totals are a floor, never the real byte count.
  */
 
 import { effectiveMode } from './model.js';
 
-/**
- * The ceiling a counter is clamped to. Bytes are whole numbers and a counter
- * only grows, so a corrupt or hand-written value would otherwise be able to
- * reach `Number.MAX_SAFE_INTEGER` — and every byte added after that would be
- * silently lost. A petabyte is far past any real month of browsing.
- */
+/** Clamp so a corrupt counter cannot overflow `Number.MAX_SAFE_INTEGER`. */
 export const TRAFFIC_MAX_BYTES = 1e15;
 
-/** `YYYY-MM-DD`, the shape a stored day key has to have to mean anything. */
+/** A stored day key has to match this shape. */
 const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
-/** @returns {object} an empty record: nothing has been counted yet. */
 export function createTraffic() {
   return { day: null, up: 0, down: 0, upTotal: 0, downTotal: 0, since: 0, at: 0 };
 }
@@ -62,7 +42,7 @@ export function sanitizeTraffic(raw) {
   };
 }
 
-/** Whether two records say the same thing (a write that changes nothing is skipped). */
+/** A write that changes nothing is skipped. */
 export function sameTraffic(left, right) {
   const a = sanitizeTraffic(left);
   const b = sanitizeTraffic(right);
@@ -70,12 +50,8 @@ export function sameTraffic(left, right) {
 }
 
 /**
- * The local calendar day a moment belongs to, as `YYYY-MM-DD`.
- *
- * Local, not UTC: "today" is the day the user is living in, and a counter that
- * rolled over in the middle of the evening would be wrong in a way nobody could
- * explain. A moment that is not a date at all has no day, and the callers treat
- * that as "do not touch the day".
+ * The local calendar day of `now` as `YYYY-MM-DD`, or `null` if `now` is not a
+ * date. Local, not UTC: "today" is the day the user is living in.
  *
  * @param {number} [now]
  * @returns {string|null}
@@ -89,7 +65,7 @@ export function dayKey(now = Date.now()) {
 }
 
 /**
- * Starts a new day: today's counters go back to zero, the totals do not move.
+ * Today's counters back to zero; the totals do not move.
  *
  * @param {object} record mutated in place
  * @param {number} [now]
@@ -106,12 +82,8 @@ export function rollTrafficDay(record, now = Date.now()) {
 }
 
 /**
- * Records one observation: the bytes a batch of requests said they would send
- * and receive. The day is rolled first, so bytes that arrive just after
- * midnight land in the new day rather than in yesterday's total.
- *
- * Mutated in place, like the failover and health records, so a caller that
- * holds the record can hand it straight to a queued write.
+ * Adds one batch of declared bytes, rolling the day first so bytes that arrive
+ * just after midnight land in the new day.
  *
  * @param {object} record mutated in place
  * @param {{up?: number, down?: number, at?: number}} [observation]
@@ -135,8 +107,7 @@ export function noteTraffic(record, observation = {}) {
 }
 
 /**
- * Empties every counter — today and total — and starts the totals again now.
- * The reset is the user's, so nothing about it is inferred from the record.
+ * Empties today and the totals, and starts them again now.
  *
  * @param {object} record mutated in place
  * @param {number} [now]
@@ -157,9 +128,7 @@ export function resetTraffic(record, now = Date.now()) {
 }
 
 /**
- * Empties the rate's window. A reset that left a live speed standing would be
- * a reading about bytes that no longer exist anywhere — the reset button clears
- * the two records together.
+ * Empties the rate's window; the reset button clears both records together.
  *
  * @param {object} record mutated in place
  */
@@ -170,15 +139,11 @@ export function resetRate(record) {
 }
 
 /**
- * The declared body size in a header list, or null when there is none.
+ * The declared body size in a header list, or `null` when there is none.
  *
- * Only plain decimal digits count. `*` (unknown), an empty value, a negative
- * number and two `Content-Length` headers that disagree are all things a proxy,
- * a captive portal or a broken server can send; a number we cannot trust is
- * worth less than no number at all, because adding it would corrupt everything
- * the record says. A repeated header that agrees with itself is fine, and a
- * size of zero is reported as null: there is no body, and therefore nothing to
- * count.
+ * Only plain decimal digits count: `*`, an empty or negative value, and two headers
+ * that disagree are all things a proxy or a broken server can send, and a size that
+ * cannot be trusted would corrupt the record. Zero is reported as `null`.
  *
  * @param {Array<{name?: string, value?: string}>} headers
  * @returns {number|null}
@@ -201,12 +166,8 @@ export function parseContentLength(headers) {
 }
 
 /**
- * The bytes a response declared it would send (`onCompleted`), or 0 when it
- * declared nothing.
- *
- * A response served from the cache never crossed the network, so its declared
- * size is not traffic: counting it would make a page you open twice look like a
- * download twice.
+ * The bytes a response declared, or 0. A response from the cache never crossed
+ * the network, so its size is not traffic.
  *
  * @param {{fromCache?: boolean, responseHeaders?: object[]}|null} details
  * @returns {number}
@@ -217,9 +178,7 @@ export function responseBytes(details) {
 }
 
 /**
- * The bytes a request declared it would send (`onBeforeSendHeaders`), or 0 when
- * it said nothing — which is every request without a body, the overwhelming
- * majority of them.
+ * The bytes a request declared, or 0 — which is every request without a body.
  *
  * @param {{requestHeaders?: object[]}|null} details
  * @returns {number}
@@ -229,16 +188,8 @@ export function requestBytes(details) {
 }
 
 /**
- * Whether the meter is running: the user left it on, the proxy is in force, and
- * the traffic is going somewhere.
- *
- * `direct` is the one mode excluded, because it is the one mode where we know
- * for certain that nothing the browser sends is being proxied — counting it
- * would answer a question nobody asked. `system` counts: the traffic is still
- * being routed by a policy the extension put in force, it just belongs to the
- * operating system rather than to a saved server. Whether a request really
- * survived the whole hop cannot be known from here, so the meter counts while
- * the route is *the extension's* — see the note in `README.md`.
+ * The meter runs while the extension is routing: `direct` is the one mode
+ * excluded, `system` counts.
  *
  * @param {object} state
  * @returns {boolean}
@@ -252,9 +203,7 @@ export function meterRuns(state) {
 const SIZE_UNITS = ['B', 'KB', 'MB', 'GB', 'TB'];
 
 /**
- * `0 B`, `37 B`, `1.0 KB`, `2.4 MB`, `1.3 GB`. Binary steps (1024) because that
- * is what a byte count means to everything that shows one; one decimal from KB
- * up, the same way `formatDuration` keeps a single decimal for seconds.
+ * `0 B`, `37 B`, `1.0 KB`, `2.4 MB`: binary steps (1024), one decimal from KB up.
  *
  * @param {number} value
  * @returns {string}
@@ -273,12 +222,8 @@ export function formatBytes(value) {
 }
 
 /**
- * What the UI shows, as ready-to-print parts.
- *
- * Today's counters are reported as zero when the stored day is not today: the
- * record is only rewritten when something actually moves, so a night with the
- * browser closed would otherwise leave yesterday's numbers under a "Today"
- * label until the next request arrived.
+ * What the UI shows, as ready-to-print parts. Today reads as zero when the
+ * stored day is not today — the record is only rewritten when something moves.
  *
  * @param {object|null} record
  * @param {number} [now]
@@ -300,63 +245,38 @@ export function describeTraffic(record, now = Date.now()) {
   };
 }
 
-/* ------------------------------------------------------------------ *
- * The live rate — what is moving right now
- * ------------------------------------------------------------------ */
+/* The live rate: what is moving right now. */
 
 /**
- * How much recent traffic the window keeps, and when it stops believing a
- * reading.
- *
- * A speed is bytes divided by time, and the only honest way to get it is to
- * divide the bytes that were counted by the time they were counted across —
- * which is why every batch the worker writes carries the span it covers
- * (`ms`, see `src/background.js`). Adding those spans up and dividing once
- * gives the average speed of the last few seconds: a transfer that is still
- * going reads its own rate rather than a fraction of it, and a transfer that
- * has slowed down reads the slower number as the fast batches age out of the
- * window.
- *
- * Nothing here is sampled on a timer. The worker stamps a batch when it writes
- * one and the reading is recomputed on every draw, so the number stays honest
- * between writes without a second source of truth.
+ * How much recent traffic the window keeps. A speed is bytes over time, so every
+ * batch the worker writes carries the span it covered (`ms`): the window's bytes
+ * divided by the sum of those spans is the last few seconds' speed. Nothing is
+ * sampled on a timer — the reading is recomputed on every draw.
  */
 export const RATE_WINDOW_MS = 10_000;
 
-/** No sample newer than this means nothing is moving: the UI says so, not 0 B/s. */
+/** No sample newer than this means nothing is moving. */
 export const RATE_IDLE_MS = 5_000;
 
-/** The shortest span a sample may claim, so a short batch cannot divide by ~zero. */
+/** The shortest span a sample may claim, so a batch cannot divide by ~zero. */
 export const RATE_MIN_SPAN_MS = 200;
 
-/**
- * The longest span a sample may claim. A batch that says it covered more than
- * the window is a batch from a worker that slept: its bytes are recent, but a
- * span we cannot trust must not be allowed to dilute a reading.
- */
+/** A batch claiming more than the window is untrustworthy: clamp it. */
 export const RATE_MAX_SPAN_MS = RATE_WINDOW_MS;
 
-/** The ceiling a reading can claim. Past this it is a corrupt value, not traffic. */
+/** Past this a reading is a corrupt value, not traffic. */
 export const RATE_MAX_BPS = 1e12;
 
-/** How many samples the window may hold. Far more than a five-second batch
- * needs, and a bound on a record that a bug could otherwise grow forever. */
+/** Bounds a record that a bug could otherwise grow forever. */
 export const RATE_MAX_SAMPLES = 32;
 
-/**
- * @returns {object} an empty rate record: nothing has been seen lately.
- */
 export function createRate() {
   return { samples: [] };
 }
 
 /**
- * One observation, made valid: the bytes a batch counted (`up`, `down`), the
- * moment it finished counting them (`at`) and how long it was counting (`ms`).
- *
- * A sample that cannot say how long it took, or that counted nothing at all, is
- * not a sample — it carries no speed, and adding it would only dilute the ones
- * that do. `null` says so, and both the writer and the reader drop it.
+ * One valid sample, or `null`: a span is required, and a sample that counted
+ * nothing carries no speed.
  *
  * @param {object} raw
  * @returns {{at: number, ms: number, up: number, down: number}|null}
@@ -380,14 +300,9 @@ function sampleOf(raw) {
 }
 
 /**
- * Coerces anything (old storage, a hand-edited value) into a valid record.
- *
- * Nothing is swept here against the wall clock — the stored record is *data*,
- * and the window is applied on the *read* (`trafficRate` drops the samples by
- * the age it is asked about). Sweeping inside sanitize would clamp every test
- * that reads with an explicit `now` to the real clock, and more importantly
- * would make the record mean different things depending on when it happened to
- * be touched.
+ * Coerces old storage or a hand-edited value into a valid record. The window is
+ * applied on the read, not here, so the record means the same thing whenever it
+ * is touched.
  */
 export function sanitizeRate(raw) {
   const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
@@ -396,7 +311,7 @@ export function sanitizeRate(raw) {
   return { samples: samples.map(sampleOf).filter(Boolean).slice(-RATE_MAX_SAMPLES) };
 }
 
-/** Whether two records hold the same samples (a write that changes nothing is skipped). */
+/** A write that changes nothing is skipped. */
 export function sameRate(left, right) {
   const a = sanitizeRate(left).samples;
   const b = sanitizeRate(right).samples;
@@ -414,10 +329,8 @@ export function sameRate(left, right) {
 }
 
 /**
- * Records one batch: the bytes counted, and the span they were counted across.
- * Mutated in place, like every record here. The window is swept first, so a
- * record that sat idle while the worker slept does not drag old bytes into a
- * reading, and a batch that counted nothing leaves no sample at all.
+ * Records one batch and the span it covered. The window is swept first, so a
+ * record that sat idle does not drag old bytes into a reading.
  *
  * @param {object} record mutated in place
  * @param {{up?: number, down?: number, at?: number, ms?: number}} [observation]
@@ -438,10 +351,8 @@ export function noteRate(record, observation = {}) {
 }
 
 /**
- * Drops the samples the window no longer holds (in place, so callers share the
- * sweep). "Holds" is read from the end of a sample's span, because that is the
- * moment its bytes were last counted: a batch that finished just after the
- * horizon was, as far as a reading is concerned, counted just now.
+ * Drops the samples outside the window, in place. Age is read from the end of a
+ * sample's span, the moment its bytes were last counted.
  */
 function sweep(record, now) {
   const horizon = Number(now) - RATE_WINDOW_MS;
@@ -451,27 +362,19 @@ function sweep(record, now) {
 }
 
 /**
- * The speed right now: bytes per second in each direction, or 0 for a
- * direction the window holds nothing about.
- *
- * The arithmetic is one division — the bytes of every sample still in the
- * window over the spans those bytes were counted across. That is what makes a
- * sustained transfer read its own rate (its bytes and its spans grow together,
- * so the ratio holds however many batches the window happens to hold) and a
- * transfer that has slowed down read the slower number, because the fast
- * batches drop out of the window on their own.
+ * The speed right now, in bytes per second. A sustained transfer reads its own
+ * rate, and one that has slowed down reads the slower number as the fast
+ * batches leave the window.
  *
  * @param {object|null} record a rate record
  * @param {number} [now]
- * @returns {{up: number, down: number, live: boolean, last: number}}
- *   bytes per second per direction, whether anything is moving at all, and the
- *   age in milliseconds of the newest sample (0 when there is none)
+ * @returns {{up: number, down: number, live: boolean, last: number}} bytes per
+ *   second per direction, whether anything is moving, and the age of the newest
+ *   sample in milliseconds (0 when there is none)
  */
 export function trafficRate(record, now = Date.now()) {
-  // The window is applied on the read, against the clock the reader asks
-  // about: a record straight out of storage after the worker slept for an hour
-  // holds nothing, and a test reading with an explicit `now` gets exactly that
-  // moment's answer.
+  // The window is applied against the clock the reader asks about, so a record
+  // straight out of storage after the worker slept for an hour holds nothing.
   const stamp = Number.isFinite(now) ? Number(now) : Date.now();
   const samples = sanitizeRate(record).samples.filter(
     (sample) => stamp - sample.at <= RATE_WINDOW_MS && sample.at - stamp <= RATE_WINDOW_MS,
@@ -494,20 +397,15 @@ export function trafficRate(record, now = Date.now()) {
   return {
     up: speed(up),
     down: speed(down),
-    // A window whose newest bytes are seconds old is not "moving slowly" —
-    // nothing has been counted lately, which is what idle means to a reader.
+    // Seconds-old bytes are not a slow transfer: nothing was counted lately.
     live: last <= RATE_IDLE_MS,
     last,
   };
 }
 
 /**
- * What the UI shows for the rate, as ready-to-print parts.
- *
- * `idle` is the answer to "is anything moving?" the way a user asks it: not
- * *were there bytes this second* but *has the meter seen anything lately*. A
- * meter that saw a burst nine seconds ago is not streaming at 40 MB/s into the
- * void; it is idle, and saying so beats a number that lies by precision.
+ * What the UI shows for the rate, as ready-to-print parts. `idle` answers "is
+ * anything moving?": a burst nine seconds ago is idle, not a live speed.
  *
  * @param {object|null} rate a rate record
  * @param {number} [now]
@@ -519,8 +417,7 @@ export function describeRate(rate, now = Date.now()) {
 
   return {
     idle,
-    // An idle meter reads as zero: the window may still hold the tail of a
-    // burst, and printing it would claim a speed nothing is sustaining.
+    // Idle reads as zero: the window may still hold the tail of a burst.
     down: idle ? '0 B/s' : `${formatBytes(down)}/s`,
     up: idle ? '0 B/s' : `${formatBytes(up)}/s`,
   };

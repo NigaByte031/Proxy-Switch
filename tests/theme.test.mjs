@@ -117,9 +117,7 @@ test('prefersDark reads matchMedia, and watchSystemTheme follows it', () => {
   assert.equal(typeof watchSystemTheme(() => {}, undefined), 'function');
 });
 
-/* ------------------------------------------------------------------ *
- * The stylesheet and the pages
- * ------------------------------------------------------------------ */
+/* The stylesheet and the pages. */
 
 /** Declarations of one CSS block, without its nested braces being an issue. */
 function block(source, selector) {

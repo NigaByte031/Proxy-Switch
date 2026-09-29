@@ -1,16 +1,16 @@
 /*
  * Offline preview harness (development only — excluded from release builds).
  *
- * `src/__preview_popup.html` and `src/__preview_options.html` are generated
- * copies of the real pages with one extra <script> tag that loads this file.
- * Opening them in a normal browser tab gives you the full UI with the handful
- * of `chrome.*` APIs it uses mocked on top of localStorage, so the extension
- * can be tried (and screenshotted) without installing it.
+ * The `src/__preview_*.html` pages are generated copies of the real ones with one
+ * extra <script> tag that loads this file: opening them in a browser tab gives the
+ * full UI with the handful of `chrome.*` APIs it uses mocked over localStorage.
  */
 (function installChromeStub() {
-  if (globalThis.chrome?.storage) return; // a real extension context: do nothing
+  // a real extension context: do nothing
+  if (globalThis.chrome?.storage) return;
 
-  var VERSION = '1.6.1'; // kept in sync with manifest.json by tests/manifest.test.mjs
+  // kept in sync with manifest.json by tests/manifest.test.mjs
+  var VERSION = '1.6.1';
   var DATA_KEY = 'proxySwitch.preview.data';
   var PROXY_KEY = 'proxySwitch.preview.proxy';
 
@@ -78,8 +78,7 @@
       },
       sendMessage: async function (message) {
         // No service worker runs in the preview, so "Try again" plays its part:
-        // it answers with a healthy status and clears the failure on screen
-        // (the real worker's answer is what lib/proxy.js `requestReapply` reads).
+        // it answers with a healthy status and clears the failure on screen.
         if (!message || message.type !== 'proxy-switch:reapply') {
           if (message && message.type === 'proxy-switch:test-all') return simulateTestAllPass();
           return undefined;
@@ -155,8 +154,7 @@
       onProxyError: { addListener: function () {} },
     },
     action: {
-      // Chrome 127+ only; the preview pretends to have it so the "which server
-      // am I on?" path in background.js can be exercised here too.
+      // Chrome 127+ only; the preview pretends to have it so the path can be tried.
       openPopup: async function () {
         window.open('./__preview_popup.html', '_blank', 'noopener');
       },
@@ -190,11 +188,11 @@
   };
 
   /*
-   * The worker's "Test all servers" pass is simulated too: the same policy the
-   * real pass applies (`testAllEligible` in lib/server-probe.js — manual mode or
-   * domain routing, with its requirements in force), one progress message per
-   * saved server (the latency of the probe hook decides ok/down), recorded into
-   * the same health key the real worker writes.
+   * The worker's "Test all servers" pass is simulated too: the same policy the real
+   * one applies (`testAllEligible` — manual mode or domain routing, with its
+   * requirements in force), one progress message per saved server (the latency of
+   * the probe hook decides ok/down), into the same health key the real worker
+   * writes.
    */
   var TEST_ALL_MESSAGE = 'proxy-switch:test-all';
   var TEST_ALL_PROGRESS_MESSAGE = 'proxy-switch:test-all-progress';
@@ -227,7 +225,8 @@
       }
       var profile = profiles[index];
       index += 1;
-      var ok = (SIMULATED_LATENCY_MS + profile.port) % 7 !== 0; // one in seven is down
+      // one in seven is down
+      var ok = (SIMULATED_LATENCY_MS + profile.port) % 7 !== 0;
       var merged = readAll();
       var record = merged[HEALTH_KEY] || {};
       record[profile.id] = {
@@ -257,8 +256,7 @@
 
   /*
    * The "Test connection" button really calls fetch(), which a file:// preview
-   * cannot do cross-origin — so the preview answers with a simulated result.
-   * `src/lib/health.js` prefers this hook over the real fetch when it exists.
+   * cannot do cross-origin, so the preview answers with a simulated result.
    */
   var SIMULATED_LATENCY_MS = 180;
   globalThis.__proxySwitchProbeFetch = function () {
@@ -270,12 +268,10 @@
   };
 
   /*
-   * A demo seed, for pictures and for poking at the UI: `?demo=1` (or
-   * `?demo=fa`) fills the stores with a plausible setup — three servers with
-   * verdicts, today's counters, and a speed that keeps moving — before the
-   * page's own scripts read them, so `README.md` can show the real interface
-   * rather than an empty list. Nothing here runs unless it is asked for, and
-   * this file is never part of a release build.
+   * A demo seed, for pictures and for poking at the UI: `?demo=1` (or `?demo=fa`)
+   * fills the stores with a plausible setup — three servers with verdicts, today's
+   * counters, a speed that keeps moving — before the page's own scripts read them.
+   * Nothing here runs unless it is asked for.
    */
   var demo = new URLSearchParams(location.search).get('demo');
   if (demo) seedDemo(demo === 'fa' ? 'fa' : 'en');
@@ -363,9 +359,8 @@
       },
     });
 
-    // The speed is the one reading that has to keep moving to look like itself,
-    // so the demo feeds the window a fresh sample every second — the same shape
-    // the worker writes, one batch over one second.
+    // A reading has to keep moving to look like itself, so the demo feeds the
+    // window a fresh sample every second — the shape the worker writes.
     var tick = 0;
     setInterval(function () {
       tick += 1;

@@ -1,12 +1,9 @@
 /*
  * Design tokens, shared components and RTL rules.
  *
- * Every colour in the extension comes from the token block below, so the whole
- * product can be re-themed (or handed a new palette) from this one place. Both
- * palettes live here: the light one on `:root`, the dark one on
- * `:root[data-theme='dark']`. src/lib/theme.js resolves the user's setting
- * ("auto" follows the operating system) and writes the result onto <html>,
- * while `color-scheme` keeps the native controls in step.
+ * Every colour comes from the token blocks below: the light palette on `:root`, the
+ * dark one on `:root[data-theme='dark']`. src/lib/theme.js resolves the setting
+ * ("auto" follows the operating system) and writes it onto <html>.
  */
 
 :root {
@@ -55,8 +52,7 @@
   --danger-soft: #fdeceb;
 
   /* ---- Shape and depth --------------------------------------------- */
-  /* One height for every control, so buttons, inputs and chips line up in a
-     row instead of each following its own padding. */
+  /* One height for every control, so buttons, inputs and chips line up in a row. */
   --control-h: 36px;
   --radius-lg: 18px;
   --radius: 14px;
@@ -112,32 +108,17 @@
   --shadow-lg: 0 2px 4px rgba(0, 0, 0, 0.45), 0 28px 54px -30px rgba(0, 0, 0, 0.95);
 }
 
-/* ---------------------------------------------------------------- *
- * Accent palettes
+/* Accent palettes.
  *
  * The brand hue is a setting (lib/theme.js writes `data-accent` next to
- * `data-theme`), so the same product can wear five different colours without a
- * stylesheet of its own. Each block overrides only the brand tokens and the two
- * background glows; the mode hues (`--pac`, `--sys`) and the feedback colours
- * keep their meaning whatever the accent is — a green "reachable" chip must
- * stay green. The derived tokens (`--gradient-brand`, `--ring`) are left alone:
- * they are built from the tokens below and follow along on their own.
- *
- * The light set reads on white, the dark set on #0b1113; each accent therefore
- * has two blocks. Both are keyed off the same attribute, so a page only ever
- * needs to write one value.
- *
- * Each block is written twice: once for the document element (the palette the
- * product actually wears) and once for any element that carries the attribute
- * (the swatch picker on the settings page paints itself with the real tokens of
- * the palette it offers, so the two can never disagree).
- * ---------------------------------------------------------------- */
+ * `data-theme`), so one stylesheet wears five colours: each block overrides only the
+ * brand tokens and the two glows, and each is written twice — once for the document
+ * element, once for any element carrying the attribute.
+ */
 
-/* Emerald is the shipped look, and the tokens on `:root` already are it. The
-   block is written out all the same, because a swatch on the settings page has
-   to paint itself emerald even while the product wears another colour — a
-   palette that only inherited would show whichever colour is in force. A test
-   keeps the two copies identical. */
+/* Emerald is the shipped look and `:root` already is it, but the block is written
+   out all the same: a swatch has to paint itself emerald even while the product
+   wears another colour. A test keeps the two copies identical. */
 :root[data-accent='emerald'],
 [data-accent='emerald'] {
   --glow-1: rgba(14, 159, 110, 0.1);
@@ -344,9 +325,7 @@ a:hover {
   background-color: color-mix(in srgb, var(--accent) 60%, transparent);
 }
 
-/* ---------------------------------------------------------------- *
- * Cards and sections
- * ---------------------------------------------------------------- */
+/* Cards and sections. */
 
 .card {
   position: relative;
@@ -361,8 +340,7 @@ a:hover {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* A hairline of brand light along the top edge: it separates stacked cards
-   without adding another border. */
+/* A hairline of brand light along the top edge, separating stacked cards. */
 .card::before {
   content: "";
   position: absolute;
@@ -486,9 +464,7 @@ section > h2::before,
   color: var(--danger);
 }
 
-/* ---------------------------------------------------------------- *
- * Buttons and chips
- * ---------------------------------------------------------------- */
+/* Buttons and chips. */
 
 .btn,
 .ghost-btn,
@@ -648,8 +624,7 @@ section > h2::before,
   box-shadow: var(--shadow-sm);
 }
 
-/* The selected chip wears the hue of its own mode, so the control doubles as a
-   legend for the colours used by the status pill, the card and the badge. */
+/* The selected chip wears its own mode's hue, so the control doubles as a legend. */
 .chips .chip[data-mode='system'].is-active {
   border-color: color-mix(in srgb, var(--sys) 40%, var(--border));
   background: color-mix(in srgb, var(--sys) 14%, var(--track-active));
@@ -682,9 +657,7 @@ button:disabled:hover {
   filter: none;
 }
 
-/* ---------------------------------------------------------------- *
- * Form controls
- * ---------------------------------------------------------------- */
+/* Form controls. */
 
 input[type="text"],
 input[type="url"],
@@ -703,8 +676,7 @@ textarea {
   transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
 }
 
-/* One-line controls share a height with the buttons next to them; the
-   textareas stay free to grow. */
+/* One-line controls share a height with the buttons next to them. */
 input[type="text"],
 input[type="url"],
 input[type="search"],
@@ -776,8 +748,7 @@ a:focus-visible {
   outline-offset: 2px;
 }
 
-/* The two controls that are not buttons still need to look reachable by
-   keyboard: the server row and the switch. */
+/* The two controls that are not buttons still need to look reachable by keyboard. */
 .profile-main:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
@@ -905,9 +876,7 @@ label {
   transform: translateX(-18px);
 }
 
-/* ---------------------------------------------------------------- *
- * Status, servers, messages
- * ---------------------------------------------------------------- */
+/* Status, servers, messages. */
 
 .status-row {
   display: flex;
@@ -1049,13 +1018,11 @@ label {
   }
 }
 
-/* ---------------------------------------------------------------- *
- * Traffic meter
+/* Traffic meter.
  *
- * A reading, not a control: the figures stay in the text colour under the
- * status line instead of borrowing the accent, which belongs to the mode.
- * The digits are tabular so a number that grows does not drag the row with it.
- * ---------------------------------------------------------------- */
+ * A reading, not a control: the figures stay in the text colour instead of
+ * borrowing the accent, which belongs to the mode. The digits are tabular, so a
+ * number that grows does not drag the row with it. */
 
 .traffic-row {
   display: flex;
@@ -1087,8 +1054,7 @@ label {
   letter-spacing: -0.01em;
 }
 
-/* The window the figures belong to trails them: it names the numbers rather
-   than competing with them. */
+/* The window the figures belong to trails them: it names the numbers. */
 .traffic-when {
   color: var(--muted);
   font-size: 11px;
@@ -1100,8 +1066,8 @@ label {
   margin-inline-start: auto;
 }
 
-/* The settings page says the same thing as two labelled lines, because it has
-   the room to name each direction in words. */
+/* The settings page says the same as two labelled lines: it has room to name each
+   direction in words. */
 .traffic-readout {
   display: grid;
   gap: 5px;
@@ -1140,8 +1106,7 @@ label {
   color: var(--muted);
 }
 
-/* The popup's speed line sits under the counters, small and quiet — the
-   reading is the news, the dot is whether anything is moving at all. */
+/* The popup's speed line sits under the counters, small and quiet. */
 .rate-row {
   display: flex;
   align-items: center;
@@ -1171,12 +1136,8 @@ label {
   unicode-bidi: plaintext;
 }
 
-/* ---------------------------------------------------------------- *
- * Server search
- *
- * Revealed by servers-ui.js once the list is long enough to need it, so the
- * simple case (one or two servers) stays a clean list.
- * ---------------------------------------------------------------- */
+/* Server search, revealed by servers-ui.js once the list is long enough to need
+   it: the simple case (one or two servers) stays a clean list. */
 
 .search {
   position: relative;
@@ -1254,8 +1215,7 @@ label {
     transform 0.12s var(--ease);
 }
 
-/* The scheme (HTTP / SOCKS5 / …) as a compact badge, straight from the data set
-   on the list item by servers-ui.js. */
+/* The scheme (HTTP / SOCKS5 / …) as a compact badge, from the data set. */
 .profile-item::before {
   content: attr(data-scheme);
   flex: 0 0 auto;
@@ -1358,12 +1318,9 @@ label {
   margin-inline-end: 2px;
 }
 
-/* ---------------------------------------------------------------- *
- * What the extension has seen about a server: the last verdict and how old it
- * is (lib/server-health.js). The dot carries the tone, the words carry the
- * meaning, and a verdict the chain no longer counts is dimmed rather than
- * rewritten — the list says exactly what the ordering does.
- * ---------------------------------------------------------------- */
+/* What the extension has seen about a server: the last verdict and its age. The
+   dot carries the tone, the words the meaning, and a verdict the chain no longer
+   counts is dimmed rather than rewritten. */
 
 .profile-health {
   display: inline-flex;
@@ -1398,9 +1355,7 @@ label {
   opacity: 0.75;
 }
 
-/* ---------------------------------------------------------------- *
- * Deleting a server: the row asks, instead of a blocking window.confirm.
- * ---------------------------------------------------------------- */
+/* Deleting a server: the row asks, instead of a blocking window.confirm. */
 
 .profile-item.is-confirming {
   border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
@@ -1485,17 +1440,14 @@ label {
   }
 }
 
-/* Jumping between sections on the settings page is smoother, but only for users
-   who have not asked the system to tone motion down. */
+/* Smoother jumps between sections, unless the system asks for less motion. */
 @media (prefers-reduced-motion: no-preference) {
   html {
     scroll-behavior: smooth;
   }
 }
 
-/* ---------------------------------------------------------------- *
- * Loading spinner (for test-connection button)
- * ---------------------------------------------------------------- */
+/* Loading spinner (test-connection button). */
 
 @keyframes spin {
   to {
@@ -1521,9 +1473,7 @@ label {
   animation: spin 0.6s linear infinite;
 }
 
-/* ---------------------------------------------------------------- *
- * Flash / toast messages
- * ---------------------------------------------------------------- */
+/* Flash / toast messages. */
 
 .warning,
 [data-toast] {
@@ -1541,9 +1491,7 @@ label {
   }
 }
 
-/* ---------------------------------------------------------------- *
- * Panel slide transitions (used by PAC panel)
- * ---------------------------------------------------------------- */
+/* Panel slide transitions (PAC panel). */
 
 #pacPanel {
   display: flex;
@@ -1577,9 +1525,7 @@ label {
   }
 }
 
-/* ---------------------------------------------------------------- *
- * Form reveal animation
- * ---------------------------------------------------------------- */
+/* Form reveal animation. */
 
 #profileForm:not(.hidden) {
   animation: form-in 0.25s var(--ease);
@@ -1600,9 +1546,7 @@ label {
   }
 }
 
-/* ---------------------------------------------------------------- *
- * Empty state
- * ---------------------------------------------------------------- */
+/* Empty state. */
 
 .empty::before {
   display: block;
@@ -1620,15 +1564,12 @@ label {
   content: "+";
 }
 
-/* The list is filtered down to nothing: say so, instead of looking broken.
-   The "add a server" circle would be the wrong invitation here, so it goes. */
+/* Nothing matched the filter: say so instead of looking broken. */
 .empty.empty-search::before {
   display: none;
 }
 
-/* ---------------------------------------------------------------- *
- * Profile delete micro-animation
- * ---------------------------------------------------------------- */
+/* Profile delete micro-animation. */
 
 .profile-item.removing {
   animation: item-out 0.2s ease forwards;
@@ -1645,9 +1586,7 @@ label {
   }
 }
 
-/* ---------------------------------------------------------------- *
- * Section card stagger (options page)
- * ---------------------------------------------------------------- */
+/* Section card stagger (options page). */
 
 .page > .card {
   animation: card-in 0.35s var(--ease) backwards;
@@ -1683,9 +1622,7 @@ label {
   }
 }
 
-/* ---------------------------------------------------------------- *
- * Save feedback
- * ---------------------------------------------------------------- */
+/* Save feedback. */
 
 .btn.saved {
   background: var(--ok);
@@ -1694,9 +1631,7 @@ label {
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
-/* ---------------------------------------------------------------- *
- * Accessibility: users who ask for more contrast get harder edges.
- * ---------------------------------------------------------------- */
+/* Accessibility: users who ask for more contrast get harder edges. */
 
 @media (prefers-contrast: more) {
   :root {

@@ -9,13 +9,8 @@ const WORKFLOW_DIR = join('.github', 'workflows');
 const read = (path) => readFileSync(join(ROOT, path), 'utf8');
 const workflows = readdirSync(join(ROOT, WORKFLOW_DIR)).filter((name) => name.endsWith('.yml'));
 
-/**
- * A workflow file that does not parse fails in the least helpful way there is:
- * GitHub refuses to run it, names the run after the *path* instead of the
- * workflow, and does it on every push — which is how a mis-indented release
- * notes block hid in plain sight. These are the mistakes that hurt, checked
- * without adding a YAML parser to a dependency-free repository.
- */
+/** GitHub refuses to run a workflow file that does not parse, and does so on every
+ *  push: these check the shape mistakes that hurt, without a YAML parser. */
 test('every workflow parses as far as shape goes: no tabs, block scalars indented', () => {
   for (const file of workflows) {
     const path = join(WORKFLOW_DIR, file);
@@ -41,7 +36,8 @@ test('every workflow parses as far as shape goes: no tabs, block scalars indente
       for (let next = content; next < lines.length; next += 1) {
         if (lines[next].trim() === '') continue;
         const indent = lines[next].search(/\S/);
-        if (indent <= keyIndent) break; // the block ended; this is the next key
+        // the block ended; this is the next key
+        if (indent <= keyIndent) break;
         assert.ok(
           indent >= blockIndent,
           `${path}:${next + 1} is indented ${indent} inside a block that starts at ${blockIndent}`,

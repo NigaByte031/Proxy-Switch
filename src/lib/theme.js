@@ -1,12 +1,8 @@
 /**
- * Theme resolution.
- *
- * `src/styles/base.css` ships two palettes: the light one on `:root` and the
- * dark one on `:root[data-theme='dark']`. This module decides which of the two
- * is showing and is the only place that reads the system preference, so the
- * setting ("auto" / "light" / "dark") and the stylesheet can never disagree.
- *
- * Dependency-free and DOM-light, so it can be unit tested in Node.
+ * Theme resolution: which palette in `src/styles/base.css` is showing. The light
+ * one lives on `:root` and the dark one on `:root[data-theme='dark']`; this is
+ * the only place that reads the system preference, so the setting and the
+ * stylesheet can never disagree.
  */
 
 import { ACCENTS, THEMES } from './model.js';
@@ -86,9 +82,8 @@ export function resolveAccent(setting) {
 }
 
 /**
- * Writes the palette onto the document element, next to `data-theme`. The pair
- * is what `src/styles/base.css` keys its palette blocks off, so the pages never
- * need to know which colours a given accent is made of.
+ * Writes the palette onto the document element, next to `data-theme` — the pair
+ * `src/styles/base.css` keys its palette blocks off.
  * @returns {string} the accent that is now active
  */
 export function applyAccent(setting, doc = globalThis.document) {
@@ -98,8 +93,8 @@ export function applyAccent(setting, doc = globalThis.document) {
 }
 
 /**
- * Calls `callback(isDark)` whenever the operating system switches appearance,
- * so an "auto" setting can follow along while a page stays open.
+ * Calls `callback(isDark)` whenever the operating system switches appearance, so
+ * an "auto" setting follows along while a page stays open.
  * @returns {() => void} unsubscribe
  */
 export function watchSystemTheme(callback, win = globalThis) {
