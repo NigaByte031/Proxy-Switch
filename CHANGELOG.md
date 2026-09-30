@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [1.7.0] — 2026-09-30
+
 ### Removed
 
 - **The Firefox build.** `manifest.firefox.json`, the `package:firefox` script and the workflow steps
@@ -47,6 +51,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   happens too — stamped with its own last counted byte and measured from its first to its last
   (`batchSpan()` in `lib/traffic.js`). A burst therefore reads the rate it really ran at, and goes
   quiet a few seconds after it ends rather than when the writer got around to it.
+
+[1.7.0]: ../../releases/tag/v1.7.0
 
 ## [1.6.1] — 2026-09-28
 
