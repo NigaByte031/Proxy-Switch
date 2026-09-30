@@ -6,7 +6,38 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+
+- **A check's own probe error was read as a broken route.** Chrome's `proxy.onError` details are
+  `{fatal, error, details}` — they carry no URL — so the guard that was meant to recognize the
+  extension's own probe (`isProbeUrl(details.url)`) could never match. While a background check or a
+  *Test all* pass looked at a server that was down, the badge flipped to `ERR` and the popup said
+  the proxy settings had not been applied — about a route that was working. What tells the two apart
+  is not the request but which configuration is in force: while a check runs it is the check's own,
+  so errors from that window are ignored.
+- **A dead route was reported as a change Chrome refused.** A server that stopped answering landed
+  in the same status record as a failed apply, so the popup and the settings page said *Chrome
+  refused the change: net::ERR_PROXY_CONNECTION_FAILED* — when the change had been applied and it
+  was the server that had gone quiet. The record now carries which of the two failed (`source`), and
+  a route failure is worded as one; a record written before this change still reads as a failed
+  apply.
+- **A server whose host carried its own port was thrown away.** Importing a backup — or reading a
+  hand-edited storage value — with `"host": "proxy.example.com:8080"` silently dropped that
+  server: a host is validated as one field and a colon is not part of a host. The host is now split
+  exactly as the form splits a pasted address, so the server survives, and the port field wins when
+  it says something.
+- **A pasted URL's path was read as credentials.** `https://proxy.example.com/@user` filled the form
+  with the username `proxy.example.com/@user` and the host `user`. The address is cut at its first
+  path, query or fragment before anything looks for userinfo.
+- **The live speed was not live.** Every batch of counted bytes was stamped with the moment the
+  flush timer fired rather than with the moment its last byte was counted, so the span it reported
+  was the length of that timer: a burst that took half a second read a fraction of the speed it ran
+  at, and the line could move at most once every five seconds, leaving the tail of a finished
+  transfer on screen until the next write. A batch is now published every second — the same
+  second-long slice the counters are written in, so *Today* and *Total* follow a download as it
+  happens too — stamped with its own last counted byte and measured from its first to its last
+  (`batchSpan()` in `lib/traffic.js`). A burst therefore reads the rate it really ran at, and goes
+  quiet a few seconds after it ends rather than when the writer got around to it.
 
 ## [1.6.1] — 2026-09-28
 

@@ -329,6 +329,28 @@ export function sameRate(left, right) {
 }
 
 /**
+ * The span one batch of counted bytes really covered: from its first byte to its
+ * last, never to the moment a timer got around to writing it.
+ *
+ * @param {number} first when the batch's first byte was counted
+ * @param {number} last when its last one was
+ * @returns {{at: number, ms: number}} the moment to stamp the batch with (0 when
+ *   neither stamp is a moment) and the span its bytes took (0 for a batch of one
+ *   moment, which is no span to read a speed from)
+ */
+export function batchSpan(first, last) {
+  const start = Number(first);
+  const end = Number(last);
+  // A batch belongs to the last byte it counted; without one, to its first byte.
+  const stamp = Number.isFinite(end) && end > 0 ? end : start;
+  const at = Number.isFinite(stamp) && stamp > 0 ? Math.round(stamp) : 0;
+  if (!at) return { at: 0, ms: 0 };
+
+  const ms = Number.isFinite(start) && start > 0 && start < at ? Math.round(at - start) : 0;
+  return { at, ms };
+}
+
+/**
  * Records one batch and the span it covered. The window is swept first, so a
  * record that sat idle does not drag old bytes into a reading.
  *

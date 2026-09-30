@@ -59,7 +59,14 @@ import {
   testAllEligible,
 } from './lib/server-probe.js';
 import { PROBE_TARGETS, probe, probeHost } from './lib/health.js';
-import { meterRuns, noteRate, noteTraffic, requestBytes, responseBytes } from './lib/traffic.js';
+import {
+  batchSpan,
+  meterRuns,
+  noteRate,
+  noteTraffic,
+  requestBytes,
+  responseBytes,
+} from './lib/traffic.js';
 import { resolveAuthCredentials } from './lib/auth.js';
 import { resolveLang, t } from './lib/i18n.js';
 
@@ -95,6 +102,7 @@ async function runSync() {
 
   const status = {
     ok: true,
+    source: 'apply',
     failed,
     levelOfControl: outcome?.levelOfControl ?? null,
     at: Date.now(),
@@ -162,6 +170,9 @@ async function reportProxyError(reason) {
   const current = await loadStatus();
   const next = {
     ok: false,
+    // The change was applied and it is the route that stopped answering, so the
+    // record says which of the two happened — the wording depends on it.
+    source: 'route',
     failed: String(reason ?? '') || 'proxy error',
     levelOfControl: current?.levelOfControl ?? null,
     at: Date.now(),
@@ -503,24 +514,30 @@ async function checkServers() {
  * configuration is touched here.
  */
 
-/** How long a batch may grow before it is written (the worker may die any time). */
-const TRAFFIC_FLUSH_MS = 5000;
+/**
+ * How long a batch may grow before it is written: a second. The live speed is read
+ * from these batches, so a longer one would leave the line frozen between writes —
+ * and the worker may die any time.
+ */
+const TRAFFIC_FLUSH_MS = 1000;
 
 /** Whether the meter may count at all — kept current by `runSync()`. */
 let meterOn = false;
 /**
  * The batch in hand: the bytes seen since the last write, when its first byte
- * arrived, and the timer that will write it.
+ * arrived, when its last one did, and the timer that will write it.
  */
 let pendingUp = 0;
 let pendingDown = 0;
 let pendingSince = 0;
+let pendingLast = 0;
 let flushTimer = 0;
 
 /**
  * Writes the batch that has piled up. Its bytes are cleared *before* the write, so
  * a failed write loses that batch rather than counting it twice. The same batch is
- * stamped into the live rate's window, its span beginning at the batch's first byte.
+ * stamped into the live rate's window — `batchSpan` reads its span from the bytes
+ * themselves, so the wait for this timer is never counted as transfer time.
  */
 async function flushTraffic() {
   if (flushTimer) {
@@ -529,17 +546,17 @@ async function flushTraffic() {
   }
   if (pendingUp <= 0 && pendingDown <= 0) {
     pendingSince = 0;
+    pendingLast = 0;
     return;
   }
 
   const up = pendingUp;
   const down = pendingDown;
-  const since = pendingSince;
+  const { at, ms } = batchSpan(pendingSince, pendingLast);
   pendingUp = 0;
   pendingDown = 0;
   pendingSince = 0;
-  const at = Date.now();
-  const ms = since > 0 ? at - since : 0;
+  pendingLast = 0;
 
   try {
     await updateTraffic((draft) => noteTraffic(draft, { up, down, at }));
@@ -551,12 +568,14 @@ async function flushTraffic() {
 
 /**
  * Adds one observation to the batch in hand, and arms the timer if it is idle. The
- * batch's clock starts with its first byte, so the span it reports is the time
- * those bytes really took rather than the length of the timer.
+ * batch's clock starts with its first byte and ends with its last, so the span it
+ * reports is the time those bytes really took rather than the length of the timer.
  */
 function countTraffic(up, down) {
   if (up <= 0 && down <= 0) return;
-  if (!pendingSince) pendingSince = Date.now();
+  const at = Date.now();
+  if (!pendingSince) pendingSince = at;
+  pendingLast = at;
   pendingUp += up;
   pendingDown += down;
 
@@ -588,8 +607,8 @@ chrome.webRequest?.onCompleted.addListener(
 );
 
 // The worker is stopped between events and a timer does not survive that, so this
-// is best effort by nature — but it costs nothing and usually saves the last few
-// seconds of counting.
+// is best effort by nature — but it costs nothing and usually saves the last
+// second of counting.
 chrome.runtime?.onSuspend?.addListener(() => {
   flushTraffic().catch(() => {});
 });
@@ -853,9 +872,15 @@ const proxyErrors = chrome.proxy?.onError ?? chrome.proxy?.onProxyError;
 proxyErrors?.addListener((details) => {
   // A check hands its own probe to a server the user may not be using: that error
   // is the server's answer, not a broken route, and the check records it itself.
-  if (checking && isProbeUrl(details?.url)) return;
+  // Which request failed cannot be told from the event — Chrome's error details
+  // carry no URL — but it does not have to be: while a check runs, the
+  // configuration in force is the check's own, so nothing here is evidence about
+  // the route the user configured.
+  if (checking || checkingProfileId || runningTestAllPass) return;
 
-  reportProxyError(details?.error ?? details?.message);
+  // Firefox hands this listener an `Error`, Chrome the details object, so both
+  // shapes (and a bare string, should a browser ever send one) have to be read.
+  reportProxyError(details?.error ?? details?.message ?? details);
   // Not awaited: the listener must return immediately.
   considerFailover().catch((error) => {
     console.warn('[proxy-switch] the failover check failed', error);

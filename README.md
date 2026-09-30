@@ -81,9 +81,10 @@ them by `npm run shots`, so they are the interface itself rather than a drawing 
   traffic* on the settings page turns it off.
 - **Live speed** — under today's figures the popup shows what is moving right now (`↓ 4.6 MB/s ·
   ↑ 120 KB/s`) beside a dot that goes quiet when nothing is, and the settings page has the same
-  reading as *Right now*. Every batch of counted bytes reports the span it covers, so a transfer
-  that is still going reads its own rate rather than a fraction of it, and one that has stopped
-  reads *nothing moving* instead of leaving the tail of a burst on screen as if it were a speed.
+  reading as *Right now*. Every second of counting is written on its own and reports the span its
+  own bytes covered, so the line moves while a transfer moves, a transfer that is still going reads
+  its own rate rather than a fraction of it, and one that has stopped reads *nothing moving* instead
+  of leaving the tail of a burst on screen as if it were a speed.
 - **Keyboard shortcuts** — `Alt+Shift+P` turns the proxy on or off, `Alt+Shift+D` goes direct.
 - **Bilingual UI** — switch language from the popup; Persian is rendered RTL.
 - **Theme** — automatic (follows your operating system), light or dark. Set it on the settings

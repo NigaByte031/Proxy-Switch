@@ -361,6 +361,31 @@ test('sanitizeState repairs garbage instead of throwing', () => {
   assert.equal(state.settings.activeProfileId, state.profiles[0].id);
 });
 
+test('a saved server whose host carries its own port is split, not dropped', () => {
+  // Another tool's export, or a hand-edited file. Losing the server silently — which
+  // is what the host field used to cost — is worse than reading it as the form does.
+  const state = sanitizeState({
+    profiles: [
+      { name: 'Pasted', host: 'proxy.example.com:8080' },
+      { name: 'URL', host: 'http://other.example.com:3128/path' },
+      { name: 'Both', host: 'third.example.com:999', port: 1080 },
+      { name: 'Garbage', host: 'not a host:80' },
+    ],
+  });
+
+  assert.deepEqual(
+    state.profiles.map((profile) => [profile.name, profile.host, profile.port]),
+    [
+      ['Pasted', 'proxy.example.com', 8080],
+      ['URL', 'other.example.com', 3128],
+      ['Both', 'third.example.com', 1080],
+    ],
+    'the port field wins when it says something, and a host that is still nonsense is still dropped',
+  );
+  // The name still falls back to the host, without the port glued to it.
+  assert.equal(sanitizeState({ profiles: [{ host: 'a.example.com:1' }] }).profiles[0].name, 'a.example.com');
+});
+
 test('sanitizeState keeps a stable active profile and unique ids', () => {
   const state = sanitizeState({
     settings: { activeProfileId: 'p1' },
@@ -471,6 +496,14 @@ test('parseProxyUrl reads proxy strings the way people paste them', () => {
     port: '443',
     username: 'u@ser',
     password: 'p:ss',
+  });
+  // an @ inside a path is part of the path, not a username
+  assert.deepEqual(parseProxyUrl('https://proxy.example.com/@user'), {
+    scheme: 'https',
+    host: 'proxy.example.com',
+    port: '',
+    username: '',
+    password: '',
   });
   // a bare IPv6 literal is bracketed for chrome.proxy
   assert.equal(parseProxyUrl('::1').host, '[::1]');

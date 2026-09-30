@@ -134,6 +134,21 @@ test('a health verdict reaches the chain, through the worker only', () => {
   }
 });
 
+test('a check\u2019s own probe error is not read as a broken route', () => {
+  const worker = read('src/background.js');
+  // Chrome's proxy error details are `{fatal, error, details}` — no URL — so the
+  // request a check made cannot be recognized by it. What tells the two apart is
+  // which configuration is in force: while a check runs it is the check's own.
+  assert.match(worker, /if \(checking \|\| checkingProfileId \|\| runningTestAllPass\) return;/);
+  assert.ok(
+    !worker.includes('checking && isProbeUrl'),
+    'a URL test on an event that never carries one',
+  );
+  // …and the record says which of the two failed, because the wording depends on it
+  assert.match(worker, /source: 'route'/);
+  assert.match(worker, /source: 'apply'/);
+});
+
 test('the switch notification is answered in the worker, not in a page', () => {
   const worker = read('src/background.js');
   assert.match(worker, /notifications\?\.create/, 'the worker shows the notification');
@@ -157,6 +172,11 @@ test('the traffic meter counts in the worker, and asks for nothing new', () => {
   // the speed the pages show is the same batch, stamped with the span it covers
   assert.match(worker, /updateRate\(\(draft\) => noteRate\(draft, \{ up, down, at, ms \}\)\)/);
   assert.match(worker, /pendingSince/);
+  // …the span its own bytes took, from its first to its last, and a slice short
+  // enough that the line moves while traffic does
+  assert.match(worker, /pendingLast/);
+  assert.match(worker, /batchSpan\(pendingSince, pendingLast\)/);
+  assert.match(worker, /TRAFFIC_FLUSH_MS = 1000/);
   assert.match(worker, /if \(!meterOn \|\| isProbeUrl\(details\?\.url\)\) return;/);
   // …and the setting is honoured, which only the worker knows about
   assert.match(worker, /meterOn = meterRuns\(state\)/);

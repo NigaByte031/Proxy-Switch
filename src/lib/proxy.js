@@ -306,13 +306,19 @@ export function applyFailureReason(error) {
 export function describeApplyProblem(outcome = null) {
   // Nothing was applied yet (a fresh profile, or the status was cleared).
   if (!outcome || typeof outcome !== 'object') return null;
-  const { failed = null, levelOfControl = null } = outcome;
+  const { source = null, failed = null, levelOfControl = null } = outcome;
 
   if (failed) {
+    // A route that stopped answering is not a change Chrome refused: saying so
+    // would send the user looking for a permissions problem that is not there.
+    const route = source === 'route';
     return {
       tone: 'warn',
-      title: { key: 'status.applyFailed.title' },
-      detail: { key: 'status.applyFailed.detail', params: { reason: String(failed) } },
+      title: { key: route ? 'status.routeFailed.title' : 'status.applyFailed.title' },
+      detail: {
+        key: route ? 'status.routeFailed.detail' : 'status.applyFailed.detail',
+        params: { reason: String(failed) },
+      },
     };
   }
 

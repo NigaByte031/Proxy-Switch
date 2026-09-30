@@ -116,12 +116,17 @@ function enqueue(task) {
 
 /* Applying status. */
 
-/** Coerces anything stored into an apply-status record, or null. */
+/**
+ * Coerces anything stored into an apply-status record, or null. `source` says what
+ * failed — `apply` for a change Chrome would not take, `route` for a proxy that
+ * stopped answering (see `describeApplyProblem`).
+ */
 export function sanitizeApplyStatus(raw) {
   if (!raw || typeof raw !== 'object') return null;
   const at = Number(raw.at);
   return {
     ok: raw.ok === true,
+    source: raw.source === 'route' ? 'route' : raw.source === 'apply' ? 'apply' : null,
     failed: typeof raw.failed === 'string' && raw.failed ? raw.failed : null,
     levelOfControl:
       typeof raw.levelOfControl === 'string' && raw.levelOfControl ? raw.levelOfControl : null,
@@ -134,7 +139,12 @@ export function sameApplyStatus(left, right) {
   const a = sanitizeApplyStatus(left);
   const b = sanitizeApplyStatus(right);
   if (!a || !b) return a === b;
-  return a.ok === b.ok && a.failed === b.failed && a.levelOfControl === b.levelOfControl;
+  return (
+    a.ok === b.ok &&
+    a.source === b.source &&
+    a.failed === b.failed &&
+    a.levelOfControl === b.levelOfControl
+  );
 }
 
 export async function loadStatus() {

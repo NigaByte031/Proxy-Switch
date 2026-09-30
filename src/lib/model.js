@@ -212,6 +212,10 @@ export function parseProxyUrl(raw) {
     rest = rest.slice(schemeMatch[0].length);
   }
 
+  // The address ends at the first path, query or fragment: a URL that carries one
+  // must not have it read as credentials.
+  rest = rest.split('/')[0].split('?')[0].split('#')[0];
+
   let username = '';
   let password = '';
   const at = rest.lastIndexOf('@');
@@ -227,7 +231,6 @@ export function parseProxyUrl(raw) {
     }
   }
 
-  rest = rest.split('/')[0].split('?')[0].split('#')[0];
   const { host, port } = splitHostPort(rest, '');
   if (!host) return null;
 
@@ -429,16 +432,20 @@ export function formatBypassList(list) {
 
 function sanitizeProfile(raw) {
   if (!raw || typeof raw !== 'object') return null;
-  const host = bracketIfIpv6(normalizeHost(raw.host));
-  if (!host || !isValidHost(host)) return null;
-  const port = Number(raw.port);
-  const portNumber = Number.isInteger(port) && port >= MIN_PORT && port <= MAX_PORT ? port : null;
+  // A host that carries its own port — another tool's export, a hand-edited file —
+  // is split instead of dropped, exactly as the form reads it. The port field wins
+  // when it says something.
+  const { host, port } = splitHostPort(raw.host, raw.port);
+  const clean = bracketIfIpv6(host).toLowerCase();
+  if (!clean || !isValidHost(clean)) return null;
+  const portNumber = Number(port);
+  const usable = Number.isInteger(portNumber) && portNumber >= MIN_PORT && portNumber <= MAX_PORT;
   return {
     id: typeof raw.id === 'string' && raw.id ? raw.id : newId(),
-    name: String(raw.name ?? '').trim() || host,
+    name: String(raw.name ?? '').trim() || clean,
     scheme: PROXY_SCHEMES.includes(raw.scheme) ? raw.scheme : 'http',
-    host: host.toLowerCase(),
-    port: portNumber ?? 8080,
+    host: clean,
+    port: usable ? portNumber : 8080,
     username: String(raw.username ?? ''),
     password: String(raw.password ?? ''),
   };

@@ -8,6 +8,7 @@ import {
   RATE_MAX_SPAN_MS,
   RATE_MIN_SPAN_MS,
   RATE_WINDOW_MS,
+  batchSpan,
   createRate,
   describeRate,
   formatBytes,
@@ -45,6 +46,38 @@ test('a batch reads its own speed: its bytes over the span they were counted acr
   assert.equal(rate.up, 0);
   assert.equal(rate.live, true);
   assert.equal(rate.last, 0);
+});
+
+test('a batch is stamped with its own bytes, not with the timer that wrote it', () => {
+  // A burst that lasted half a second, written by a flush that fired two seconds
+  // after its first byte: the span is the burst's, not the wait's.
+  assert.deepEqual(batchSpan(now - 2500, now - 2000), { at: now - 2000, ms: 500 });
+
+  const record = createRate();
+  const { at, ms } = batchSpan(now - 2500, now - 2000);
+  noteRate(record, { down: 2 * 1024 * 1024, at, ms });
+  // Two megabytes in half a second is four, not the fraction a longer span reads.
+  assert.equal(Math.round(trafficRate(record, now).down), 4 * 1024 * 1024);
+  // …and it is stamped when it really happened, so the reading ages from there.
+  assert.equal(describeRate(record, now).idle, false, 'two seconds on it is still live');
+  assert.equal(describeRate(record, now + RATE_IDLE_MS).idle, true, 'and quiet a few seconds later');
+});
+
+test('a batch without two moments to measure between claims no span', () => {
+  // One moment: the bytes arrived, but nothing says how fast.
+  assert.deepEqual(batchSpan(now, now), { at: now, ms: 0 });
+  // A clock that stepped backwards is not a span either, and neither is none at all.
+  assert.deepEqual(batchSpan(now, now - 1000), { at: now - 1000, ms: 0 });
+  assert.deepEqual(batchSpan(now - 1000, now), { at: now, ms: 1000 });
+  assert.deepEqual(batchSpan(0, 0), { at: 0, ms: 0 });
+  assert.deepEqual(batchSpan(Number.NaN, now), { at: now, ms: 0 });
+  assert.deepEqual(batchSpan(now, 'later'), { at: now, ms: 0 });
+  assert.deepEqual(batchSpan('then', 'later'), { at: 0, ms: 0 });
+
+  // A batch of one moment is still no sample, so it cannot divide by nothing.
+  const record = createRate();
+  noteRate(record, { down: 4096, ...batchSpan(now, now) });
+  assert.deepEqual(record.samples, []);
 });
 
 test('a sustained transfer reads its own rate at every moment', () => {

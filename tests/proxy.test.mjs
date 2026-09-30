@@ -443,9 +443,29 @@ test('applyFailureReason always produces a storable string', () => {
   assert.equal(applyFailureReason(new Error('   ')), 'unknown error');
 });
 
-test('the two apply problems read in both languages, placeholders filled', () => {
+test('a route that stopped answering is not a change Chrome refused', () => {
+  const route = describeApplyProblem({
+    failed: 'net::ERR_PROXY_CONNECTION_FAILED',
+    source: 'route',
+  });
+  assert.equal(route.tone, 'warn');
+  assert.equal(route.title.key, 'status.routeFailed.title');
+  assert.deepEqual(route.detail.params, { reason: 'net::ERR_PROXY_CONNECTION_FAILED' });
+
+  // A failed apply — and a record from before the two were told apart — says so.
+  assert.equal(describeApplyProblem({ failed: 'boom', source: 'apply' }).title.key, 'status.applyFailed.title');
+  assert.equal(describeApplyProblem({ failed: 'boom' }).title.key, 'status.applyFailed.title');
+  // The route failure is the same problem whatever the control level says.
+  assert.equal(
+    describeApplyProblem({ failed: 'x', source: 'route', levelOfControl: 'not_controllable' }).title.key,
+    'status.routeFailed.title',
+  );
+});
+
+test('the three apply problems read in both languages, placeholders filled', () => {
   const views = [
     describeApplyProblem({ failed: 'net::ERR_PROXY_CONNECTION_FAILED' }),
+    describeApplyProblem({ failed: 'net::ERR_PROXY_CONNECTION_FAILED', source: 'route' }),
     describeApplyProblem({ levelOfControl: 'controlled_by_other_extensions' }),
   ];
 

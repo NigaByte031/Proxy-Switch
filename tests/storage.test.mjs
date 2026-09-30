@@ -168,7 +168,12 @@ test('the apply status survives a round trip, and repeats are not rewritten', as
   const seen = [];
   const stop = subscribeStatus((status) => seen.push(status));
 
-  const status = { ok: false, failed: 'net::ERR_PROXY_CONNECTION_FAILED', levelOfControl: null };
+  const status = {
+    ok: false,
+    source: 'route',
+    failed: 'net::ERR_PROXY_CONNECTION_FAILED',
+    levelOfControl: null,
+  };
   await saveStatus(status);
   assert.deepEqual(await loadStatus(), { ...status, at: 0 });
 
@@ -195,16 +200,22 @@ test('the apply status rejects garbage instead of trusting it', async () => {
   assert.equal(sanitizeApplyStatus('nonsense'), null);
   assert.deepEqual(sanitizeApplyStatus({ ok: 'yes', at: 'later' }), {
     ok: false,
+    source: null,
     failed: null,
     levelOfControl: null,
     at: 0,
   });
   assert.deepEqual(sanitizeApplyStatus({ ok: true, failed: 42, levelOfControl: 7, at: 5 }), {
     ok: true,
+    source: null,
     failed: null,
     levelOfControl: null,
     at: 5,
   });
+  // Only the two things a failure can be survive: anything else is no source.
+  assert.equal(sanitizeApplyStatus({ ok: false, source: 'route' }).source, 'route');
+  assert.equal(sanitizeApplyStatus({ ok: false, source: 'apply' }).source, 'apply');
+  assert.equal(sanitizeApplyStatus({ ok: false, source: 'nonsense' }).source, null);
 
   assert.equal(await loadStatus(), null, 'nothing stored yet');
   data.set(STATUS_KEY, 'nonsense');
@@ -214,6 +225,14 @@ test('the apply status rejects garbage instead of trusting it', async () => {
   assert.equal(sameApplyStatus(null, { ok: true }), false);
   assert.equal(sameApplyStatus({ ok: false, failed: 'x' }, { ok: false, failed: 'x', at: 99 }), true);
   assert.equal(sameApplyStatus({ ok: false, failed: 'x' }, { ok: false, failed: 'y' }), false);
+  assert.equal(
+    sameApplyStatus(
+      { ok: false, source: 'route', failed: 'x' },
+      { ok: false, source: 'apply', failed: 'x' },
+    ),
+    false,
+    'a route that stopped answering is not a change Chrome refused',
+  );
   assert.equal(
     sameApplyStatus({ ok: true }, { ok: true, levelOfControl: 'controlled_by_other_extensions' }),
     false,
@@ -230,6 +249,7 @@ test('outside the extension everything degrades to defaults', async () => {
     // nothing is stored, but the caller still gets back what would have been stored
     assert.deepEqual(await saveStatus({ ok: true }), {
       ok: true,
+      source: null,
       failed: null,
       levelOfControl: null,
       at: 0,
