@@ -101,25 +101,10 @@
 | مرورگر | حداقل نسخه | فایل |
 | --- | --- | --- |
 | Chrome، Edge، Brave، Opera، Vivaldi | ۱۱۶ به بالا | `proxy-switch-vX.Y.Z.zip` |
-| فایرفاکس (نسخهٔ دسکتاپ) | ۱۴۰ به بالا (ESR) | `proxy-switch-vX.Y.Z-firefox.zip` |
 
-از نسخهٔ ۱.۶.۱ به بعد، هر [انتشار](../../releases) هر دو فایل را دارد[^firefox-first] و هر دو یک
-افزونه‌اند: نسخهٔ فایرفاکس فقط
-`manifest.json` را با `manifest.firefox.json` عوض می‌کند که همان کد را به‌صورت event page اجرا
-می‌کند (فایرفاکس برای افزونه service worker ندارد) و شناسهٔ gecko و اعلام «بدون جمع‌آوری داده»
-را که AMO برای افزونه‌های تازه لازم دارد اضافه می‌کند. با `npm run package:firefox` ساخته می‌شود
-و ابزار رسمی موزیل (`addons-linter`) آن را بدون هیچ خطایی می‌پذیرد.
-
-دو تفاوت صادقانه در سمت فایرفاکس:
-
-- دکمهٔ **«بازگشت به …»** روی اعلان تعویض خودکار به **فایرفاکس ۱۵۲** به بالا نیاز دارد؛ نسخه‌های
-  قدیمی‌تر همان اعلان را بدون دکمه می‌گیرند و پاپ‌آپ هنوز همان کار را می‌کند.
-- نسخهٔ امضانشده فقط به‌صورت **افزونهٔ موقت** نصب می‌شود: `about:debugging` → *This Firefox* →
-  *Load Temporary Add-on* برای آزمایش، یا ارسال به
-  [addons.mozilla.org](https://addons.mozilla.org) برای نصب دائمی. فایرفاکس اندروید هدف نیست —
-  پروکسیای که سیستم‌عامل خودش مسیردهی می‌کند، چیزی نیست که افزونه بتواند جابه‌جا کند.
-
-[^firefox-first]: نسخهٔ ۱.۶.۱ نخستین انتشاری است که فایل فایرفاکس را دارد؛ تگ‌های قدیمی‌تر فقط کروم‌اند.
+هر [انتشار](../../releases) فقط همین یک فایل را دارد و همان چیزی است که Chrome Web Store
+می‌خواهد: MV3 با پس‌زمینهٔ service worker. نسخهٔ فایرفاکس دیگر ساخته نمی‌شود — نسخهٔ ۱.۶.۱ یکی
+در کنارش منتشر کرد و بعد برداشته شد (به [CHANGELOG.md](CHANGELOG.md) نگاه کنید).
 
 ## نصب
 
@@ -205,7 +190,6 @@ npm test              # آزمونهای واحد
 npm run preview       # بازسازی صفحههای پیشنمایش
 npm run shots         # گرفتن دوبارهٔ تصویرهای docs/screenshots (سرور پیش‌نمایش باید بالا باشد)
 npm run package       # ساخت فایل dist/proxy-switch-v<version>.zip
-npm run package:firefox  # ساخت فایل dist/proxy-switch-v<version>-firefox.zip برای فایرفاکس
 ```
 
 منطق خالص (`lib/model.js`، `lib/theme.js`، `lib/proxy.js`، `lib/auth.js`، `lib/health.js`، `lib/pac.js`، `lib/server-health.js`، `lib/server-probe.js`، `lib/test-all-ui.js`، `lib/i18n.js`) از APIهای کروم جدا
@@ -218,9 +202,6 @@ npm run package:firefox  # ساخت فایل dist/proxy-switch-v<version>-firefo
 
 - [ ] با `npm run package` فایل `dist/proxy-switch-v<version>.zip` را بسازید و آن را در پنل
       توسعه‌دهندگان Chrome Web Store بارگذاری کنید (آیکون ۱۲۸×۱۲۸ از قبل موجود است).
-- [ ] با `npm run package:firefox` فایل `dist/proxy-switch-v<version>-firefox.zip` را بسازید و آن
-      را به [addons.mozilla.org](https://addons.mozilla.org) بفرستید — مانیفست از قبل بدون خطا
-      lint شده و اعلام جمع‌آوری داده هم «هیچ» ثبت شده است.
 - [ ] برچسب انتشار بزنید: `git tag v<version> && git push origin v<version>`. کارِ
       [گردش‌کار انتشار](.github/workflows/release.yml) برچسبی را که با نسخهٔ `manifest.json`
       هم‌خوان نباشد رد می‌کند، آزمون‌ها را اجرا می‌کند و فایل ZIP را به انتشار گیت‌هاب می‌چسباند.

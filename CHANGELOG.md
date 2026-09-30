@@ -6,6 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Removed
+
+- **The Firefox build.** `manifest.firefox.json`, the `package:firefox` script and the workflow steps
+  that attached a `-firefox.zip` to every release are gone: `tools/package.mjs` builds one archive
+  from `manifest.json`, and releases carry it alone from here on. The archives published with v1.6.1
+  are untouched. The dialect tolerance the second browser brought stays where it is — the
+  `onError`/`onProxyError` event alias and a build that refuses notification buttons are handled
+  without a manifest of their own.
+
 ### Fixed
 
 - **A check's own probe error was read as a broken route.** Chrome's `proxy.onError` details are

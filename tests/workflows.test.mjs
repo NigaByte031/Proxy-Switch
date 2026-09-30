@@ -47,17 +47,18 @@ test('every workflow parses as far as shape goes: no tabs, block scalars indente
   }
 });
 
-test('the release workflow builds both archives and refuses a mismatched tag', () => {
+test('the release workflow builds the archive and refuses a mismatched tag', () => {
   const release = read(join(WORKFLOW_DIR, 'release.yml'));
   assert.match(release, /npm run package\b/, 'the Chrome/Chromium archive');
-  assert.match(release, /npm run package:firefox/, 'the Firefox archive');
-  assert.match(release, /files: dist\/\*\.zip/, 'both archives are attached to the release');
+  assert.match(release, /files: dist\/\*\.zip/, 'the archive is attached to the release');
   assert.match(release, /does not match manifest version/, 'the tag has to match what is packaged');
+  assert.ok(!release.includes('firefox'), 'there is one build, and one archive to carry it');
 });
 
 test('CI runs the suite on the Node versions the project supports', () => {
   const ci = read(join(WORKFLOW_DIR, 'ci.yml'));
   assert.match(ci, /npm test/);
   assert.match(ci, /node: \[22, 24\]/, 'the floor and the newest line, not just one of them');
-  assert.match(ci, /npm run package:firefox/, 'a Firefox manifest that cannot be packaged fails here');
+  assert.match(ci, /npm run package\b/, 'a manifest that cannot be packaged fails here');
+  assert.ok(!ci.includes('firefox'), 'nothing to build for a browser the project does not target');
 });

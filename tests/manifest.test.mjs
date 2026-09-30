@@ -134,6 +134,12 @@ test('a health verdict reaches the chain, through the worker only', () => {
   }
 });
 
+test('the worker subscribes to whichever name the proxy-error event has', () => {
+  const worker = read('src/background.js');
+  // `onProxyError` is the long-standing name; `onError` is the alias newer browsers add.
+  assert.match(worker, /chrome\.proxy\?\.onError \?\? chrome\.proxy\?\.onProxyError/);
+});
+
 test('a check\u2019s own probe error is not read as a broken route', () => {
   const worker = read('src/background.js');
   // Chrome's proxy error details are `{fatal, error, details}` — no URL — so the

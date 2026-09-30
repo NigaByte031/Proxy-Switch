@@ -30,10 +30,8 @@ jobs:
       - name: Run the unit tests
         run: npm test
 
-      - name: Build the store packages
-        run: |
-          npm run package
-          npm run package:firefox
+      - name: Build the store package
+        run: npm run package
 
       - name: Upload the extension package
         if: matrix.node == 22

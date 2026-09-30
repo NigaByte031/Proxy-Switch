@@ -102,33 +102,16 @@ them by `npm run shots`, so they are the interface itself rather than a drawing 
 | Browser | Minimum version | Archive |
 | --- | --- | --- |
 | Chrome, Edge, Brave, Opera, Vivaldi | 116+ | `proxy-switch-vX.Y.Z.zip` |
-| Firefox (desktop) | 140+ (ESR) | `proxy-switch-vX.Y.Z-firefox.zip` |
 
-Every [release](../../releases) from v1.6.1 on carries both archives[^firefox-first], and they hold the same extension: the Firefox
-one swaps `manifest.json` for `manifest.firefox.json`, which runs the same code as an event page
-(Firefox has no extension service worker — see
-[MDN](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/manifest.json/background))
-and adds the Gecko id plus the *no data collection* declaration AMO requires from new add-ons.
-`npm run package:firefox` builds it, and Mozilla's own `addons-linter` accepts it with zero errors.
-
-Two honest differences on the Firefox side:
-
-- The **Back to …** button on the automatic-switch notification needs **Firefox 152** — older
-  versions get the same notification without the button, and the popup still switches back.
-- An unsigned build installs as a **temporary add-on** only: `about:debugging` → *This Firefox* →
-  *Load Temporary Add-on* to try it, or submit it to
-  [addons.mozilla.org](https://addons.mozilla.org) for a permanent install. Firefox for Android is
-  not a target — a proxy the operating system routes anyway is not something an extension can move
-  there.
-
-[^firefox-first]: v1.6.1 is the first release with a Firefox archive; older tags are Chrome-only.
+Every [release](../../releases) carries that one archive, which is what the Chrome Web Store takes:
+MV3 with a service worker background. There is no Firefox build: v1.6.1 shipped one beside it under
+`manifest.firefox.json`, and it has since been removed (see [CHANGELOG.md](CHANGELOG.md)).
 
 ## Install
 
 ### From a release (recommended)
 
-1. Download `proxy-switch-vX.Y.Z.zip` from the [releases page](../../releases) (Firefox:
-   `proxy-switch-vX.Y.Z-firefox.zip`).
+1. Download `proxy-switch-vX.Y.Z.zip` from the [releases page](../../releases).
 2. Unzip it somewhere permanent.
 3. Open `chrome://extensions`, enable **Developer mode**, click **Load unpacked** and pick the
    unzipped folder.
@@ -218,7 +201,6 @@ npm test                 # unit tests (state, proxy config, i18n coverage, manif
 npm run preview          # regenerate the offline preview pages
 npm run shots           # retake docs/screenshots/*.png (needs the preview server running)
 npm run package          # build dist/proxy-switch-v<version>.zip for the Web Store
-npm run package:firefox  # build dist/proxy-switch-v<version>-firefox.zip for Firefox
 ```
 
 Project layout:
@@ -276,12 +258,9 @@ Design decisions worth knowing:
 - [ ] `npm run package`, then upload `dist/proxy-switch-v<version>.zip` from the Chrome Web Store
       developer dashboard (a 128×128 icon is already included; screenshots can be taken from the
       preview pages).
-- [ ] `npm run package:firefox`, then submit `dist/proxy-switch-v<version>-firefox.zip` to
-      [addons.mozilla.org](https://addons.mozilla.org) — the manifest is already linted clean, and
-      the listing's data-collection answer is declared as *none*.
 - [ ] Tag the release — `git tag v<version> && git push origin v<version>`. The
       [release workflow](.github/workflows/release.yml) refuses a tag that does not match
-      `manifest.json`, runs the tests and attaches **both** ZIPs to the GitHub release.
+      `manifest.json`, runs the tests and attaches the ZIP to the GitHub release.
 - [ ] Retake the screenshots (`npm run shots`) if the interface changed — the version they show is
       the version the README claims.
 

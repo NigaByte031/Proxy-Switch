@@ -279,8 +279,8 @@ async function notifySwitch(state, to, from) {
       notice.button ? { ...base, buttons: [{ title: notice.button }] } : base,
     );
   } catch {
-    // Firefox before 152 refuses `NotificationOptions.buttons` and would reject
-    // the whole notification, so the same notice is shown without the button:
+    // A build that refuses `NotificationOptions.buttons` rejects the whole
+    // notification with it, so the same notice is shown without the button:
     // announcing the switch matters more than the undo affordance.
     try {
       await chrome.notifications.create(notice.id, {
@@ -863,10 +863,10 @@ chrome.webRequest?.onAuthRequired.addListener(
 );
 
 /**
- * A route broke. Chrome calls this event `onProxyError`; Firefox renamed it to
- * `onError` and keeps the old name as an alias, so whichever the browser has is the
- * one to subscribe to. Their argument shapes differ, and both are treated the same:
- * what matters is that a route broke.
+ * A route broke. Chrome calls this event `onProxyError`; `onError` is the alias
+ * newer builds add to the same event, so whichever name this browser has is the one
+ * to subscribe to. The argument shape differs too (an `Error`, or a details
+ * object), and both are treated the same: what matters is that a route broke.
  */
 const proxyErrors = chrome.proxy?.onError ?? chrome.proxy?.onProxyError;
 proxyErrors?.addListener((details) => {
@@ -878,8 +878,8 @@ proxyErrors?.addListener((details) => {
   // the route the user configured.
   if (checking || checkingProfileId || runningTestAllPass) return;
 
-  // Firefox hands this listener an `Error`, Chrome the details object, so both
-  // shapes (and a bare string, should a browser ever send one) have to be read.
+  // One build hands this listener an `Error`, another the details object, so
+  // both shapes (and a bare string, should a build ever send one) have to be read.
   reportProxyError(details?.error ?? details?.message ?? details);
   // Not awaited: the listener must return immediately.
   considerFailover().catch((error) => {
