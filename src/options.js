@@ -24,6 +24,7 @@ import {
 } from './lib/storage.js';
 import {
   ACCENTS,
+  TRAFFIC_VIEWS,
   createDefaultState,
   parseBypassList,
   formatBypassList,
@@ -39,6 +40,7 @@ import {
   resetRate,
   resetTraffic,
 } from './lib/traffic.js';
+import { resolveTrafficView, trafficViewHintKey } from './lib/traffic-view.js';
 import { createModeUi } from './lib/mode-ui.js';
 import { createServersUi } from './lib/servers-ui.js';
 import { createHealthUi } from './lib/health-ui.js';
@@ -58,9 +60,12 @@ const els = {
   failoverToggle: el('failoverToggle'),
   notifyToggle: el('notifyToggle'),
   probeToggle: el('probeToggle'),
+  trafficReadout: el('trafficReadout'),
   trafficToday: el('trafficToday'),
   trafficTotal: el('trafficTotal'),
   trafficRate: el('trafficRate'),
+  trafficViewPicker: el('trafficViewPicker'),
+  trafficViewHint: el('trafficViewHint'),
   trafficToggle: el('trafficToggle'),
   trafficReset: el('trafficReset'),
   trafficMessage: el('trafficMessage'),
@@ -146,6 +151,58 @@ function renderAccents() {
     if (label && label.textContent !== name) label.textContent = name;
   }
 }
+
+/** The buttons of the traffic-template picker, in the order of TRAFFIC_VIEWS. */
+const viewOptions = [];
+
+/**
+ * Collects the template buttons and wires them, following TRAFFIC_VIEWS so the
+ * arrow keys walk the picker in the order it is drawn. The buttons and their little
+ * diagrams live in the page; the behaviour is here.
+ */
+function buildTrafficViewPicker() {
+  if (!els.trafficViewPicker || viewOptions.length) return;
+
+  for (const button of els.trafficViewPicker.querySelectorAll('[data-view]')) {
+    const view = button.dataset.view;
+    if (!TRAFFIC_VIEWS.includes(view)) continue;
+
+    button.addEventListener('click', () => pickTrafficView(view));
+    button.addEventListener('keydown', (event) => {
+      const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+      if (!step) return;
+      event.preventDefault();
+      const index =
+        (TRAFFIC_VIEWS.indexOf(view) + step + TRAFFIC_VIEWS.length) % TRAFFIC_VIEWS.length;
+      const next = TRAFFIC_VIEWS[index];
+      viewOptions.find((option) => option.view === next)?.button.focus();
+      pickTrafficView(next);
+    });
+
+    viewOptions.push({ view, button });
+  }
+}
+
+function pickTrafficView(view) {
+  if (!state || resolveTrafficView(state.settings.trafficView) === view) return;
+  commit((draft) => {
+    draft.settings.trafficView = view;
+  });
+}
+
+/** Marks the template in force, and says in words what it arranges. */
+function renderTrafficViews() {
+  const active = resolveTrafficView(state.settings.trafficView);
+
+  for (const { view, button } of viewOptions) {
+    const isActive = view === active;
+    button.classList.toggle('is-active', isActive);
+    button.setAttribute('aria-checked', String(isActive));
+  }
+
+  setText(els.trafficViewHint, t(trafficViewHintKey(active), lang));
+}
+
 /** Result of the last attempt by the service worker to apply the proxy. */
 let applyStatus = null;
 /** What the extension has seen about each server (lib/server-health.js). */
@@ -286,6 +343,10 @@ function render() {
   const reading = describeTraffic(traffic ?? createTraffic());
   setText(els.trafficToday, describeReading(reading.down, reading.up));
   setText(els.trafficTotal, describeReading(reading.totalDown, reading.totalUp));
+  // Which template draws those figures (lib/traffic-view.js); the layout itself
+  // lives in styles/base.css, keyed off the attribute set here.
+  els.trafficReadout.dataset.view = resolveTrafficView(state.settings.trafficView);
+  renderTrafficViews();
   renderRate();
 
   els.trafficMessage.textContent = trafficMessage ?? '';
@@ -356,6 +417,7 @@ async function retryApply() {
 
 function wire() {
   buildAccentSwatches();
+  buildTrafficViewPicker();
 
   els.langSelect.addEventListener('change', () => {
     const value = els.langSelect.value;

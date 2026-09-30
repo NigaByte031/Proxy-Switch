@@ -85,6 +85,10 @@ them by `npm run shots`, so they are the interface itself rather than a drawing 
   own bytes covered, so the line moves while a transfer moves, a transfer that is still going reads
   its own rate rather than a fraction of it, and one that has stopped reads *nothing moving* instead
   of leaving the tail of a burst on screen as if it were a speed.
+- **Four traffic display templates** — *Display* on the settings page lays the same three readings
+  out four ways: the shipped *Classic* (today with the live speed under it), a one-line *Compact*
+  for a small popup, three *Cards* for right now, today and the total, and *Speed first*, where the
+  live reading is the headline. The popup wears whichever you pick, and a backup carries it.
 - **Keyboard shortcuts** — `Alt+Shift+P` turns the proxy on or off, `Alt+Shift+D` goes direct.
 - **Bilingual UI** — switch language from the popup; Persian is rendered RTL.
 - **Theme** — automatic (follows your operating system), light or dark. Set it on the settings

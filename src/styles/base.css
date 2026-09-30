@@ -1024,16 +1024,31 @@ label {
  * borrowing the accent, which belongs to the mode. The digits are tabular, so a
  * number that grows does not drag the row with it. */
 
-.traffic-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
+/* The panel owns the separator and the type size; a template only rearranges what
+   is inside it (lib/traffic-view.js). */
+.traffic-panel {
   margin-block-start: 10px;
   padding-block-start: 9px;
   border-block-start: 1px dashed var(--border);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
+}
+
+.traffic-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* The totals: a row of their own on the popup, and part of the stack on the
+   settings page. */
+.traffic-total-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 5px 0 0;
 }
 
 .traffic-metric {
@@ -1062,12 +1077,20 @@ label {
   text-transform: uppercase;
 }
 
-.traffic-row .traffic-when {
+/* Classic: today's counters, with the window's name pushed to the far end and the
+   totals left to the hover text. */
+.traffic-panel[data-view='classic'] .traffic-when {
+  order: 1;
   margin-inline-start: auto;
 }
 
-/* The settings page says the same as two labelled lines: it has room to name each
-   direction in words. */
+.traffic-panel[data-view='classic'] .traffic-total-row,
+.traffic-panel[data-view='classic'] .traffic-when-rate {
+  display: none;
+}
+
+/* The settings page says the same as three labelled lines: it has room to name
+   each window in words. */
 .traffic-readout {
   display: grid;
   gap: 5px;
@@ -1095,6 +1118,161 @@ label {
   color: var(--text);
   font-variant-numeric: tabular-nums;
   unicode-bidi: plaintext;
+}
+
+/* The templates. Each one arranges exactly the same figures.
+ *
+ * Compact: one dense line, with the labels kept — they name the figure next to
+ * them, which is what keeps a one-line readout readable. */
+
+.traffic-panel[data-view='compact'] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 9px;
+}
+
+.traffic-panel[data-view='compact'] .traffic-row,
+.traffic-panel[data-view='compact'] .traffic-total-row,
+.traffic-panel[data-view='compact'] .rate-row {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 11.5px;
+}
+
+.traffic-panel[data-view='compact'] .traffic-when {
+  font-size: 10px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* A quiet dot between the readings, drawn rather than typed into the page. */
+.traffic-panel[data-view='compact'] > * + *::before {
+  content: '·';
+  margin-inline-end: 9px;
+  color: var(--muted);
+}
+
+.traffic-panel[data-view='compact'] .rate-dot {
+  display: none;
+}
+
+/* Cards: one tile per window of time, with the live speed first. */
+
+.traffic-panel[data-view='cards'] {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.traffic-panel[data-view='cards'] .traffic-row,
+.traffic-panel[data-view='cards'] .traffic-total-row,
+.traffic-panel[data-view='cards'] .rate-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  margin: 0;
+  padding: 7px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: 11.5px;
+}
+
+.traffic-panel[data-view='cards'] .rate-row {
+  order: -1;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.traffic-panel[data-view='cards'] .traffic-when {
+  font-size: 9.5px;
+}
+
+/* Speed first: the live reading as the headline, the two windows as footnotes. */
+
+.traffic-panel[data-view='speed'] {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.traffic-panel[data-view='speed'] .rate-row {
+  order: -1;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  font-size: 15px;
+}
+
+.traffic-panel[data-view='speed'] .rate-text {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.traffic-panel[data-view='speed'] .rate-dot {
+  width: 8px;
+  height: 8px;
+}
+
+.traffic-panel[data-view='speed'] .traffic-row,
+.traffic-panel[data-view='speed'] .traffic-total-row {
+  margin: 0;
+  font-size: 11px;
+}
+
+/* The same templates on the settings page, where the readout is a stack of three
+   labelled lines by default. */
+
+.traffic-readout[data-view='compact'] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+}
+
+.traffic-readout[data-view='compact'] .traffic-line {
+  justify-content: flex-start;
+  gap: 6px;
+}
+
+.traffic-readout[data-view='compact'] .traffic-line .traffic-when {
+  font-size: 11px;
+}
+
+.traffic-readout[data-view='cards'] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.traffic-readout[data-view='cards'] .traffic-line {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 3px;
+  padding: 7px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.traffic-readout[data-view='speed'] .traffic-line:first-child {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.traffic-readout[data-view='speed'] .traffic-line:not(:first-child) {
+  font-size: 11.5px;
+}
+
+.traffic-readout[data-view='speed'] .traffic-line:not(:first-child) .traffic-values {
+  color: var(--muted);
 }
 
 /* The Right-now line: brighter while something is moving, muted when idle. */

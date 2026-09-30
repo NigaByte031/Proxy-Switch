@@ -44,22 +44,39 @@
         <p id="testResult" class="health-result hidden" role="status" aria-live="polite"></p>
       </div>
       <!-- The meter (lib/traffic.js): what is moving now, and what has gone down
-           and up today. -->
-      <div id="trafficRow" class="traffic-row">
-        <span id="trafficDownMetric" class="traffic-metric">
-          <span class="traffic-arrow" aria-hidden="true">↓</span>
-          <span id="trafficDown" class="traffic-value">0 B</span>
-        </span>
-        <span id="trafficUpMetric" class="traffic-metric">
-          <span class="traffic-arrow" aria-hidden="true">↑</span>
-          <span id="trafficUp" class="traffic-value">0 B</span>
-        </span>
-        <span class="traffic-when" data-i18n="traffic.today"></span>
+           and up today and in total. Every figure is in the DOM for all four
+           templates (lib/traffic-view.js); `data-view` decides which of them are
+           shown and where, so a template never needs a second set of numbers. -->
+      <div id="trafficPanel" class="traffic-panel" data-view="classic">
+        <div id="trafficRow" class="traffic-row">
+          <span class="traffic-when" data-i18n="traffic.today"></span>
+          <span id="trafficDownMetric" class="traffic-metric">
+            <span class="traffic-arrow" aria-hidden="true">↓</span>
+            <span id="trafficDown" class="traffic-value">0 B</span>
+          </span>
+          <span id="trafficUpMetric" class="traffic-metric">
+            <span class="traffic-arrow" aria-hidden="true">↑</span>
+            <span id="trafficUp" class="traffic-value">0 B</span>
+          </span>
+        </div>
+        <!-- Hidden by the classic template, which keeps the total on hover. -->
+        <div id="trafficTotalRow" class="traffic-total-row">
+          <span class="traffic-when" data-i18n="traffic.total"></span>
+          <span class="traffic-metric">
+            <span class="traffic-arrow" aria-hidden="true">↓</span>
+            <span id="trafficTotalDown" class="traffic-value">0 B</span>
+          </span>
+          <span class="traffic-metric">
+            <span class="traffic-arrow" aria-hidden="true">↑</span>
+            <span id="trafficTotalUp" class="traffic-value">0 B</span>
+          </span>
+        </div>
+        <p id="rateRow" class="rate-row">
+          <span class="traffic-when traffic-when-rate" data-i18n="traffic.rightNow"></span>
+          <span id="rateDot" class="rate-dot" aria-hidden="true"></span>
+          <span id="rateText" class="rate-text"></span>
+        </p>
       </div>
-      <p id="rateRow" class="rate-row">
-        <span id="rateDot" class="rate-dot" aria-hidden="true"></span>
-        <span id="rateText" class="rate-text"></span>
-      </p>
       <!-- role=alert: a warning about the proxy not being applied is worth interrupting for. -->
       <p id="warning" class="warning hidden" role="alert"></p>
     </section>

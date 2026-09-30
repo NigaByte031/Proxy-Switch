@@ -138,8 +138,9 @@
       <section class="card">
         <h2 data-i18n="traffic.title"></h2>
         <!-- The meter's counters (lib/traffic.js), in their own storage key, never
-             in the settings: an import cannot overwrite them. -->
-        <div class="traffic-readout">
+             in the settings: an import cannot overwrite them. `data-view` is the
+             template the picker below picks (lib/traffic-view.js). -->
+        <div id="trafficReadout" class="traffic-readout" data-view="classic">
           <div class="traffic-line">
             <span class="traffic-when" data-i18n="traffic.rightNow"></span>
             <span id="trafficRate" class="traffic-values rate-live">—</span>
@@ -152,6 +153,51 @@
             <span class="traffic-when" data-i18n="traffic.total"></span>
             <span id="trafficTotal" class="traffic-values"></span>
           </div>
+        </div>
+        <!-- Picking a template restyles the readout above it: the choice is its
+             own preview. -->
+        <div>
+          <label data-i18n="traffic.view.title"></label>
+          <div
+            id="trafficViewPicker"
+            class="view-picker"
+            role="radiogroup"
+            data-i18n-aria-label="traffic.view.title"
+          >
+            <button class="view-option" type="button" role="radio" aria-checked="false" data-view="classic">
+              <svg class="view-glyph" viewBox="0 0 16 16" aria-hidden="true">
+                <rect x="1" y="3" width="14" height="2" rx="1" />
+                <rect x="1" y="7" width="14" height="2" rx="1" />
+                <rect x="1" y="11" width="9" height="2" rx="1" />
+              </svg>
+              <span class="view-name" data-i18n="traffic.view.classic"></span>
+            </button>
+            <button class="view-option" type="button" role="radio" aria-checked="false" data-view="compact">
+              <svg class="view-glyph" viewBox="0 0 16 16" aria-hidden="true">
+                <rect x="1" y="7" width="6" height="2" rx="1" />
+                <rect x="8" y="7" width="4" height="2" rx="1" />
+                <rect x="13" y="7" width="2" height="2" rx="1" />
+              </svg>
+              <span class="view-name" data-i18n="traffic.view.compact"></span>
+            </button>
+            <button class="view-option" type="button" role="radio" aria-checked="false" data-view="cards">
+              <svg class="view-glyph" viewBox="0 0 16 16" aria-hidden="true">
+                <rect x="1" y="4" width="4" height="8" rx="1.2" />
+                <rect x="6" y="4" width="4" height="8" rx="1.2" />
+                <rect x="11" y="4" width="4" height="8" rx="1.2" />
+              </svg>
+              <span class="view-name" data-i18n="traffic.view.cards"></span>
+            </button>
+            <button class="view-option" type="button" role="radio" aria-checked="false" data-view="speed">
+              <svg class="view-glyph" viewBox="0 0 16 16" aria-hidden="true">
+                <rect x="1" y="3" width="14" height="4" rx="1.5" />
+                <rect x="1" y="9" width="14" height="1.8" rx="0.9" />
+                <rect x="1" y="12.2" width="9" height="1.8" rx="0.9" />
+              </svg>
+              <span class="view-name" data-i18n="traffic.view.speed"></span>
+            </button>
+          </div>
+          <p id="trafficViewHint" class="form-note"></p>
         </div>
         <p class="form-note" data-i18n="traffic.note"></p>
         <!-- Counted in the worker on requests every page makes; the switch says

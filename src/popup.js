@@ -29,6 +29,7 @@ import {
 import { describeApplyProblem, describeBadge, describeStatus } from './lib/proxy.js';
 import { createModeUi } from './lib/mode-ui.js';
 import { createRate, createTraffic, describeRate, describeTraffic } from './lib/traffic.js';
+import { resolveTrafficView, trafficViewParts } from './lib/traffic-view.js';
 import { createServersUi } from './lib/servers-ui.js';
 import { createHealthUi } from './lib/health-ui.js';
 import { createTestAllUi } from './lib/test-all-ui.js';
@@ -54,12 +55,14 @@ const els = {
   warning: el('warning'),
   testBtn: el('testBtn'),
   testResult: el('testResult'),
+  trafficPanel: el('trafficPanel'),
   trafficRow: el('trafficRow'),
   trafficDown: el('trafficDown'),
   trafficUp: el('trafficUp'),
+  trafficTotalDown: el('trafficTotalDown'),
+  trafficTotalUp: el('trafficTotalUp'),
   trafficDownMetric: el('trafficDownMetric'),
   trafficUpMetric: el('trafficUpMetric'),
-  rateRow: el('rateRow'),
   rateDot: el('rateDot'),
   rateText: el('rateText'),
   bypassInfo: el('bypassInfo'),
@@ -228,25 +231,33 @@ function render() {
     ? t('field.bypassSummary', lang, { count })
     : t('field.bypassNone', lang);
 
-  // The row is hidden when counting is off, so the popup never shows a number that
-  // is not being kept up to date; the arrows are decoration, hence the labels.
+  // The panel is hidden when counting is off, so the popup never shows a number
+  // that is not being kept up to date; the arrows are decoration, hence the labels.
   const meterOn = state.settings.trafficMeter === true;
-  els.trafficRow.classList.toggle('hidden', !meterOn);
+  els.trafficPanel.classList.toggle('hidden', !meterOn);
   if (meterOn) {
+    // The template the settings page picked, worn by the popup too (lib/traffic-view.js).
+    const view = resolveTrafficView(state.settings.trafficView);
+    els.trafficPanel.dataset.view = view;
+
     const reading = describeTraffic(traffic ?? createTraffic());
     setText(els.trafficDown, reading.down);
     setText(els.trafficUp, reading.up);
+    setText(els.trafficTotalDown, reading.totalDown);
+    setText(els.trafficTotalUp, reading.totalUp);
     els.trafficDownMetric.setAttribute('aria-label', t('traffic.down', lang, { value: reading.down }));
     els.trafficUpMetric.setAttribute('aria-label', t('traffic.up', lang, { value: reading.up }));
-    // The totals, which do not fit on one popup row, are a hover away.
-    els.trafficRow.title = t('traffic.totalTitle', lang, {
-      down: reading.totalDown,
-      up: reading.totalUp,
-    });
+    // A template that shows the total itself needs no hover text for it; the
+    // classic row, which has no room, keeps it there instead.
+    els.trafficRow.title = trafficViewParts(view).total
+      ? ''
+      : t('traffic.totalTitle', lang, {
+          down: reading.totalDown,
+          up: reading.totalUp,
+        });
 
     renderRate();
   }
-  els.rateRow.classList.toggle('hidden', !meterOn);
 
   modeUi.render(state, lang);
   serversUi.render(state, lang);

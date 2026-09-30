@@ -32,6 +32,12 @@ export const THEMES = ['auto', 'light', 'dark'];
  */
 export const ACCENTS = ['emerald', 'ocean', 'violet', 'amber', 'rose'];
 
+/**
+ * Accepted values of the traffic-view setting: how the meter's readings are laid
+ * out (see `lib/traffic-view.js`). "classic" is the shipped arrangement.
+ */
+export const TRAFFIC_VIEWS = ['classic', 'compact', 'cards', 'speed'];
+
 /** Hosts that skip the proxy out of the box. */
 export const DEFAULT_BYPASS_LIST = ['<local>', 'localhost', '[::1]'];
 
@@ -61,6 +67,9 @@ export function createDefaultState() {
       // Traffic meter (see `lib/traffic.js`): counts declared sizes while the
       // proxy is on. Nothing leaves the device.
       trafficMeter: true,
+      // How the meter reads (lib/traffic-view.js): the same figures, arranged
+      // differently. A display choice only — it never changes what is counted.
+      trafficView: 'classic',
       proxyDomains: [],
       language: 'auto',
       theme: 'auto',
@@ -506,6 +515,9 @@ export function sanitizeState(raw) {
         typeof settings.trafficMeter === 'boolean'
           ? settings.trafficMeter
           : base.settings.trafficMeter,
+      trafficView: TRAFFIC_VIEWS.includes(settings.trafficView)
+        ? settings.trafficView
+        : base.settings.trafficView,
       proxyDomains: sanitizeDomainRules(settings.proxyDomains),
       language: LANGUAGES.includes(settings.language) ? settings.language : base.settings.language,
       theme: THEMES.includes(settings.theme) ? settings.theme : base.settings.theme,

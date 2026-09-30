@@ -6,7 +6,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **Four display templates for the traffic meter.** A new *Display* picker in the settings' Traffic
+  card arranges the same three readings — right now, today and the total — four ways: the shipped
+  *Classic*, a one-line *Compact*, three *Cards*, and *Speed first*, where the live reading is the
+  headline. The popup wears the template the settings page picked, the choice travels in a backup
+  file, and nothing about what is counted changes.
 
 ## [1.7.0] — 2026-09-30
 
