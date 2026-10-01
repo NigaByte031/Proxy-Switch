@@ -10,7 +10,7 @@
   if (globalThis.chrome?.storage) return;
 
   // kept in sync with manifest.json by tests/manifest.test.mjs
-  var VERSION = '1.7.0';
+  var VERSION = '1.8.0';
   var DATA_KEY = 'proxySwitch.preview.data';
   var PROXY_KEY = 'proxySwitch.preview.proxy';
 

@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [1.8.0] — 2026-10-01
+
 ### Added
 
 - **Four display templates for the traffic meter.** A new *Display* picker in the settings' Traffic
@@ -75,6 +79,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   (`batchSpan()` in `lib/traffic.js`). A burst therefore reads the rate it really ran at, and goes
   quiet a few seconds after it ends rather than when the writer got around to it.
 
+[1.8.0]: ../../releases/tag/v1.8.0
 [1.7.0]: ../../releases/tag/v1.7.0
 
 ## [1.6.1] — 2026-09-28
