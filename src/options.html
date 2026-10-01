@@ -127,6 +127,13 @@
               data-i18n-placeholder="field.domainListPlaceholder"
             ></textarea>
             <p class="form-note" data-i18n="field.domainListHint"></p>
+            <!-- One row per listed site: the server it goes through, or the shared
+                 chain. Filled by mode-ui.js from the list above and the servers. -->
+            <div id="domainServersPanel" class="hidden">
+              <span class="field-label" data-i18n="field.domainServers"></span>
+              <ul id="domainServerList" class="domain-server-list"></ul>
+              <p class="form-note" data-i18n="field.domainServersHint"></p>
+            </div>
             <div class="form-actions">
               <button id="pacDomainsSave" class="btn" type="button" data-i18n="btn.save"></button>
             </div>

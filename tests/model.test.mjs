@@ -236,6 +236,49 @@ test('the domain list survives storage, export and a broken value', () => {
   assert.deepEqual(sanitizeState({ settings: { proxyDomains: 'example.com' } }).settings.proxyDomains, []);
 });
 
+test('a listed site keeps the server it was given, and loses it with the rule', () => {
+  const state = sanitizeState({
+    settings: {
+      domainRouting: true,
+      mode: 'pac_script',
+      proxyDomains: ['example.com', 'intra.test'],
+      domainServers: { 'Example.com': 'p2', 'intra.test': 'p2', 'gone.test': 'p2' },
+    },
+    profiles: [draft({ id: 'p1' }), draft({ id: 'p2', host: '10.0.0.1' })],
+  });
+  // the key is written back in the rule's own spelling, not the one it arrived in
+  assert.deepEqual(state.settings.domainServers, { 'example.com': 'p2', 'intra.test': 'p2' });
+
+  // the server is gone: the rule stays, and falls back to the shared chain
+  const orphaned = sanitizeState({
+    settings: { proxyDomains: ['example.com'], domainServers: { 'example.com': 'missing' } },
+    profiles: [draft({ id: 'p1' })],
+  });
+  assert.deepEqual(orphaned.settings.proxyDomains, ['example.com']);
+  assert.deepEqual(orphaned.settings.domainServers, {});
+
+  // a rule that no longer exists cannot keep a server waiting for it
+  const dropped = sanitizeState({
+    settings: { proxyDomains: [], domainServers: { 'example.com': 'p1' } },
+    profiles: [draft({ id: 'p1' })],
+  });
+  assert.deepEqual(dropped.settings.domainServers, {});
+
+  assert.deepEqual(sanitizeState({}).settings.domainServers, {});
+  assert.deepEqual(sanitizeState({ settings: { domainServers: 'nope' } }).settings.domainServers, {});
+  assert.deepEqual(
+    sanitizeState({ settings: { proxyDomains: ['a.test'], domainServers: ['p1'] } }).settings
+      .domainServers,
+    {},
+  );
+
+  const imported = parseImport(JSON.stringify(serializeState(state)));
+  assert.deepEqual(imported.state.settings.domainServers, {
+    'example.com': 'p2',
+    'intra.test': 'p2',
+  });
+});
+
 test('newId is unique and findProfile tolerates unknown ids', () => {
   const ids = new Set(Array.from({ length: 200 }, () => newId()));
   assert.equal(ids.size, 200);

@@ -71,6 +71,10 @@ export function createDefaultState() {
       // differently. A display choice only — it never changes what is counted.
       trafficView: 'classic',
       proxyDomains: [],
+      // Which server each listed site goes through, rule -> profile id (see
+      // `lib/site-route.js`). A rule with no entry uses the chain every listed
+      // site shares: the active server first, then the rest.
+      domainServers: {},
       language: 'auto',
       theme: 'auto',
       accent: 'emerald',
@@ -111,17 +115,40 @@ export function findProfile(state, id) {
 }
 
 /**
- * The servers that may be routed through, in order: the active one first, then the
- * rest in list order. Shared by `lib/pac.js` and `lib/auth.js`, so the two can never
- * disagree.
+ * The servers that may be routed through, in order: `profileId` first, then the
+ * rest in list order. A chain always ends somewhere rather than going direct, so a
+ * site that was promised a server keeps that promise.
+ *
+ * @param {object} state
+ * @param {string|null} profileId the server that heads the chain
+ * @returns {object[]} empty when that server is gone
+ */
+export function chainForProfile(state, profileId) {
+  const head = findProfile(state, profileId);
+  if (!head) return [];
+  const fallbacks = (state?.profiles ?? []).filter((profile) => profile.id !== head.id);
+  return [head, ...fallbacks];
+}
+
+/**
+ * The chain of the active server: the one every listed site shares. Shared by
+ * `lib/pac.js` and `lib/auth.js`, so the two can never disagree.
  *
  * @returns {object[]}
  */
 export function routingChain(state) {
-  const active = findProfile(state, state?.settings?.activeProfileId);
-  if (!active) return [];
-  const fallbacks = (state?.profiles ?? []).filter((profile) => profile.id !== active.id);
-  return [active, ...fallbacks];
+  return chainForProfile(state, state?.settings?.activeProfileId);
+}
+
+/** The profile id a listed rule was given, or null for the shared chain. */
+export function domainServerOf(settings, rule) {
+  const map = settings?.domainServers;
+  if (!map || typeof map !== 'object') return null;
+  const wanted = String(rule ?? '').toLowerCase();
+  for (const [key, id] of Object.entries(map)) {
+    if (key.toLowerCase() === wanted && typeof id === 'string' && id) return id;
+  }
+  return null;
 }
 
 let idCounter = 0;
@@ -437,6 +464,32 @@ export function formatBypassList(list) {
   return (Array.isArray(list) ? list : []).join('\n');
 }
 
+/**
+ * Coerces the rule -> server map: a rule that is no longer listed, or a server
+ * that no longer exists, loses its entry instead of leaving a rule pointing at a
+ * chain that cannot be built. Keys are written back in their canonical spelling,
+ * so `Example.com` and `example.com` never become two entries.
+ *
+ * @param {object} raw the stored map
+ * @param {string[]} rules the rules that survived sanitizing
+ * @param {object[]} profiles the profiles that survived sanitizing
+ */
+export function sanitizeDomainServers(raw, rules, profiles) {
+  const known = new Set((Array.isArray(profiles) ? profiles : []).map((profile) => profile.id));
+  const map = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const byRule = new Map();
+  for (const [key, id] of Object.entries(map)) {
+    if (typeof id === 'string') byRule.set(String(key).toLowerCase(), id);
+  }
+
+  const result = {};
+  for (const rule of Array.isArray(rules) ? rules : []) {
+    const id = byRule.get(rule.toLowerCase());
+    if (id && known.has(id)) result[rule] = id;
+  }
+  return result;
+}
+
 /* Persistence helpers. */
 
 function sanitizeProfile(raw) {
@@ -479,6 +532,8 @@ export function sanitizeState(raw) {
     profiles.push(profile);
   }
 
+  const proxyDomains = sanitizeDomainRules(settings.proxyDomains);
+
   const bypassList = Array.isArray(settings.bypassList)
     ? settings.bypassList.map((rule) => String(rule).trim()).filter(Boolean)
     : [...base.settings.bypassList];
@@ -518,7 +573,8 @@ export function sanitizeState(raw) {
       trafficView: TRAFFIC_VIEWS.includes(settings.trafficView)
         ? settings.trafficView
         : base.settings.trafficView,
-      proxyDomains: sanitizeDomainRules(settings.proxyDomains),
+      proxyDomains,
+      domainServers: sanitizeDomainServers(settings.domainServers, proxyDomains, profiles),
       language: LANGUAGES.includes(settings.language) ? settings.language : base.settings.language,
       theme: THEMES.includes(settings.theme) ? settings.theme : base.settings.theme,
       accent: ACCENTS.includes(settings.accent) ? settings.accent : base.settings.accent,

@@ -3,12 +3,62 @@
  * the UI. Everything except `applyProxy`/`readProxySettings` is pure.
  */
 
-import { effectiveMode, findProfile, missingRequirement, routingChain } from './model.js';
+import {
+  chainForProfile,
+  domainServerOf,
+  effectiveMode,
+  findProfile,
+  missingRequirement,
+  routingChain,
+  sanitizeDomainRules,
+} from './model.js';
 import { PROBE_TARGETS, probeHost } from './health.js';
-import { buildPacScript, proxyDirective } from './pac.js';
+import { buildPacScript, proxyChain, proxyDirective } from './pac.js';
 import { orderServersByHealth } from './server-health.js';
 
 export const SCOPE = 'regular';
+
+/**
+ * The three inputs the generated script is built from: the shared chain, the rules
+ * that use it, and the rules that named a server of their own. A rule with its own
+ * server heads a chain of that server plus the rest, ordered by what the extension
+ * last proved about each one — the same never-goes-direct promise the shared chain
+ * makes, just starting somewhere else. Rules pointing at the same server share one
+ * directive, so the script carries one entry each rather than one per rule.
+ *
+ * @param {object} state
+ * @param {object|null} [health] per-server verdicts (`lib/server-health.js`)
+ * @returns {{servers: object[], domains: string[], routes: Array<{directive: string, hosts: string[]}>}}
+ */
+export function pacRouting(state, health = null) {
+  const servers = orderServersByHealth(routingChain(state), health);
+  const domains = [];
+  const byDirective = new Map();
+
+  for (const rule of sanitizeDomainRules(state?.settings?.proxyDomains ?? [])) {
+    const profileId = domainServerOf(state?.settings, rule);
+    const chain = profileId
+      ? orderServersByHealth(chainForProfile(state, profileId), health)
+      : [];
+    const directive = chain.length > 0 ? proxyChain(chain) : '';
+
+    // No usable server named, or a chain that builds nothing: the rule falls back
+    // to the shared chain instead of disappearing.
+    if (!directive) {
+      domains.push(rule);
+      continue;
+    }
+    const hosts = byDirective.get(directive);
+    if (hosts) hosts.push(rule);
+    else byDirective.set(directive, [rule]);
+  }
+
+  return {
+    servers,
+    domains,
+    routes: [...byDirective].map(([directive, hosts]) => ({ directive, hosts })),
+  };
+}
 
 /**
  * @param {object} state
@@ -47,12 +97,7 @@ export function buildProxyConfig(state, health = null) {
       // A generated script wins over the URL while domain routing is on.
       if (state.settings.domainRouting) {
         // Proven first, unknown next, proven-bad last — see `orderServersByHealth`.
-        const servers = orderServersByHealth(routingChain(state), health);
-        const data = buildPacScript({
-          servers,
-          domains: state.settings.proxyDomains ?? [],
-          bypass: bypassList,
-        });
+        const data = buildPacScript({ ...pacRouting(state, health), bypass: bypassList });
         // No server, or nothing to route: fail open like every other mode.
         if (!data) return { mode: 'direct' };
         // `mandatory`: a script that Chrome fails to parse must not quietly turn
@@ -102,12 +147,7 @@ export function buildProbeConfig(state, target, health = null) {
   }
 
   if (mode === 'pac_script' && state.settings.domainRouting === true) {
-    const data = buildPacScript({
-      servers: orderServersByHealth(routingChain(state), health),
-      domains: state.settings.proxyDomains ?? [],
-      bypass,
-      override,
-    });
+    const data = buildPacScript({ ...pacRouting(state, health), bypass, override });
     return data ? { mode: 'pac_script', pacScript: { data, mandatory: true } } : null;
   }
 

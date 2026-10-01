@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import { PAC_DIRECTIVE, buildPacScript, proxyChain, proxyDirective } from '../src/lib/pac.js';
 import { createProfile, sanitizeDomainRules } from '../src/lib/model.js';
+import { hostMatchesRule, listMatchesHost } from '../src/lib/site-route.js';
 
 /**
  * The generated PAC script is a contract with Chrome, so it is evaluated and
@@ -251,4 +252,93 @@ test('an IPv6 server and bracketed rules survive the trip', () => {
   const script = scriptFor(['[2001:db8::1]', 'example.com']);
   assert.equal(ask(script, { host: '[2001:db8::1]' }), 'PROXY proxy.example.com:8080');
   assert.equal(ask(script, { host: '2001:db8::1' }), 'PROXY proxy.example.com:8080');
+});
+
+const NL = 'SOCKS5 nl.example.net:1080';
+
+const routedScript = (over = {}) =>
+  buildPacScript({
+    servers: [WORK],
+    domains: ['example.com'],
+    routes: [{ directive: NL, hosts: ['intra.test'] }],
+    ...over,
+  });
+
+test('a site that named a server of its own is matched ahead of the shared chain', () => {
+  const script = routedScript();
+  assert.equal(ask(script, { host: 'www.example.com' }), 'PROXY proxy.example.com:8080');
+  assert.equal(ask(script, { host: 'a.intra.test' }), NL);
+  assert.equal(ask(script, { host: 'intra.test' }), NL);
+  assert.equal(ask(script, { host: 'elsewhere.test' }), 'DIRECT');
+  assert.match(script, /2 domain rule\(s\)/, 'the header counts both halves of the list');
+  assert.match(script, /Some rules name a server of their own/);
+});
+
+test('routes alone are enough, and a half route is no route at all', () => {
+  const onlyRoute = buildPacScript({
+    servers: [WORK],
+    domains: [],
+    routes: [{ directive: 'PROXY home.example.net:3128', hosts: ['x.test'] }],
+  });
+  assert.ok(onlyRoute, 'a rule with its own server needs no rule on the shared chain');
+  assert.equal(ask(onlyRoute, { host: 'x.test' }), 'PROXY home.example.net:3128');
+  assert.equal(ask(onlyRoute, { host: 'other.test' }), 'DIRECT');
+
+  // Half a route would look like routing while diverting nothing.
+  assert.equal(
+    buildPacScript({ servers: [WORK], domains: [], routes: [{ directive: '', hosts: ['x.test'] }] }),
+    null,
+  );
+  assert.equal(
+    buildPacScript({ servers: [WORK], domains: [], routes: [{ directive: NL, hosts: [] }] }),
+    null,
+  );
+  assert.equal(
+    buildPacScript({ servers: [WORK], domains: [], routes: [{ directive: NL, hosts: ['no space'] }] }),
+    null,
+    'a host that cannot match is not a reason to build a script',
+  );
+});
+
+test('the bypass list still outranks a site that named its own server', () => {
+  const script = routedScript({ bypass: ['intra.test'] });
+  assert.equal(ask(script, { host: 'a.intra.test' }), 'DIRECT');
+});
+
+test("the popup's matcher agrees with the script it stands in for", () => {
+  const rules = ['example.com', '*.internal.test', 'a?.test', '<local>', 'host.test'];
+  const script = buildPacScript({ servers: [WORK], domains: rules });
+  const hosts = [
+    'example.com',
+    'www.example.com',
+    'notexample.com',
+    'example.com.evil.test',
+    'internal.test',
+    'a.internal.test',
+    'a.b.internal.test',
+    'a1.test',
+    'ab.test',
+    'anything.test',
+    'intranet',
+    'intranet.corp',
+    'host.test',
+    'sub.host.test',
+  ];
+
+  for (const host of hosts) {
+    const fromScript = ask(script, { host }) !== 'DIRECT';
+    assert.equal(listMatchesHost(rules, host), fromScript, `${host} must be read the same way`);
+  }
+
+  // and each rule on its own, not just the list as a whole
+  for (const rule of rules) {
+    const one = buildPacScript({ servers: [WORK], domains: [rule] });
+    for (const host of hosts) {
+      assert.equal(
+        hostMatchesRule(host, rule),
+        ask(one, { host }) !== 'DIRECT',
+        `${host} against ${rule}`,
+      );
+    }
+  }
 });

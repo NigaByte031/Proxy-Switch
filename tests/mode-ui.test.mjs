@@ -11,9 +11,50 @@ import { createDefaultState, sanitizeState } from '../src/lib/model.js';
  * checked, what does its value say, was it hidden, what did a click commit.
  */
 
+/**
+ * A node with just enough DOM to hold the per-site server rows: children that can be
+ * appended to, a `textContent` that clears them, and listeners that can be fired.
+ */
+function fakeNode(tag = 'div') {
+  const listeners = new Map();
+  const classes = new Set();
+  return {
+    tagName: tag,
+    dataset: {},
+    children: [],
+    attributes: {},
+    text: '',
+    selected: false,
+    classList: {
+      toggle: (name, on) => (on ? classes.add(name) : classes.delete(name)),
+      contains: (name) => classes.has(name),
+    },
+    get textContent() {
+      return this.text;
+    },
+    set textContent(value) {
+      this.text = value;
+      if (value === '') this.children = [];
+    },
+    setAttribute(name, value) {
+      this.attributes[name] = value;
+    },
+    append(...nodes) {
+      this.children.push(...nodes);
+    },
+    addEventListener(type, handler) {
+      listeners.set(type, [...(listeners.get(type) ?? []), handler]);
+    },
+    async fire(type, event = {}) {
+      for (const handler of listeners.get(type) ?? []) handler(event);
+      await tick();
+    },
+  };
+}
+
 // `mode-ui.js` reads `document.activeElement` to leave the field the user is typing
-// in alone; a stub is enough here.
-globalThis.document = { activeElement: null };
+// in alone, and builds the per-site server rows; a stub is enough here.
+globalThis.document = { activeElement: null, createElement: (tag) => fakeNode(tag) };
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -64,6 +105,8 @@ function setup(state) {
     pacDomainsEl: fakeElement(),
     pacDomainsSaveEl: fakeElement(),
     pacSaveEl: fakeElement(),
+    domainServersPanelEl: fakeNode('div'),
+    domainServerListEl: fakeNode('ul'),
   };
 
   const commits = [];
@@ -79,6 +122,58 @@ function setup(state) {
   const ui = createModeUi({ ...els, commit, getLang: () => 'en', onError: (text) => errors.push(text) });
   return { ui, els, chips, commits, errors, state };
 }
+
+/** The option a select is showing: the fake DOM has no computed value. */
+const chosen = (select) => select.children.find((option) => option.selected)?.value ?? '';
+
+test('each listed site gets a row naming the server it goes through', async () => {
+  const state = sanitizeState({
+    settings: {
+      mode: 'pac_script',
+      domainRouting: true,
+      proxyDomains: ['example.com', 'intra.test'],
+      domainServers: { 'intra.test': 'p2' },
+    },
+    profiles: [
+      { id: 'p1', name: 'Work', scheme: 'http', host: 'w.example.net', port: 8080 },
+      { id: 'p2', name: 'Home', scheme: 'socks5', host: 'h.example.net', port: 1080 },
+    ],
+  });
+  const { ui, els, commits } = setup(state);
+  ui.render(state, 'en');
+
+  assert.equal(els.domainServersPanelEl.classList.contains('hidden'), false);
+  const [shared, own] = els.domainServerListEl.children;
+  assert.equal(shared.children[0].textContent, 'example.com');
+  assert.equal(own.children[0].textContent, 'intra.test');
+
+  const selects = [shared.children[1], own.children[1]];
+  assert.equal(selects[0].children.length, 3, 'the shared chain and the two servers');
+  assert.equal(selects[0].dataset.rule, 'example.com');
+  assert.equal(chosen(selects[0]), '', 'a rule with no server of its own');
+  assert.equal(chosen(selects[1]), 'p2', 'the server it was given');
+  assert.equal(
+    selects[0].children[0].textContent,
+    'Your servers (active one first)',
+    'the fallback is the first option',
+  );
+
+  // Picking a server writes the map; picking the fallback takes it back out.
+  selects[0].value = 'p1';
+  await els.domainServerListEl.fire('change', { target: { closest: () => selects[0] } });
+  assert.equal(commits.at(-1).domainServers['example.com'], 'p1');
+
+  selects[1].value = '';
+  await els.domainServerListEl.fire('change', { target: { closest: () => selects[1] } });
+  assert.equal(commits.at(-1).domainServers['intra.test'], undefined);
+
+  // An empty list has nothing to name, so the panel goes away with it.
+  const empty = sanitizeState({ settings: { mode: 'pac_script', domainRouting: true } });
+  const bare = setup(empty);
+  bare.ui.render(empty, 'en');
+  assert.equal(bare.els.domainServersPanelEl.classList.contains('hidden'), true);
+  assert.deepEqual(bare.els.domainServerListEl.children, []);
+});
 
 test('the PAC source on screen is the one in charge', () => {
   const plain = setup(sanitizeState({ settings: { mode: 'pac_script', pacUrl: 'https://x/p.pac' } }));

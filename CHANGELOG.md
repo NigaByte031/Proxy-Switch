@@ -13,6 +13,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   *Classic*, a one-line *Compact*, three *Cards*, and *Speed first*, where the live reading is the
   headline. The popup wears the template the settings page picked, the choice travels in a backup
   file, and nothing about what is counted changes.
+- **Every listed site can name a server of its own.** Domain routing used to send every listed site
+  through one shared chain; now a picker appears under the list, one row per rule, so one site can
+  leave through Frankfurt while another leaves through Amsterdam. A named server heads a chain
+  rather than a single hop — that server is tried first, the rest stay behind it — so a site with
+  its own server is still never sent direct. A rule whose server is deleted falls back to the shared
+  chain instead of disappearing, and the choice travels in a backup file.
+- **A one-click “this site” control in the popup.** The popup shows the host of the tab it was
+  opened over and offers *Through the proxy*, *Directly* or *Follow the mode*. The chips write the
+  two site lists (dropping any older rule that covered the same host, so the newest choice wins) and
+  the line under them reports what the current mode actually does with that host. Reading the host
+  needs no new permission: the extension already holds host permissions for every URL.
 
 ## [1.7.0] — 2026-09-30
 

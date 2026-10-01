@@ -45,7 +45,17 @@ them by `npm run shots`, so they are the interface itself rather than a drawing 
   extension — nothing to host, nothing to download — and a listed site is never sent direct, so a
   server that is down fails loudly instead of leaking it. The fallback chain follows what the
   extension has *seen*: a server that recently answered is tried before one nobody has looked at,
-  and one that recently failed goes last.
+  and one that recently failed goes last. Each listed site can also **name a server of its own** —
+  a row appears under the list with a picker for every rule — so one site leaves through Frankfurt
+  while another leaves through Amsterdam. A named server still heads a chain rather than a single
+  hop: that server is tried first and the rest stay behind it, so even a site with its own server is
+  never sent direct.
+- **“This site” in the popup** — the popup shows the host of the tab it was opened over and offers
+  three choices: *Through the proxy*, *Directly*, or *Follow the mode*. The chips write the two site
+  lists, and the line under them says what the current mode actually does with that host, so the
+  control never promises routing the mode will not do. Choosing *Through the proxy* turns domain
+  routing on when the mode would otherwise ignore the list (never in manual mode, where everything
+  is already proxied, and never without a server to route through).
 - **Bypass list** — one rule per line (`<local>`, `localhost`, `*.internal.example.com`, …).
 - **Master switch** — instantly go direct without losing the mode you configured.
 - **Context menu** — right-click the toolbar icon to switch mode or server.
@@ -222,6 +232,7 @@ src/
     failover.js             auto-failover policy: strikes, rounds, cooldown (pure, tested)
     notice.js               the wording of the automatic-switch notification (pure, tested)
     pac.js                  builds a PAC script from the domain list (pure, tested)
+    site-route.js           the popup's "this site": host matching, effect, actions (pure, tested)
     server-health.js        recent per-server verdicts, and the chain order they imply (pure, tested)
     server-probe.js         the policy of the periodic background check (pure, tested)
     proxy.js                builds the chrome.proxy config + status text (pure, tested)
@@ -231,7 +242,7 @@ src/
     test-all-ui.js          the shared "Test all servers" control (pure core, tested)
     storage.js              chrome.storage.local wrapper
     i18n.js                 English/Persian dictionaries, RTL helpers (pure, tested)
-    mode-ui.js              shared mode chips + PAC row
+    mode-ui.js              shared mode chips + PAC row + per-site servers
     servers-ui.js           shared server list + form
   styles/                   base design tokens, popup, options
   __preview_*.html          generated offline previews (not shipped)
@@ -270,8 +281,8 @@ Design decisions worth knowing:
 
 ## Roadmap ideas
 
-- One server per domain: domain routing sends every listed site through the same chain, so a
-  per-domain server is the next step.
+- A fail-closed switch: today the extension deliberately fails open (direct) when no server is
+  usable, and a privacy-minded user may want that closed instead.
 - Import from common formats (`SwitchyOmega` backups).
 
 ## Security

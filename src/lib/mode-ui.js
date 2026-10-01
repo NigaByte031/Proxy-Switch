@@ -4,7 +4,13 @@
  * Used by both the popup and the settings page.
  */
 
-import { formatDomainList, isValidPacUrl, parseDomainRules } from './model.js';
+import {
+  domainServerOf,
+  formatDomainList,
+  isValidPacUrl,
+  parseDomainRules,
+  sanitizeDomainRules,
+} from './model.js';
 import { modeKey, t } from './i18n.js';
 
 export function createModeUi({
@@ -17,11 +23,57 @@ export function createModeUi({
   pacDomainsPanelEl,
   pacDomainsEl,
   pacDomainsSaveEl,
+  domainServersPanelEl,
+  domainServerListEl,
   pacSaveEl,
   commit,
   getLang,
   onError = () => {},
 }) {
+  /**
+   * One row per listed site, with the server it goes through (`lib/site-route.js`).
+   * The list is the source of truth, so a rule that was deleted from the textarea
+   * takes its row — and the server it was given — with it.
+   */
+  function renderDomainServers(state, lang) {
+    if (!domainServerListEl) return;
+    const rules = sanitizeDomainRules(state.settings.proxyDomains ?? []);
+    domainServerListEl.textContent = '';
+
+    for (const rule of rules) {
+      const row = document.createElement('li');
+      row.className = 'domain-server-row';
+
+      const name = document.createElement('span');
+      name.className = 'domain-server-rule';
+      name.textContent = rule;
+
+      const select = document.createElement('select');
+      select.className = 'domain-server-select';
+      select.dataset.rule = rule;
+      select.setAttribute('aria-label', t('field.domainServerFor', lang, { host: rule }));
+
+      const fallback = document.createElement('option');
+      fallback.value = '';
+      fallback.textContent = t('field.domainServersDefault', lang);
+      select.append(fallback);
+
+      const current = domainServerOf(state.settings, rule);
+      for (const profile of state.profiles ?? []) {
+        const option = document.createElement('option');
+        option.value = profile.id;
+        option.textContent = profile.name;
+        option.selected = profile.id === current;
+        select.append(option);
+      }
+
+      row.append(name, select);
+      domainServerListEl.append(row);
+    }
+
+    domainServersPanelEl?.classList.toggle('hidden', rules.length === 0);
+  }
+
   function render(state, lang) {
     const mode = state.settings.mode;
     const routing = state.settings.domainRouting === true;
@@ -51,6 +103,8 @@ export function createModeUi({
     if (pacDomainsEl && routing && document.activeElement !== pacDomainsEl) {
       pacDomainsEl.value = formatDomainList(state.settings.proxyDomains);
     }
+
+    renderDomainServers(state, lang);
   }
 
   async function savePac() {
@@ -83,6 +137,20 @@ export function createModeUi({
       draft.settings.mode = mode;
       // Picking a mode is an explicit "I want this": turn the switch back on.
       draft.settings.enabled = true;
+    });
+  });
+
+  // Where each listed site goes, when a site asked for a server of its own.
+  domainServerListEl?.addEventListener('change', (event) => {
+    const select = event.target.closest('.domain-server-select');
+    if (!select) return;
+    const { rule } = select.dataset;
+    const profileId = select.value;
+    commit((draft) => {
+      const map = { ...(draft.settings.domainServers ?? {}) };
+      if (profileId) map[rule] = profileId;
+      else delete map[rule];
+      draft.settings.domainServers = map;
     });
   });
 

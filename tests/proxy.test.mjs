@@ -11,6 +11,7 @@ import {
   buildProbeConfig,
   buildProxyConfig,
   describeApplyProblem,
+  pacRouting,
   describeBadge,
   describeStatus,
   describeSwitchBadge,
@@ -253,6 +254,72 @@ test('the check keeps the user\'s policy and moves only its own probes', () => {
 
   // The check never edits the stored state it was handed.
   assert.deepEqual(manual.settings.bypassList, ['<local>']);
+});
+
+test('a listed site goes to the server it named, and the rest share the chain', () => {
+  const state = sanitizeState({
+    settings: {
+      mode: 'pac_script',
+      domainRouting: true,
+      activeProfileId: 'p1',
+      proxyDomains: ['example.com', 'intra.test', 'other.test'],
+      domainServers: { 'intra.test': 'p2', 'other.test': 'p2' },
+    },
+    profiles: [
+      { id: 'p1', name: 'Work', scheme: 'http', host: 'proxy.example.com', port: 8080 },
+      { id: 'p2', name: 'Home', scheme: 'socks5', host: 'home.example.net', port: 1080 },
+    ],
+  });
+
+  const routing = pacRouting(state, null);
+  assert.deepEqual(routing.domains, ['example.com'], 'the rules that share the chain');
+  // Two rules pointing at one server share one directive, not two entries.
+  assert.deepEqual(routing.routes, [
+    { directive: 'SOCKS5 home.example.net:1080; PROXY proxy.example.com:8080', hosts: ['intra.test', 'other.test'] },
+  ]);
+
+  const data = buildProxyConfig(state, null).pacScript.data;
+  assert.match(data, /ROUTED = \["example\.com"\]/);
+  assert.match(data, /ROUTES = \[\["SOCKS5 home\.example\.net:1080; PROXY proxy\.example\.com:8080"/);
+
+  // A rule whose server was deleted falls back to the chain instead of vanishing.
+  const orphaned = sanitizeState({
+    settings: {
+      mode: 'pac_script',
+      domainRouting: true,
+      activeProfileId: 'p1',
+      proxyDomains: ['example.com'],
+      domainServers: { 'example.com': 'gone' },
+    },
+    profiles: [{ id: 'p1', name: 'Work', scheme: 'http', host: 'proxy.example.com', port: 8080 }],
+  });
+  assert.deepEqual(pacRouting(orphaned, null), {
+    servers: orphaned.profiles,
+    domains: ['example.com'],
+    routes: [],
+  });
+});
+
+test('the health of a server orders the chain a site of its own takes too', () => {
+  const state = sanitizeState({
+    settings: {
+      mode: 'pac_script',
+      domainRouting: true,
+      activeProfileId: 'p1',
+      proxyDomains: ['intra.test'],
+      domainServers: { 'intra.test': 'p2' },
+    },
+    profiles: [
+      { id: 'p1', name: 'Work', scheme: 'http', host: 'proxy.example.com', port: 8080 },
+      { id: 'p2', name: 'Home', scheme: 'http', host: 'home.example.net', port: 8080 },
+    ],
+  });
+  const stale = { p1: { ok: false, at: 1 }, p2: { ok: false, at: 1 } };
+  const fresh = { p1: { ok: false, at: 1 }, p2: { ok: true, at: Date.now() } };
+
+  const [route] = pacRouting(state, fresh).routes;
+  assert.match(route.directive, /^PROXY home\.example\.net:8080/, 'the site its own server first');
+  assert.deepEqual(pacRouting(state, stale).servers.map((p) => p.id), ['p1', 'p2']);
 });
 
 test('a config the browser no longer reports is not believed', () => {

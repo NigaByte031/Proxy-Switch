@@ -86,6 +86,21 @@ export const MESSAGES = {
 
     'popup.shortcuts': 'Alt+Shift+P on/off · Alt+Shift+D direct',
 
+    // The "this site" control in the popup (lib/site-route.js). The chips write the
+    // two lists; the effect lines say what the mode then does with them.
+    'site.title': 'This site',
+    'site.none': 'This tab has no site address to route.',
+    'site.choice.proxy': 'Through the proxy',
+    'site.choice.direct': 'Directly',
+    'site.choice.auto': 'Follow the mode',
+    'site.effect.off': 'The extension is off, so {host} is untouched.',
+    'site.effect.bypass': '{host} is on the bypass list: it never uses a proxy.',
+    'site.effect.direct': '{host} goes direct.',
+    'site.effect.proxy': '{host} goes through the proxy.',
+    'site.effect.proxy.named': '{host} goes through {name}.',
+    'site.effect.system': '{host} follows your system proxy settings.',
+    'site.effect.pac': '{host} follows the PAC script.',
+
     'health.action': 'Test connection',
     'health.running': 'Testing…',
     'health.ok.title': 'Connection works',
@@ -173,6 +188,11 @@ export const MESSAGES = {
       '# one per line\nexample.com\n*.internal.example.com\nlocalhost',
     'field.domainListHint':
       'A domain covers itself and its subdomains; *.domain covers the subdomains only, and * or ? work as patterns. Use <local> for dot-less intranet names. Leave a rule out and its traffic stays direct. Bypass rules above still win.',
+    'field.domainServers': 'Which server each site goes through',
+    'field.domainServersDefault': 'Your servers (active one first)',
+    'field.domainServersHint':
+      'A site with no server of its own uses the chain every listed site shares: the active server first, then the rest as backups. Naming a server for one site keeps that same promise — that server is tried first, the others stay behind it — so a listed site is still never sent direct.',
+    'field.domainServerFor': 'Server for {host}',
     'field.bypass': 'Bypass list',
     'field.bypassPlaceholder': '<local>\nlocalhost\n127.0.0.1\n*.internal.example.com',
     'field.bypassSummary': '{count} bypass rules',
@@ -318,6 +338,19 @@ export const MESSAGES = {
 
     'popup.shortcuts': 'Alt+Shift+P روشن/خاموش · Alt+Shift+D مستقیم',
 
+    'site.title': 'این سایت',
+    'site.none': 'این تب نشانی سایتی ندارد که مسیردهی شود.',
+    'site.choice.proxy': 'از پروکسی',
+    'site.choice.direct': 'مستقیم',
+    'site.choice.auto': 'مثل بقیه',
+    'site.effect.off': 'افزونه خاموش است، پس {host} دست‌نخورده می‌ماند.',
+    'site.effect.bypass': '{host} در فهرست عبور است: هیچ‌وقت از پروکسی نمی‌رود.',
+    'site.effect.direct': '{host} مستقیم می‌رود.',
+    'site.effect.proxy': '{host} از پروکسی می‌رود.',
+    'site.effect.proxy.named': '{host} از {name} می‌رود.',
+    'site.effect.system': '{host} از تنظیمات پروکسی سیستم‌عامل پیروی می‌کند.',
+    'site.effect.pac': '{host} طبق اسکریپت PAC می‌رود.',
+
     'health.action': 'تست اتصال',
     'health.running': 'در حال تست…',
     'health.ok.title': 'اتصال برقرار است',
@@ -399,6 +432,11 @@ export const MESSAGES = {
       '# هر خط یک قاعده\nexample.com\n*.internal.example.com\nlocalhost',
     'field.domainListHint':
       'یک دامنه، خودش و زیردامنه‌هایش را می‌گیرد؛ *.domain فقط زیردامنه‌ها را، و * و ? به‌عنوان الگو کار می‌کنند. برای نام‌های داخلی بدون نقطه از <local> استفاده کنید. هر چیزی که در فهرست نباشد مستقیم می‌رود. قواعد عبور بالا هنوز مقدم‌اند.',
+    'field.domainServers': 'هر سایت از کدام سرور برود',
+    'field.domainServersDefault': 'سرورهای شما (اول سرور فعال)',
+    'field.domainServersHint':
+      'سایتی که سرور خودش را ندارد از همان زنجیره‌ای می‌رود که همهٔ سایت‌های فهرست‌شده دارند: اول سرور فعال و بقیه به‌عنوان پشتیبان. انتخاب یک سرور برای یک سایت همان وعده را نگه می‌دارد — آن سرور اول امتحان می‌شود و بقیه پشتش می‌مانند — پس سایت فهرست‌شده باز هم هیچ‌وقت مستقیم فرستاده نمی‌شود.',
+    'field.domainServerFor': 'سرور برای {host}',
     'field.pacUrl': 'نشانی اسکریپت PAC',
     'field.pacPlaceholder': 'https://example.com/proxy.pac',
     'field.pacHint': 'کروم این فایل PAC را دانلود میکند و طبق آن عمل میکند.',

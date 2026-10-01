@@ -234,6 +234,8 @@ const modeUi = createModeUi({
   pacDomainsPanelEl: el('pacDomainsPanel'),
   pacDomainsEl: el('pacDomains'),
   pacDomainsSaveEl: el('pacDomainsSave'),
+  domainServersPanelEl: el('domainServersPanel'),
+  domainServerListEl: el('domainServerList'),
   pacSaveEl: el('pacSave'),
   commit,
   getLang: () => lang,

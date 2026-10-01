@@ -27,7 +27,9 @@ import {
   updateState,
 } from './lib/storage.js';
 import { describeApplyProblem, describeBadge, describeStatus } from './lib/proxy.js';
+import { findProfile } from './lib/model.js';
 import { createModeUi } from './lib/mode-ui.js';
+import { applySiteChoice, describeSiteRoute, siteHostFromUrl, siteRouteOf } from './lib/site-route.js';
 import { createRate, createTraffic, describeRate, describeTraffic } from './lib/traffic.js';
 import { resolveTrafficView, trafficViewParts } from './lib/traffic-view.js';
 import { createServersUi } from './lib/servers-ui.js';
@@ -55,6 +57,10 @@ const els = {
   warning: el('warning'),
   testBtn: el('testBtn'),
   testResult: el('testResult'),
+  siteCard: el('siteCard'),
+  siteHost: el('siteHost'),
+  siteChoices: el('siteChoices'),
+  siteEffect: el('siteEffect'),
   trafficPanel: el('trafficPanel'),
   trafficRow: el('trafficRow'),
   trafficDown: el('trafficDown'),
@@ -83,6 +89,11 @@ let rateTimer = 0;
 let lang = 'en';
 let transientWarning = null;
 let warningTimer = 0;
+/**
+ * The site the popup was opened over (`lib/site-route.js`), read once. It changes
+ * only when the popup is opened again, since the popup closes with its tab.
+ */
+let siteHost = null;
 
 const commit = (mutator) => updateState(mutator);
 
@@ -96,6 +107,8 @@ const modeUi = createModeUi({
   pacDomainsPanelEl: el('pacDomainsPanel'),
   pacDomainsEl: el('pacDomains'),
   pacDomainsSaveEl: el('pacDomainsSave'),
+  domainServersPanelEl: el('domainServersPanel'),
+  domainServerListEl: el('domainServerList'),
   pacSaveEl: el('pacSave'),
   commit,
   getLang: () => lang,
@@ -138,6 +151,11 @@ const serversUi = createServersUi({
   getHealth: () => serverHealth,
 });
 
+function pickSiteChoice(choice) {
+  if (!siteHost) return;
+  commit((draft) => applySiteChoice(draft, siteHost, choice));
+}
+
 function flashWarning(message) {
   transientWarning = message;
   render();
@@ -159,6 +177,58 @@ function openOptions() {
  */
 function setText(node, value) {
   if (node && node.textContent !== value) node.textContent = value;
+}
+
+/**
+ * The address of the active tab, reduced to the site a rule can name. Reading it
+ * needs no permission of its own: the extension already holds host permissions for
+ * every URL, which is what makes `tab.url` visible here.
+ */
+async function loadSiteHost() {
+  const query = typeof chrome !== 'undefined' ? chrome.tabs?.query : null;
+  if (!query) return null;
+  try {
+    const [tab] = await query({ active: true, currentWindow: true });
+    return siteHostFromUrl(tab?.url);
+  } catch {
+    // No window, or a page the browser will not name: the control stays empty.
+    return null;
+  }
+}
+
+/**
+ * The "this site" control: which lists the site is in (the chips) and what the
+ * current configuration actually does with it (the line below). The two are kept
+ * apart on purpose — a lit chip must not promise routing the mode will not do.
+ */
+function renderSite(currentLang) {
+  if (!els.siteCard) return;
+  const host = siteHost;
+  els.siteHost.textContent = host ?? '';
+  els.siteHost.classList.toggle('hidden', !host);
+
+  if (!host) {
+    els.siteChoices.classList.add('hidden');
+    setText(els.siteEffect, t('site.none', currentLang));
+    return;
+  }
+
+  const route = siteRouteOf(state, host);
+  const chosen = route.listed ? 'proxy' : route.bypassed ? 'direct' : 'auto';
+  const hasServer = Boolean(findProfile(state, state.settings.activeProfileId));
+
+  els.siteChoices.classList.remove('hidden');
+  for (const chip of els.siteChoices.querySelectorAll('.chip')) {
+    const { choice } = chip.dataset;
+    const active = choice === chosen;
+    chip.classList.toggle('is-active', active);
+    chip.setAttribute('aria-checked', String(active));
+    // Nothing to route through: better to refuse the click than to promise it.
+    if (choice === 'proxy') chip.disabled = !hasServer;
+  }
+
+  const described = describeSiteRoute(state, host);
+  setText(els.siteEffect, t(described.key, currentLang, described.params));
 }
 
 /**
@@ -226,6 +296,8 @@ function render() {
   els.warning.textContent = warning ?? '';
   els.warning.classList.toggle('hidden', !warning);
 
+  renderSite(lang);
+
   const count = state.settings.bypassList.length;
   els.bypassInfo.textContent = count
     ? t('field.bypassSummary', lang, { count })
@@ -278,6 +350,25 @@ function wire() {
     });
   });
 
+  // One click routes the site the popup sits over. The chips are a radiogroup, so
+  // the arrow keys walk them the way the mode chips and the template picker do.
+  els.siteChoices?.addEventListener('click', (event) => {
+    const chip = event.target.closest('.chip');
+    if (chip?.dataset.choice) pickSiteChoice(chip.dataset.choice);
+  });
+
+  els.siteChoices?.addEventListener('keydown', (event) => {
+    const chip = event.target.closest('.chip');
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+    if (!chip || !step) return;
+    event.preventDefault();
+    const chips = [...els.siteChoices.querySelectorAll('.chip')];
+    const index = (chips.indexOf(chip) + step + chips.length) % chips.length;
+    const next = chips[index];
+    next.focus();
+    if (!next.disabled) pickSiteChoice(next.dataset.choice);
+  });
+
   // The frosted header only draws its hairline once content slides under it. Scroll
   // events do not bubble, so the listener sits on `document` in the capture phase.
   const header = els.header;
@@ -313,6 +404,7 @@ function wire() {
 
 async function init() {
   state = await loadState();
+  siteHost = await loadSiteHost();
   applyStatus = await loadStatus();
   serverHealth = await loadServerHealth();
   traffic = await loadTraffic();

@@ -183,6 +183,11 @@
       create: function (options) {
         window.open(options.url, '_blank', 'noopener');
       },
+      // The popup's "this site" control reads the active tab's address. A preview
+      // tab is not a site, so it is handed one to show (lib/site-route.js).
+      query: function () {
+        return Promise.resolve([{ url: 'https://www.example.com/' }]);
+      },
     },
     i18n: { getMessage: function (key) { return key; } },
   };

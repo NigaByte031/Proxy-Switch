@@ -81,6 +81,48 @@
       <p id="warning" class="warning hidden" role="alert"></p>
     </section>
 
+    <!-- The site the open tab is on, and one click to route it (lib/site-route.js).
+         The chips write the two lists the settings page edits; the line under them
+         says what actually happens, mode and all. -->
+    <section id="siteCard" class="card site-card">
+      <div class="site-head">
+        <h2 data-i18n="site.title"></h2>
+        <span id="siteHost" class="site-host"></span>
+      </div>
+      <div
+        id="siteChoices"
+        class="chips site-chips"
+        role="radiogroup"
+        data-i18n-aria-label="site.title"
+      >
+        <button
+          class="chip"
+          type="button"
+          role="radio"
+          aria-checked="false"
+          data-choice="proxy"
+          data-i18n="site.choice.proxy"
+        ></button>
+        <button
+          class="chip"
+          type="button"
+          role="radio"
+          aria-checked="false"
+          data-choice="direct"
+          data-i18n="site.choice.direct"
+        ></button>
+        <button
+          class="chip"
+          type="button"
+          role="radio"
+          aria-checked="false"
+          data-choice="auto"
+          data-i18n="site.choice.auto"
+        ></button>
+      </div>
+      <p id="siteEffect" class="form-note"></p>
+    </section>
+
     <section>
       <h2 data-i18n="mode.title"></h2>
       <div class="chips" id="modeChips">
@@ -117,6 +159,12 @@
           data-i18n-placeholder="field.domainListPlaceholder"
         ></textarea>
         <p class="form-note" data-i18n="field.domainListHint"></p>
+        <!-- One row per listed site: the server it goes through (mode-ui.js). -->
+        <div id="domainServersPanel" class="hidden">
+          <span class="field-label" data-i18n="field.domainServers"></span>
+          <ul id="domainServerList" class="domain-server-list"></ul>
+          <p class="form-note" data-i18n="field.domainServersHint"></p>
+        </div>
         <div class="form-actions">
           <button id="pacDomainsSave" class="btn" type="button" data-i18n="btn.save"></button>
         </div>

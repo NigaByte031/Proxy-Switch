@@ -232,6 +232,48 @@ body.popup {
   transition: opacity 0.15s ease;
 }
 
+/* "This site": the host the popup was opened over, three chips, and one line that
+   says what the mode actually does with it (lib/site-route.js). */
+
+.site-card {
+  padding: 10px 12px;
+}
+
+.site-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.site-head h2 {
+  margin: 0;
+}
+
+.site-host {
+  overflow: hidden;
+  color: var(--muted);
+  direction: ltr;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.site-chips {
+  margin-bottom: 6px;
+}
+
+.site-chips .chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.site-card .form-note {
+  margin: 0;
+}
+
 .app-footer a:hover {
   opacity: 0.8;
 }
