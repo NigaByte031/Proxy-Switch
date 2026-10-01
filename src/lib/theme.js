@@ -5,13 +5,31 @@
  * stylesheet can never disagree.
  */
 
-import { ACCENTS, THEMES } from './model.js';
+import { ACCENTS, DENSITIES, THEMES, TEXT_SIZES } from './model.js';
 
 /** Default value of `settings.theme`. */
 export const DEFAULT_THEME = 'auto';
 
 /** Default value of `settings.accent`. */
 export const DEFAULT_ACCENT = 'emerald';
+
+/** Default value of `settings.density`. */
+export const DEFAULT_DENSITY = 'comfortable';
+
+/** Default value of `settings.textSize`. */
+export const DEFAULT_TEXT_SIZE = 'normal';
+
+/** i18n key per density setting. */
+export const DENSITY_KEYS = {
+  comfortable: 'density.comfortable',
+  compact: 'density.compact',
+};
+
+/** i18n key per text-size setting. */
+export const TEXT_SIZE_KEYS = {
+  normal: 'textSize.normal',
+  large: 'textSize.large',
+};
 
 /** i18n key per accent setting. */
 export const ACCENT_KEYS = {
@@ -47,6 +65,16 @@ export function themeIcon(theme) {
 /** i18n key naming the palette, so the picker can label each swatch. */
 export function accentKey(accent) {
   return ACCENT_KEYS[accent] ?? ACCENT_KEYS[DEFAULT_ACCENT];
+}
+
+/** i18n key naming the spacing, so the picker can label each option. */
+export function densityKey(density) {
+  return DENSITY_KEYS[density] ?? DENSITY_KEYS[DEFAULT_DENSITY];
+}
+
+/** i18n key naming the type size. */
+export function textSizeKey(textSize) {
+  return TEXT_SIZE_KEYS[textSize] ?? TEXT_SIZE_KEYS[DEFAULT_TEXT_SIZE];
 }
 
 /** Cycles `auto -> light -> dark -> auto`, so one button covers all three. */
@@ -90,6 +118,32 @@ export function applyAccent(setting, doc = globalThis.document) {
   const accent = resolveAccent(setting);
   if (doc?.documentElement) doc.documentElement.dataset.accent = accent;
   return accent;
+}
+
+/** Turns a density setting into the spacing that is actually shown. */
+export function resolveDensity(setting) {
+  return DENSITIES.includes(setting) ? setting : DEFAULT_DENSITY;
+}
+
+/** Turns a text-size setting into the type scale that is actually shown. */
+export function resolveTextSize(setting) {
+  return TEXT_SIZES.includes(setting) ? setting : DEFAULT_TEXT_SIZE;
+}
+
+/**
+ * Writes the spacing and the type scale onto the document element, where the
+ * stylesheet reads them. The values are the setting's own names: CSS decides what
+ * "compact" and "large" mean, so the two can never disagree about it.
+ *
+ * @returns {{density: string, textSize: string}} what is now active
+ */
+export function applyLayout(density, textSize, doc = globalThis.document) {
+  const resolved = { density: resolveDensity(density), textSize: resolveTextSize(textSize) };
+  if (doc?.documentElement) {
+    doc.documentElement.dataset.density = resolved.density;
+    doc.documentElement.dataset.text = resolved.textSize;
+  }
+  return resolved;
 }
 
 /**

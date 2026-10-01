@@ -7,6 +7,7 @@
 import { applyDocumentLang, applyStaticText, LANG_LABELS, otherLang, resolveLang, t } from './lib/i18n.js';
 import {
   applyAccent,
+  applyLayout,
   applyTheme,
   nextTheme,
   themeIcon,
@@ -261,6 +262,9 @@ function render() {
   // has no picker of its own: it wears what the settings page saved.
   applyTheme(state.settings.theme);
   applyAccent(state.settings.accent);
+  // Spacing and type scale are the settings page's business to pick and the
+  // popup's to wear, exactly like the theme and the accent above.
+  applyLayout(state.settings.density, state.settings.textSize);
 
   // A proxy not really in force outranks the mode: every indicator says so.
   const problem = describeApplyProblem(applyStatus);

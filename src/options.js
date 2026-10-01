@@ -5,7 +5,14 @@
  */
 
 import { applyDocumentLang, applyStaticText, resolveLang, t } from './lib/i18n.js';
-import { accentKey, applyAccent, applyTheme, resolveAccent, watchSystemTheme } from './lib/theme.js';
+import {
+  accentKey,
+  applyAccent,
+  applyLayout,
+  applyTheme,
+  resolveAccent,
+  watchSystemTheme,
+} from './lib/theme.js';
 import {
   loadRate,
   loadServerHealth,
@@ -54,6 +61,8 @@ const els = {
   version: el('version'),
   langSelect: el('langSelect'),
   themeSelect: el('themeSelect'),
+  densitySelect: el('densitySelect'),
+  textSizeSelect: el('textSizeSelect'),
   accentSwatches: el('accentSwatches'),
   enabledToggle: el('enabledToggle'),
   authToggle: el('authToggle'),
@@ -329,10 +338,19 @@ function render() {
   // Written onto <html>, where src/styles/base.css picks the palettes up.
   applyTheme(state.settings.theme);
   applyAccent(state.settings.accent);
+  // Spacing and type scale: the same two attributes the popup wears, so a change
+  // here shows on both pages.
+  applyLayout(state.settings.density, state.settings.textSize);
   renderAccents();
 
   if (document.activeElement !== els.langSelect) els.langSelect.value = state.settings.language;
   if (document.activeElement !== els.themeSelect) els.themeSelect.value = state.settings.theme;
+  if (document.activeElement !== els.densitySelect) {
+    els.densitySelect.value = state.settings.density;
+  }
+  if (document.activeElement !== els.textSizeSelect) {
+    els.textSizeSelect.value = state.settings.textSize;
+  }
   els.enabledToggle.checked = state.settings.enabled;
   els.authToggle.checked = state.settings.autoAuth;
   els.failoverToggle.checked = state.settings.autoFailover;
@@ -432,6 +450,20 @@ function wire() {
     const theme = els.themeSelect.value;
     commit((draft) => {
       draft.settings.theme = theme;
+    });
+  });
+
+  els.densitySelect.addEventListener('change', () => {
+    const density = els.densitySelect.value;
+    commit((draft) => {
+      draft.settings.density = density;
+    });
+  });
+
+  els.textSizeSelect.addEventListener('change', () => {
+    const textSize = els.textSizeSelect.value;
+    commit((draft) => {
+      draft.settings.textSize = textSize;
     });
   });
 

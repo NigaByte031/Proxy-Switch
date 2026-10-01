@@ -49,6 +49,24 @@
             data-i18n-aria-label="accent.title"
           ></div>
         </div>
+        <!-- Appearance, not behaviour: how much air sits between the cards, and how
+             big the type is. Both are written onto <html> (lib/theme.js). -->
+        <div class="form-grid cols-2">
+          <div>
+            <label for="densitySelect" data-i18n="options.density"></label>
+            <select id="densitySelect">
+              <option value="comfortable" data-i18n="density.comfortable"></option>
+              <option value="compact" data-i18n="density.compact"></option>
+            </select>
+          </div>
+          <div>
+            <label for="textSizeSelect" data-i18n="options.textSize"></label>
+            <select id="textSizeSelect">
+              <option value="normal" data-i18n="textSize.normal"></option>
+              <option value="large" data-i18n="textSize.large"></option>
+            </select>
+          </div>
+        </div>
         <label class="check">
           <input id="enabledToggle" type="checkbox" />
           <span data-i18n="options.enabled"></span>

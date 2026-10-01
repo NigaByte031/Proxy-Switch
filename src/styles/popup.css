@@ -27,7 +27,7 @@ body.popup {
   }
 
   .app-titles h1 {
-    font-size: 14px;
+    font-size: var(--fs-14);
   }
 
   .status-card {
@@ -40,7 +40,7 @@ body.popup {
 
   .chip {
     padding: 6px 6px;
-    font-size: 12px;
+    font-size: var(--fs-12);
   }
 
   .app-footer {
@@ -76,14 +76,14 @@ body.popup {
 }
 
 .app-titles h1 {
-  font-size: 15px;
+  font-size: var(--fs-15);
   letter-spacing: -0.01em;
 }
 
 .app-titles p {
   margin: 0;
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: var(--fs-11h);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -91,7 +91,7 @@ body.popup {
 
 /* The theme glyphs (◐ ☀ ☾) are drawn far lighter than the ⚙ next to them. */
 #themeBtn {
-  font-size: 16px;
+  font-size: var(--fs-16);
 }
 
     /* Status card: the whole card takes the colour of the current mode. */
@@ -178,7 +178,7 @@ body.popup {
   background: var(--veil);
   backdrop-filter: blur(10px) saturate(1.4);
   border-block-start: 1px solid var(--border);
-  font-size: 12px;
+  font-size: var(--fs-12);
 }
 
 .footer-row {
@@ -191,7 +191,7 @@ body.popup {
 .footer-meta {
   margin: 0;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--fs-11);
   unicode-bidi: plaintext;
 }
 
@@ -212,7 +212,7 @@ body.popup {
 
 .section-actions .ghost-btn {
   padding: 6px 11px;
-  font-size: 12.5px;
+  font-size: var(--fs-12h);
 }
 
     /* The pass's narration sits under the list, as the single-server test's chip. */
@@ -256,7 +256,7 @@ body.popup {
   color: var(--muted);
   direction: ltr;
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 12px;
+  font-size: var(--fs-12);
   text-overflow: ellipsis;
   white-space: nowrap;
 }

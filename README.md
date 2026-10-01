@@ -106,6 +106,11 @@ them by `npm run shots`, so they are the interface itself rather than a drawing 
 - **Accent colour** — five palettes (emerald, ocean, violet, amber and rose) recolour the interface.
   Pick one on the settings page; both pages wear it, and a backup carries it. Mode and status colours
   never change, so a green “reachable” hint stays green in every palette.
+- **Spacing and text size** — two more appearance settings on the same card. *Spacing* chooses
+  comfortable or compact: the same layout with less air between the cards, and nothing hidden — no
+  card, figure or button disappears. *Text size* moves every text size on both pages at once through
+  one type scale (`--type-scale` in `base.css`), so the popup can be made readable without zooming
+  the whole browser. Both travel in a backup.
 - **Backup & restore** — export/import the whole configuration as JSON.
 - **No analytics, no telemetry, no remote code.** The only requests the extension itself ever makes
   are the optional **Connection test**/**Test all** buttons and the background checks it can run on a
@@ -228,7 +233,7 @@ src/
   options.html|js           settings page
   lib/
     model.js                state shape, validation, import/export (pure, tested)
-    theme.js                theme + accent resolution, applied onto <html> (pure, tested)
+    theme.js                theme, accent, spacing and type scale onto <html> (pure, tested)
     failover.js             auto-failover policy: strikes, rounds, cooldown (pure, tested)
     notice.js               the wording of the automatic-switch notification (pure, tested)
     pac.js                  builds a PAC script from the domain list (pure, tested)

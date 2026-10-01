@@ -19,6 +19,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   rather than a single hop — that server is tried first, the rest stay behind it — so a site with
   its own server is still never sent direct. A rule whose server is deleted falls back to the shared
   chain instead of disappearing, and the choice travels in a backup file.
+- **Spacing and text size, for the two pages you actually read.** *Spacing* chooses comfortable or
+  compact — the same layout with less air between the cards, and nothing hidden: no card, figure or
+  button disappears. *Text size* moves every text size on both pages at once through one type scale,
+  so the popup no longer needs browser zoom to be readable. The stylesheet now carries no raw
+  `font-size` at all: each size is a `--fs-*` token defined as its own base times `--type-scale`, so
+  *normal* is pixel-for-pixel what shipped, and both settings travel in a backup file.
 - **A one-click “this site” control in the popup.** The popup shows the host of the tab it was
   opened over and offers *Through the proxy*, *Directly* or *Follow the mode*. The chips write the
   two site lists (dropping any older rule that covered the same host, so the newest choice wins) and

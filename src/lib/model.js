@@ -38,6 +38,18 @@ export const ACCENTS = ['emerald', 'ocean', 'violet', 'amber', 'rose'];
  */
 export const TRAFFIC_VIEWS = ['classic', 'compact', 'cards', 'speed'];
 
+/**
+ * Accepted values of the density setting: how tightly the pages pack their cards
+ * (see `lib/theme.js`). "comfortable" is the shipped spacing.
+ */
+export const DENSITIES = ['comfortable', 'compact'];
+
+/**
+ * Accepted values of the text-size setting: the type scale every page reads
+ * (`--type-scale` in `src/styles/base.css`). "normal" is the shipped size.
+ */
+export const TEXT_SIZES = ['normal', 'large'];
+
 /** Hosts that skip the proxy out of the box. */
 export const DEFAULT_BYPASS_LIST = ['<local>', 'localhost', '[::1]'];
 
@@ -78,6 +90,10 @@ export function createDefaultState() {
       language: 'auto',
       theme: 'auto',
       accent: 'emerald',
+      // Appearance, not behaviour: how much air between the cards, and how big
+      // the type is. Both are written onto <html> and read by the stylesheet.
+      density: 'comfortable',
+      textSize: 'normal',
     },
     profiles: [],
   };
@@ -578,6 +594,8 @@ export function sanitizeState(raw) {
       language: LANGUAGES.includes(settings.language) ? settings.language : base.settings.language,
       theme: THEMES.includes(settings.theme) ? settings.theme : base.settings.theme,
       accent: ACCENTS.includes(settings.accent) ? settings.accent : base.settings.accent,
+      density: DENSITIES.includes(settings.density) ? settings.density : base.settings.density,
+      textSize: TEXT_SIZES.includes(settings.textSize) ? settings.textSize : base.settings.textSize,
     },
     profiles,
   };
