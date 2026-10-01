@@ -1,6 +1,6 @@
 {
   "name": "proxy-switch",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "Chrome extension (Manifest V3) that switches the browser proxy between system, direct, manual HTTP/SOCKS and PAC modes.",
   "private": true,
   "type": "module",

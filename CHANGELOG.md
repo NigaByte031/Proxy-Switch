@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [1.9.0] — 2026-10-01
+
 ### Added
 
 - **A route check: why a host goes where it does.** The settings page's domain-routing panel takes
@@ -101,6 +105,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   (`batchSpan()` in `lib/traffic.js`). A burst therefore reads the rate it really ran at, and goes
   quiet a few seconds after it ends rather than when the writer got around to it.
 
+[1.9.0]: ../../releases/tag/v1.9.0
 [1.8.0]: ../../releases/tag/v1.8.0
 [1.7.0]: ../../releases/tag/v1.7.0
 

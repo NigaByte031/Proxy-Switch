@@ -34,6 +34,11 @@ const SHOTS = [
     width: 380,
     scale: 2,
     lang: 'en',
+    /** The popup half of the route explanation: the line the site card keeps closed. */
+    prepare: `(() => {
+      document.getElementById('siteWhy')?.click();
+      return true;
+    })()`,
     /** The popup is as tall as its content — not as tall as the tab it opened in. */
     frame: `(() => {
       const body = document.body;
@@ -52,6 +57,19 @@ const SHOTS = [
      * picker need domain routing on. The demo seed takes `view=pac` for that.
      */
     query: 'view=pac',
+    /**
+     * The route check answers a host you type, so an empty box would show nothing of
+     * it. The seed lists `example.com` and `intra.example.net` (the second one with a
+     * server of its own), and a subdomain of the second is exactly the question a
+     * rule list leaves you with.
+     */
+    prepare: `(() => {
+      const input = document.getElementById('routeCheckHost');
+      if (!input) return false;
+      input.value = 'www.intra.example.net';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      return true;
+    })()`,
     /** Frame it from the top down to the end of the Traffic card. */
     frame: `(() => {
       const card = document.getElementById('trafficMessage').closest('section');
@@ -165,6 +183,13 @@ async function capture(session, shot) {
   // The pages read their store asynchronously and the demo moves the speed every
   // second: give both a moment before believing the screen.
   await sleep(1600);
+
+  // Some of what a picture should show only appears once it is asked for — a typed
+  // host, an opened disclosure. The expression runs before the frame is measured.
+  if (shot.prepare) {
+    await session.send('Runtime.evaluate', { expression: shot.prepare, returnByValue: true });
+    await sleep(400);
+  }
 
   const measured = await session.send('Runtime.evaluate', {
     expression: shot.frame,

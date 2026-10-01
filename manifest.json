@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Proxy Switch",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "Switch Chrome between system, direct, manual HTTP/SOCKS and PAC proxies in one click. Live traffic speed, daily counters, EN/FA UI.",
   "homepage_url": "https://github.com/NigaByte031/Proxy-Switch",
   "minimum_chrome_version": "116",
