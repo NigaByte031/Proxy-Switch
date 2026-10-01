@@ -84,6 +84,14 @@
           <span data-i18n="options.failover"></span>
         </label>
         <p class="muted" data-i18n="options.failoverHint"></p>
+        <!-- Fail-closed: a mode whose route cannot be built refuses the request
+             instead of going direct (lib/proxy.js). A direct connection the user
+             asked for — Direct mode, a bypassed host — is left alone. -->
+        <label class="check">
+          <input id="failClosedToggle" type="checkbox" />
+          <span data-i18n="options.failClosed"></span>
+        </label>
+        <p class="muted" data-i18n="options.failClosedHint"></p>
         <!-- What the user is told when the worker moves server on its own. -->
         <label class="check">
           <input id="notifyToggle" type="checkbox" />
@@ -152,6 +160,20 @@
               <span class="field-label" data-i18n="field.domainServers"></span>
               <ul id="domainServerList" class="domain-server-list"></ul>
               <p class="form-note" data-i18n="field.domainServersHint"></p>
+            </div>
+            <!-- The route check (lib/route-explain.js): any host, listed or not,
+                 answered from the configuration itself. -->
+            <div>
+              <label for="routeCheckHost" data-i18n="route.check.title"></label>
+              <input
+                id="routeCheckHost"
+                type="text"
+                autocomplete="off"
+                spellcheck="false"
+                data-i18n-placeholder="route.check.placeholder"
+              />
+              <ul id="routeCheckSteps" class="route-steps"></ul>
+              <p class="form-note" data-i18n="route.check.hint"></p>
             </div>
             <div class="form-actions">
               <button id="pacDomainsSave" class="btn" type="button" data-i18n="btn.save"></button>

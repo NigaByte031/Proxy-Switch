@@ -56,12 +56,21 @@ test('createDefaultState is a valid, empty state', () => {
   assert.equal(state.settings.activeProfileId, null);
   assert.equal(state.settings.autoFailover, true);
   assert.equal(state.settings.notifyFailover, true);
+  assert.equal(state.settings.failClosed, false, 'a broken route goes direct unless asked not to');
   assert.equal(state.settings.backgroundProbe, false, 'nothing uses the network on its own by default');
   assert.equal(state.settings.domainRouting, false);
   assert.deepEqual(state.settings.proxyDomains, []);
   assert.deepEqual(state.settings.bypassList, DEFAULT_BYPASS_LIST);
   // defaults must survive a round trip through sanitizeState
   assert.deepEqual(sanitizeState(state), state);
+});
+
+test('fail-closed travels in a backup and only a real boolean sets it', () => {
+  assert.equal(sanitizeState({ settings: { failClosed: true } }).settings.failClosed, true);
+  assert.equal(sanitizeState({ settings: { failClosed: 'yes' } }).settings.failClosed, false);
+  assert.equal(parseImport(JSON.stringify(serializeState(
+    sanitizeState({ settings: { failClosed: true } }),
+  ))).state.settings.failClosed, true);
 });
 
 test('effectiveMode turns the master switch into "direct"', () => {

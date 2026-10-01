@@ -274,6 +274,25 @@ body.popup {
   margin: 0;
 }
 
+/* "Why?" — the explanation the effect line above it rests on (lib/route-explain.js).
+   A link rather than a button: it reveals reasoning, it does not act. */
+.why-btn {
+  display: block;
+  margin: 6px 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-strong);
+  font: inherit;
+  font-size: var(--fs-12);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.why-btn:hover {
+  text-decoration: underline;
+}
+
 .app-footer a:hover {
   opacity: 0.8;
 }

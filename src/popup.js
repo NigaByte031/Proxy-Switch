@@ -29,8 +29,9 @@ import {
 } from './lib/storage.js';
 import { describeApplyProblem, describeBadge, describeStatus } from './lib/proxy.js';
 import { findProfile } from './lib/model.js';
-import { createModeUi } from './lib/mode-ui.js';
+import { createModeUi, renderRouteSteps } from './lib/mode-ui.js';
 import { applySiteChoice, describeSiteRoute, siteHostFromUrl, siteRouteOf } from './lib/site-route.js';
+import { explainRoute } from './lib/route-explain.js';
 import { createRate, createTraffic, describeRate, describeTraffic } from './lib/traffic.js';
 import { resolveTrafficView, trafficViewParts } from './lib/traffic-view.js';
 import { createServersUi } from './lib/servers-ui.js';
@@ -62,6 +63,8 @@ const els = {
   siteHost: el('siteHost'),
   siteChoices: el('siteChoices'),
   siteEffect: el('siteEffect'),
+  siteWhy: el('siteWhy'),
+  siteWhySteps: el('siteWhySteps'),
   trafficPanel: el('trafficPanel'),
   trafficRow: el('trafficRow'),
   trafficDown: el('trafficDown'),
@@ -95,6 +98,8 @@ let warningTimer = 0;
  * only when the popup is opened again, since the popup closes with its tab.
  */
 let siteHost = null;
+/** Whether the site card's "Why?" explanation is open. Closed by default. */
+let siteWhyOpen = false;
 
 const commit = (mutator) => updateState(mutator);
 
@@ -211,6 +216,8 @@ function renderSite(currentLang) {
   if (!host) {
     els.siteChoices.classList.add('hidden');
     setText(els.siteEffect, t('site.none', currentLang));
+    els.siteWhy?.classList.add('hidden');
+    els.siteWhySteps?.classList.add('hidden');
     return;
   }
 
@@ -230,6 +237,16 @@ function renderSite(currentLang) {
 
   const described = describeSiteRoute(state, host);
   setText(els.siteEffect, t(described.key, currentLang, described.params));
+
+  // The reasoning behind that line (lib/route-explain.js): closed by default, and
+  // rebuilt on every render so an open one stays true while the mode or the server
+  // verdicts change under it.
+  els.siteWhy?.classList.remove('hidden');
+  els.siteWhy?.setAttribute('aria-expanded', String(siteWhyOpen));
+  els.siteWhySteps?.classList.toggle('hidden', !siteWhyOpen);
+  if (siteWhyOpen) {
+    renderRouteSteps(els.siteWhySteps, explainRoute(state, host, serverHealth), currentLang);
+  }
 }
 
 /**
@@ -371,6 +388,12 @@ function wire() {
     const next = chips[index];
     next.focus();
     if (!next.disabled) pickSiteChoice(next.dataset.choice);
+  });
+
+  // "Why?" — the same decision the line above just named, with its reasons.
+  els.siteWhy?.addEventListener('click', () => {
+    siteWhyOpen = !siteWhyOpen;
+    render();
   });
 
   // The frosted header only draws its hairline once content slides under it. Scroll

@@ -6,7 +6,29 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **A route check: why a host goes where it does.** The settings page's domain-routing panel takes
+  any host — listed or not, `www.example.com` under a rule for `example.com` — and answers with the
+  reasoning: the mode in force, the rule that matched, the server that rule named, and the order the
+  servers will be tried in. The popup's *This site* card carries the same answer behind a **Why?**
+  line, for the tab it was opened over. Nothing is sent anywhere: the answer is read from the
+  configuration itself, and whether a route exists at all is decided by building the very script the
+  browser is handed, so the explanation cannot drift from what the extension does.
+- **Never fall back to a direct connection.** A switch for the one case the extension's promise is
+  weakest in — a mode whose route cannot be built, because no server is saved or no PAC script is
+  set. Off, the extension fails open and connects directly, which is what shipped; on, the browser is
+  pointed at `127.0.0.1:1` instead, where nothing listens, so the request is refused rather than
+  leaving unwatched. A direct connection the user asked for is untouched: Direct mode, and every host
+  on the bypass list, still go direct.
+
+### Fixed
+
+- **A rule that named a server could be demoted by a neighbour's verdict.** The chain a listed site
+  takes ordered *every* server by health, so a rule saying “this site through Amsterdam” quietly
+  started at Frankfurt whenever Frankfurt had the fresher, faster verdict — against the promise the
+  per-site picker makes. The named server now heads its own chain and only the servers behind it are
+  ordered by what the extension last proved about each one.
 
 ## [1.8.0] — 2026-10-01
 

@@ -71,6 +71,11 @@ export function createDefaultState() {
       autoAuth: true,
       autoFailover: true,
       notifyFailover: true,
+      // Fail-closed: when a mode's route cannot be built — no server saved, no PAC
+      // script — the extension otherwise fails open and connects directly. With
+      // this on it points the browser at an address nothing listens on instead, so
+      // a broken route refuses the request rather than leaking it (`lib/proxy.js`).
+      failClosed: false,
       // Periodic background checks (see `lib/server-probe.js`). Off by default:
       // the one setting that makes network requests the user did not press for.
       backgroundProbe: false,
@@ -574,6 +579,8 @@ export function sanitizeState(raw) {
         typeof settings.notifyFailover === 'boolean'
           ? settings.notifyFailover
           : base.settings.notifyFailover,
+      failClosed:
+        typeof settings.failClosed === 'boolean' ? settings.failClosed : base.settings.failClosed,
       backgroundProbe:
         typeof settings.backgroundProbe === 'boolean'
           ? settings.backgroundProbe

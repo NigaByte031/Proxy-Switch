@@ -105,6 +105,47 @@ export const MESSAGES = {
     'site.effect.system': '{host} follows your system proxy settings.',
     'site.effect.pac': '{host} follows the PAC script.',
 
+    // The route check (lib/route-explain.js): what the configuration does to one
+    // host, and which part of it decided that. Every sentence names its reason.
+    'route.check.title': 'Check a route',
+    'route.check.hint':
+      'Any host, whether or not it is listed. The answer comes from your own configuration; nothing is sent anywhere.',
+    'route.check.empty': 'Type a host to see which rule covers it and where it goes.',
+    'route.check.placeholder': 'www.example.com',
+    'route.why': 'Why?',
+    'route.step.mode': 'The mode in force is {mode}.',
+    'route.step.off': 'The extension is switched off, so nothing is routed at all.',
+    'route.step.bypass':
+      'It matches the bypass rule {rule}, and a bypassed host never uses a proxy.',
+    'route.step.directMode': 'Direct mode is chosen: no request goes through a proxy.',
+    'route.step.system': 'System mode leaves routing to the operating system.',
+    'route.step.manual': 'Manual mode sends every request through {name}.',
+    'route.step.manualFailover':
+      'If it stops answering, the extension moves to another saved server on its own.',
+    'route.step.manualAlone':
+      'The other servers are not a fallback here: automatic switching is off, so this one is the only route.',
+    'route.step.pacUrl': 'The script downloaded from {url} decides.',
+    'route.step.modeIgnoresList':
+      'The listed sites do nothing in this mode — they are read only when the proxy is set to a generated PAC script.',
+    'route.step.listed': 'It matches your rule {rule}.',
+    'route.step.notListed': 'No listed rule covers it, so it goes direct.',
+    'route.step.notListedClosed':
+      'Never-go-direct is on, but it covers a route that breaks, not a host nobody listed: this direct connection is the mode working as asked.',
+    'route.step.ruleServer': 'That rule names {name}, so the chain starts there.',
+    'route.step.ruleServerGone':
+      'The server that rule named is gone, so it uses the shared chain instead of vanishing from the list.',
+    'route.step.sharedChain': 'It uses the chain every listed site shares.',
+    'route.step.chain': 'Servers, in the order they are tried: {chain}.',
+    'route.step.noServer': 'No server is saved, so there is nothing to route through.',
+    'route.step.noPacUrl': 'PAC mode is chosen, but no script URL is set.',
+    'route.step.noRules': 'The script would have nothing to route: no site is listed.',
+    'route.step.noRoute': 'This mode has no route it can build right now.',
+    'route.step.blocked':
+      'Never-go-direct is on, so requests are pointed at {host}:{port} — where nothing listens — instead of being sent direct.',
+    'route.step.failOpen': 'Never-go-direct is off, so this falls back to a direct connection.',
+    'route.step.failClosedOn':
+      'Never-go-direct is on: if this chain stops working, the request fails instead of going direct.',
+
     'health.action': 'Test connection',
     'health.running': 'Testing…',
     'health.ok.title': 'Connection works',
@@ -247,6 +288,9 @@ export const MESSAGES = {
     'options.failover': 'Switch to another server when the active one stops answering',
     'options.failoverHint':
       'Manual mode with two servers or more: after a few failed requests the connection is checked once more, and only a server that really is down is replaced — by the healthiest other one, meaning the fastest server that recently answered, and never one that just failed. One round visits every other server once and then stops, so a network outage cannot make the extension flip back and forth.',
+    'options.failClosed': 'Never fall back to a direct connection',
+    'options.failClosedHint':
+      'With this on, a mode whose route cannot be built — no server saved, no PAC script — refuses the request instead of connecting directly, which is what the extension otherwise does. A direct connection you asked for is untouched: Direct mode, and every host on the bypass list, still go direct.',
     'options.notifyFailover': 'Tell me when the extension switches servers on its own',
     'options.notifyFailoverHint':
       'A system notification names the server that took over, and the toolbar icon briefly wears its name. Only automatic switches are reported — picking a server yourself is an answer, not news.',
@@ -360,6 +404,46 @@ export const MESSAGES = {
     'site.effect.proxy.named': '{host} از {name} می‌رود.',
     'site.effect.system': '{host} از تنظیمات پروکسی سیستم‌عامل پیروی می‌کند.',
     'site.effect.pac': '{host} طبق اسکریپت PAC می‌رود.',
+
+    // بررسی مسیر (lib/route-explain.js): این تنظیمات با یک میزبان چه می‌کند و
+    // کدام بخشش این تصمیم را گرفته است.
+    'route.check.title': 'بررسی یک مسیر',
+    'route.check.hint':
+      'هر میزبانی، چه در فهرست باشد چه نه. پاسخ از خودِ تنظیمات شما می‌آید؛ هیچ‌چیز جایی فرستاده نمی‌شود.',
+    'route.check.empty': 'یک میزبان بنویسید تا ببینید کدام قاعده می‌گیردش و کجا می‌رود.',
+    'route.check.placeholder': 'www.example.com',
+    'route.why': 'چرا؟',
+    'route.step.mode': 'حالتی که در کار است: {mode}.',
+    'route.step.off': 'افزونه خاموش است، پس هیچ مسیردهی‌ای انجام نمی‌شود.',
+    'route.step.bypass': 'با قاعدهٔ عبور {rule} می‌خواند، و میزبان عبوری هیچ‌وقت از پروکسی نمی‌رود.',
+    'route.step.directMode': 'حالت مستقیم انتخاب شده است: هیچ درخواستی از پروکسی نمی‌رود.',
+    'route.step.system': 'حالت سیستم، مسیردهی را به سیستم‌عامل می‌سپارد.',
+    'route.step.manual': 'حالت دستی همهٔ درخواست‌ها را از {name} می‌فرستد.',
+    'route.step.manualFailover':
+      'اگر بی‌پاسخ بماند، افزونه خودش به سرور ذخیره‌شدهٔ دیگری جابه‌جا می‌شود.',
+    'route.step.manualAlone':
+      'سرورهای دیگر اینجا پشتیبان نیستند: سوئیچ خودکار خاموش است، پس همین یکی تنها مسیر است.',
+    'route.step.pacUrl': 'اسکریپتی که از {url} دانلود می‌شود تصمیم می‌گیرد.',
+    'route.step.modeIgnoresList':
+      'فهرست سایت‌های شما در این حالت کاری نمی‌کند — فقط وقتی خوانده می‌شود که پروکسی روی اسکریپت PAC تولیدشده باشد.',
+    'route.step.listed': 'با قاعدهٔ شما {rule} می‌خواند.',
+    'route.step.notListed': 'هیچ قاعده‌ای پوششش نمی‌دهد، پس مستقیم می‌رود.',
+    'route.step.notListedClosed':
+      'گزینهٔ «هرگز مستقیم» روشن است، ولی آن دربارهٔ مسیری است که می‌شکند، نه میزبانی که کسی فهرستش نکرده: این اتصال مستقیم همان کارِ خواسته‌شده است.',
+    'route.step.ruleServer': 'آن قاعده {name} را نام برده، پس زنجیره از همان‌جا شروع می‌شود.',
+    'route.step.ruleServerGone':
+      'سروری که آن قاعده نام برده بود پاک شده است، پس از زنجیرهٔ مشترک استفاده می‌کند تا از فهرست نیفتد.',
+    'route.step.sharedChain': 'از زنجیره‌ای می‌رود که همهٔ سایت‌های فهرست‌شده شریک‌اند.',
+    'route.step.chain': 'سرورها، به ترتیبی که امتحان می‌شوند: {chain}.',
+    'route.step.noServer': 'هیچ سروری ذخیره نشده، پس چیزی برای مسیردهی نیست.',
+    'route.step.noPacUrl': 'حالت PAC انتخاب شده، ولی نشانی اسکریپت خالی است.',
+    'route.step.noRules': 'اسکریپت چیزی برای مسیردهی نمی‌داشت: هیچ سایتی فهرست نشده است.',
+    'route.step.noRoute': 'این حالت همین حالا مسیری ندارد که بسازد.',
+    'route.step.blocked':
+      'گزینهٔ «هرگز مستقیم» روشن است، پس درخواست‌ها به {host}:{port} — جایی که چیزی گوش نمی‌دهد — فرستاده می‌شوند تا مستقیم نروند.',
+    'route.step.failOpen': 'گزینهٔ «هرگز مستقیم» خاموش است، پس به اتصال مستقیم برمی‌گردد.',
+    'route.step.failClosedOn':
+      'گزینهٔ «هرگز مستقیم» روشن است: اگر این زنجیره از کار بیفتد، درخواست شکست می‌خورد و مستقیم نمی‌رود.',
 
     'health.action': 'تست اتصال',
     'health.running': 'در حال تست…',
@@ -501,6 +585,9 @@ export const MESSAGES = {
     'options.failover': 'هنگام بی‌پاسخ ماندن سرور فعال، خودکار به سرور دیگری سوئیچ شود',
     'options.failoverHint':
       'در حالت دستی و با دست‌کم دو سرور: بعد از چند درخواست ناموفق، اتصال یک بار دیگر بررسی می‌شود و فقط سروری که واقعاً قطع است با سرور بعدیِ فهرست عوض می‌شود. در هر نوبت یک‌بار از همهٔ سرورها رد می‌شویم و بعد متوقف می‌شویم تا قطعی شبکه باعث جابهجایی پیوسته نشود.',
+    'options.failClosed': 'هرگز به اتصال مستقیم برنگرد',
+    'options.failClosedHint':
+      'با روشن بودن این گزینه، حالتی که مسیرش ساخته نمی‌شود — سرور ذخیره‌شده نداری، یا اسکریپت PAC نداری — درخواست را رد می‌کند و مستقیم وصل نمی‌شود؛ کاری که افزونه در غیر این صورت می‌کند. اتصال مستقیمی که خودتان خواسته‌اید دست‌نخورده می‌ماند: حالت «مستقیم» و هر میزبان روی فهرست عبور همچنان مستقیم می‌روند.',
     'options.notifyFailover': 'وقتی افزونه خودش سرور را عوض می‌کند به من اطلاع بده',
     'options.notifyFailoverHint':
       'یک اعلان سیستمی نام سروری را که جایگزین شده می‌گوید و آیکون افزونه هم چند لحظه همان نام را نشان می‌دهد. فقط سوئیچ‌های خودکار گزارش می‌شوند — انتخاب دستی سرور خودِ پاسخ است، نه خبر تازه.',

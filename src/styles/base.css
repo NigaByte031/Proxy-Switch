@@ -1916,6 +1916,60 @@ label {
   white-space: nowrap;
 }
 
+/* One explanation as a list of reasons: the route check on the settings page and
+   the popup's "Why?" disclosure (lib/route-explain.js). Every line states one fact
+   the decision rests on, in the order it is decided, and the tone says what the
+   line is: the answer itself (good), ordinary context, or a warning about a route
+   that will not be built. */
+
+.route-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.route-step {
+  display: flex;
+  gap: 7px;
+  color: var(--muted);
+  font-size: var(--fs-12);
+  line-height: 1.5;
+}
+
+/* A dot rather than a bullet: the list is prose, not a set of items. */
+.route-step::before {
+  content: '';
+  flex: none;
+  width: 5px;
+  height: 5px;
+  margin-top: 7px;
+  border-radius: 50%;
+  background: var(--border-strong);
+}
+
+.route-step-good {
+  color: var(--text);
+}
+
+.route-step-good::before {
+  background: var(--accent);
+}
+
+.route-step-warn {
+  color: var(--warn);
+}
+
+.route-step-warn::before {
+  background: var(--warn);
+}
+
+.route-step-empty {
+  font-style: italic;
+}
+
 /* Save feedback. */
 
 .btn.saved {

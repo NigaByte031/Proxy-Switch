@@ -121,6 +121,18 @@
         ></button>
       </div>
       <p id="siteEffect" class="form-note"></p>
+      <!-- The same decision, spelled out (lib/route-explain.js): which rule took
+           the site, and which servers it will be tried against. Closed by default
+           so the card stays a one-line answer to "what happens to this site". -->
+      <button
+        id="siteWhy"
+        class="why-btn hidden"
+        type="button"
+        aria-expanded="false"
+        aria-controls="siteWhySteps"
+        data-i18n="route.why"
+      ></button>
+      <ul id="siteWhySteps" class="route-steps hidden"></ul>
     </section>
 
     <section>

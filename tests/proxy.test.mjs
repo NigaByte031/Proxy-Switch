@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import { createDefaultState, routingChain, sanitizeState } from '../src/lib/model.js';
 import {
+  BLOCKED_PROXY,
   REAPPLY_MESSAGE,
   SWITCH_FLASH_MS,
   activeSwitchFlash,
@@ -11,6 +12,7 @@ import {
   buildProbeConfig,
   buildProxyConfig,
   describeApplyProblem,
+  fallbackConfig,
   pacRouting,
   describeBadge,
   describeStatus,
@@ -68,6 +70,33 @@ test('manual mode without a usable server fails open to direct', () => {
   const state = createDefaultState();
   state.settings.mode = 'fixed_servers';
   assert.deepEqual(buildProxyConfig(state), { mode: 'direct' });
+});
+
+test('fail-closed answers a route that cannot be built with a dead end', () => {
+  const state = sanitizeState({ settings: { mode: 'fixed_servers', failClosed: true } });
+  assert.deepEqual(buildProxyConfig(state), {
+    mode: 'fixed_servers',
+    rules: { singleProxy: { ...BLOCKED_PROXY }, bypassList: [] },
+  });
+  // No bypass list: a bypass would be the leak the setting exists to prevent.
+  const blocked = buildProxyConfig(state);
+  assert.deepEqual(blocked.rules.bypassList, []);
+  assert.equal(BLOCKED_PROXY.host, '127.0.0.1', 'the dead end is not routable anywhere');
+
+  // A PAC mode without a script is the same kind of unbuilt route.
+  const pac = sanitizeState({ settings: { mode: 'pac_script', failClosed: true } });
+  assert.deepEqual(buildProxyConfig(pac), blocked);
+
+  // The default answer to both is still the friendly one.
+  assert.deepEqual(fallbackConfig(createDefaultState()), { mode: 'direct' });
+});
+
+test('fail-closed leaves a direct connection the user asked for alone', () => {
+  // Picking Direct is a decision, not a fallback; so is switching the extension off.
+  const direct = sanitizeState({ settings: { mode: 'direct', failClosed: true } });
+  assert.deepEqual(buildProxyConfig(direct), { mode: 'direct' });
+  const off = sanitizeState({ settings: { enabled: false, failClosed: true } });
+  assert.deepEqual(buildProxyConfig(off), { mode: 'direct' });
 });
 
 test('PAC mode builds a pacScript entry and requires a URL', () => {
@@ -320,6 +349,19 @@ test('the health of a server orders the chain a site of its own takes too', () =
   const [route] = pacRouting(state, fresh).routes;
   assert.match(route.directive, /^PROXY home\.example\.net:8080/, 'the site its own server first');
   assert.deepEqual(pacRouting(state, stale).servers.map((p) => p.id), ['p1', 'p2']);
+
+  // The shared chain follows the verdicts; a rule that named a server does not,
+  // because naming one is an instruction rather than a preference.
+  const better = {
+    p1: { ok: true, at: Date.now(), ms: 30 },
+    p2: { ok: true, at: Date.now(), ms: 900 },
+  };
+  const [promised] = pacRouting(state, better).routes;
+  assert.match(
+    promised.directive,
+    /^PROXY home\.example\.net:8080/,
+    'faster elsewhere never demotes the server the rule named',
+  );
 });
 
 test('a config the browser no longer reports is not believed', () => {

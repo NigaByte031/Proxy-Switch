@@ -19,6 +19,57 @@ import { orderServersByHealth } from './server-health.js';
 export const SCOPE = 'regular';
 
 /**
+ * The address a fail-closed configuration points at. Nothing listens on port 1 of
+ * the loopback interface, so every request is refused instead of quietly leaving
+ * the machine without a proxy.
+ */
+export const BLOCKED_PROXY = { scheme: 'http', host: '127.0.0.1', port: 1 };
+
+/**
+ * What the browser is told when the route the current mode promises cannot be
+ * built: no server saved, no PAC script. Failing open (direct) is what shipped;
+ * `failClosed` asks for the other answer — a refused request instead of
+ * unwatched traffic. A route the user *chose* is never touched by this.
+ */
+export function fallbackConfig(state) {
+  if (state?.settings?.failClosed !== true) return { mode: 'direct' };
+  return {
+    mode: 'fixed_servers',
+    // No bypass list: every host, the bypassed ones included, meets the same dead
+    // end. A bypass here would be the leak the setting exists to prevent.
+    rules: { singleProxy: { ...BLOCKED_PROXY }, bypassList: [] },
+  };
+}
+
+/**
+ * The chain one listed rule uses: the rule's own server heads a chain of that
+ * server plus the rest, ordered by what the extension last proved about each one,
+ * and a rule with no server — or one whose server is gone — falls back to the
+ * shared chain. `chain` is what the site is really tried against; `directive` is
+ * empty for a rule that falls back, which is how the script spells "use the shared
+ * chain" (`lib/route-explain.js` explains both cases).
+ *
+ * @returns {{chain: object[], own: boolean, profileId: string|null, directive: string}}
+ */
+export function ruleChain(state, rule, health = null) {
+  const profileId = domainServerOf(state?.settings, rule);
+  const named = chainForProfile(state, profileId);
+  // The named server is the whole point of the rule, so a verdict about somebody
+  // else never demotes it: only the servers *behind* it are ordered by health,
+  // exactly as the shared chain is. A named server that is down is still tried
+  // first and the chain falls through, which is what "tried first" has to mean.
+  const own =
+    named.length > 0 ? [named[0], ...orderServersByHealth(named.slice(1), health)] : [];
+  const chain = own.length > 0 ? own : orderServersByHealth(routingChain(state), health);
+  return {
+    chain,
+    own: own.length > 0,
+    profileId,
+    directive: own.length > 0 ? proxyChain(own) : '',
+  };
+}
+
+/**
  * The three inputs the generated script is built from: the shared chain, the rules
  * that use it, and the rules that named a server of their own. A rule with its own
  * server heads a chain of that server plus the rest, ordered by what the extension
@@ -36,11 +87,7 @@ export function pacRouting(state, health = null) {
   const byDirective = new Map();
 
   for (const rule of sanitizeDomainRules(state?.settings?.proxyDomains ?? [])) {
-    const profileId = domainServerOf(state?.settings, rule);
-    const chain = profileId
-      ? orderServersByHealth(chainForProfile(state, profileId), health)
-      : [];
-    const directive = chain.length > 0 ? proxyChain(chain) : '';
+    const { directive } = ruleChain(state, rule, health);
 
     // No usable server named, or a chain that builds nothing: the rule falls back
     // to the shared chain instead of disappearing.
@@ -78,8 +125,8 @@ export function buildProxyConfig(state, health = null) {
 
     case 'fixed_servers': {
       const profile = findProfile(state, state.settings.activeProfileId);
-      // No server yet: fail open (direct) instead of breaking the browser.
-      if (!profile) return { mode: 'direct' };
+      // No server yet: fail open (direct) by default, or closed when asked.
+      if (!profile) return fallbackConfig(state);
       return {
         mode: 'fixed_servers',
         rules: {
@@ -98,15 +145,17 @@ export function buildProxyConfig(state, health = null) {
       if (state.settings.domainRouting) {
         // Proven first, unknown next, proven-bad last — see `orderServersByHealth`.
         const data = buildPacScript({ ...pacRouting(state, health), bypass: bypassList });
-        // No server, or nothing to route: fail open like every other mode.
-        if (!data) return { mode: 'direct' };
+        // No server, or nothing to route: the same fallback as every other mode.
+        if (!data) return fallbackConfig(state);
         // `mandatory`: a script that Chrome fails to parse must not quietly turn
         // into a direct connection for the very hosts the list was written for.
         return { mode: 'pac_script', pacScript: { data, mandatory: true } };
       }
 
       const url = String(state.settings.pacUrl ?? '').trim();
-      if (!url) return { mode: 'direct' };
+      // A PAC mode with no script is a route that cannot be built, exactly like a
+      // manual mode with no server.
+      if (!url) return fallbackConfig(state);
       return { mode: 'pac_script', pacScript: { url, mandatory: false } };
     }
 

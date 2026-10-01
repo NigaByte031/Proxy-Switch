@@ -67,6 +67,7 @@ const els = {
   enabledToggle: el('enabledToggle'),
   authToggle: el('authToggle'),
   failoverToggle: el('failoverToggle'),
+  failClosedToggle: el('failClosedToggle'),
   notifyToggle: el('notifyToggle'),
   probeToggle: el('probeToggle'),
   trafficReadout: el('trafficReadout'),
@@ -78,6 +79,8 @@ const els = {
   trafficToggle: el('trafficToggle'),
   trafficReset: el('trafficReset'),
   trafficMessage: el('trafficMessage'),
+  routeCheckHost: el('routeCheckHost'),
+  routeCheckSteps: el('routeCheckSteps'),
   bypassInput: el('bypassInput'),
   bypassSave: el('bypassSave'),
   testBtn: el('testBtn'),
@@ -245,9 +248,14 @@ const modeUi = createModeUi({
   pacDomainsSaveEl: el('pacDomainsSave'),
   domainServersPanelEl: el('domainServersPanel'),
   domainServerListEl: el('domainServerList'),
+  routeCheckInputEl: el('routeCheckHost'),
+  routeCheckStepsEl: el('routeCheckSteps'),
   pacSaveEl: el('pacSave'),
   commit,
   getLang: () => lang,
+  // The same list the worker orders the chain by, so the check explains the order
+  // that will really be used.
+  getHealth: () => serverHealth,
   onError: (text) => {
     if (text) flash(text);
   },
@@ -354,6 +362,7 @@ function render() {
   els.enabledToggle.checked = state.settings.enabled;
   els.authToggle.checked = state.settings.autoAuth;
   els.failoverToggle.checked = state.settings.autoFailover;
+  els.failClosedToggle.checked = state.settings.failClosed === true;
   els.notifyToggle.checked = state.settings.notifyFailover;
   els.probeToggle.checked = state.settings.backgroundProbe;
   els.trafficToggle.checked = state.settings.trafficMeter === true;
@@ -486,6 +495,15 @@ function wire() {
     const autoFailover = els.failoverToggle.checked;
     commit((draft) => {
       draft.settings.autoFailover = autoFailover;
+    });
+  });
+
+  // How a route that cannot be built is answered: applied by the worker, chosen
+  // here (`lib/proxy.js`).
+  els.failClosedToggle.addEventListener('change', () => {
+    const failClosed = els.failClosedToggle.checked;
+    commit((draft) => {
+      draft.settings.failClosed = failClosed;
     });
   });
 

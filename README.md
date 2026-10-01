@@ -50,12 +50,26 @@ them by `npm run shots`, so they are the interface itself rather than a drawing 
   while another leaves through Amsterdam. A named server still heads a chain rather than a single
   hop: that server is tried first and the rest stay behind it, so even a site with its own server is
   never sent direct.
+- **Never fall back to a direct connection** — an optional switch for the one case where the
+  extension's promise is weakest: a mode whose route cannot be built, because no server is saved or
+  no PAC script is set. Left off — the shipped behaviour — it fails open and connects directly, which
+  is what a browser is expected to do. Turned on, the browser is pointed at `127.0.0.1:1` instead,
+  where nothing listens, so the request fails loudly rather than leaving unwatched. A direct
+  connection you *asked* for is untouched: Direct mode, and every host on the bypass list, still go
+  direct — a choice is not a fallback.
 - **“This site” in the popup** — the popup shows the host of the tab it was opened over and offers
   three choices: *Through the proxy*, *Directly*, or *Follow the mode*. The chips write the two site
   lists, and the line under them says what the current mode actually does with that host, so the
   control never promises routing the mode will not do. Choosing *Through the proxy* turns domain
   routing on when the mode would otherwise ignore the list (never in manual mode, where everything
-  is already proxied, and never without a server to route through).
+  is already proxied, and never without a server to route through). A **Why?** line under the card's
+  answer opens the same reasoning the route check gives, for the tab you are looking at.
+- **Route check** — the domain-routing panel takes any host, listed or not (`www.example.com` under a
+  rule for `example.com` is the question a rule list leaves you with) and answers with the mode in
+  force, the rule that matched, the server that rule named, and the order the servers will be tried
+  in. Nothing is sent anywhere: the answer comes from your own configuration, and whether a route
+  exists at all is decided by building the same script the browser is handed, so the explanation
+  cannot drift from what the extension does.
 - **Bypass list** — one rule per line (`<local>`, `localhost`, `*.internal.example.com`, …).
 - **Master switch** — instantly go direct without losing the mode you configured.
 - **Context menu** — right-click the toolbar icon to switch mode or server.
@@ -286,8 +300,6 @@ Design decisions worth knowing:
 
 ## Roadmap ideas
 
-- A fail-closed switch: today the extension deliberately fails open (direct) when no server is
-  usable, and a privacy-minded user may want that closed instead.
 - Import from common formats (`SwitchyOmega` backups).
 
 ## Security

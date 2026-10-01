@@ -12,6 +12,27 @@ import {
   sanitizeDomainRules,
 } from './model.js';
 import { modeKey, t } from './i18n.js';
+import { explainRoute, routeSentences } from './route-explain.js';
+
+/**
+ * Draws one explanation as a list of reasons. Shared by the settings page's route
+ * check and the popup's "Why?", so the two read the same sentences in the same
+ * order (the tone is the class the stylesheet colours them by).
+ *
+ * @param {HTMLElement|null} listEl
+ * @param {{steps: object[]}} explanation
+ * @param {string} lang
+ */
+export function renderRouteSteps(listEl, explanation, lang) {
+  if (!listEl) return;
+  listEl.textContent = '';
+  for (const { text, tone } of routeSentences(explanation, lang)) {
+    const item = document.createElement('li');
+    item.className = `route-step route-step-${tone}`;
+    item.textContent = text;
+    listEl.append(item);
+  }
+}
 
 export function createModeUi({
   chipsEl,
@@ -25,11 +46,41 @@ export function createModeUi({
   pacDomainsSaveEl,
   domainServersPanelEl,
   domainServerListEl,
+  routeCheckInputEl,
+  routeCheckStepsEl,
   pacSaveEl,
   commit,
   getLang,
+  getHealth = () => null,
   onError = () => {},
 }) {
+  /**
+   * The host the route check is asked about, kept out of the state on purpose: it
+   * is a question, not a setting, so it is never stored and never in a backup.
+   */
+  let routeCheckHost = '';
+  /** The state of the last render, for the input handler to answer from. */
+  let lastState = null;
+
+  /**
+   * Answers the route check for whatever host was typed (lib/route-explain.js).
+   * Runs on every render, so the answer follows the mode, the lists and the server
+   * verdicts as they change under it.
+   */
+  function renderRouteCheck(lang) {
+    if (!routeCheckStepsEl || !lastState) return;
+    const host = routeCheckHost.trim();
+    if (!host) {
+      routeCheckStepsEl.textContent = '';
+      const prompt = document.createElement('li');
+      prompt.className = 'route-step route-step-empty';
+      prompt.textContent = t('route.check.empty', lang);
+      routeCheckStepsEl.append(prompt);
+      return;
+    }
+    renderRouteSteps(routeCheckStepsEl, explainRoute(lastState, host, getHealth()), lang);
+  }
+
   /**
    * One row per listed site, with the server it goes through (`lib/site-route.js`).
    * The list is the source of truth, so a rule that was deleted from the textarea
@@ -75,6 +126,7 @@ export function createModeUi({
   }
 
   function render(state, lang) {
+    lastState = state;
     const mode = state.settings.mode;
     const routing = state.settings.domainRouting === true;
 
@@ -105,6 +157,7 @@ export function createModeUi({
     }
 
     renderDomainServers(state, lang);
+    renderRouteCheck(lang);
   }
 
   async function savePac() {
@@ -152,6 +205,12 @@ export function createModeUi({
       else delete map[rule];
       draft.settings.domainServers = map;
     });
+  });
+
+  // The check reads the state on every render; typing only re-asks the question.
+  routeCheckInputEl?.addEventListener('input', () => {
+    routeCheckHost = routeCheckInputEl.value;
+    renderRouteCheck(getLang());
   });
 
   pacDomainsToggleEl?.addEventListener('change', () => {
