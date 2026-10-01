@@ -12,9 +12,9 @@ bilingual — English and Persian (فارسی) with full RTL support — and eve
 
 ## Screenshots
 
-<img src="docs/screenshots/popup.png" width="380" alt="The popup: the master switch, the server in use, today's traffic and the live speed">
+<img src="docs/screenshots/popup.png" width="380" alt="The popup: one-click routing for the site this tab is on, the master switch, the server in use, today's traffic and the live speed">
 
-<img src="docs/screenshots/settings.png" width="780" alt="The settings page: proxy mode, the traffic meter with the live speed, and the servers with their last verdicts">
+<img src="docs/screenshots/settings.png" width="780" alt="The settings page: appearance, proxy mode with the site list and a server for each listed site, the traffic meter with the live speed, and the servers with their last verdicts">
 
 Both pages open without installing anything — see
 [Try the UI without installing](#try-the-ui-without-installing) — and these pictures are taken from

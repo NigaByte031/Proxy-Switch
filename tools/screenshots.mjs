@@ -46,6 +46,12 @@ const SHOTS = [
     width: 780,
     scale: 1.25,
     lang: 'en',
+    /**
+     * The settings page is where the newest features live, and two of them only
+     * appear in a mode that uses them: the domain list and the per-site server
+     * picker need domain routing on. The demo seed takes `view=pac` for that.
+     */
+    query: 'view=pac',
     /** Frame it from the top down to the end of the Traffic card. */
     frame: `(() => {
       const card = document.getElementById('trafficMessage').closest('section');
@@ -142,7 +148,8 @@ async function openSession(webSocketUrl) {
 
 /** One picture: lay the page out at `width`, frame it, then capture that frame. */
 async function capture(session, shot) {
-  const url = `${BASE}/${shot.page}?demo=${shot.lang}`;
+  const extra = shot.query ? `&${shot.query}` : '';
+  const url = `${BASE}/${shot.page}?demo=${shot.lang}${extra}`;
   // Lay the page out at the width it really has (the sticky header and the media
   // queries depend on it), then let the clip below do the scaling.
   await session.send('Emulation.setDeviceMetricsOverride', {

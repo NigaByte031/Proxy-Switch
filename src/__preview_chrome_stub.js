@@ -276,12 +276,15 @@
    * A demo seed, for pictures and for poking at the UI: `?demo=1` (or `?demo=fa`)
    * fills the stores with a plausible setup — three servers with verdicts, today's
    * counters, a speed that keeps moving — before the page's own scripts read them.
-   * Nothing here runs unless it is asked for.
+   * Nothing here runs unless it is asked for. `&view=pac` seeds domain routing
+   * instead, with two listed sites, so the settings page can show the per-site
+   * server picker.
    */
-  var demo = new URLSearchParams(location.search).get('demo');
-  if (demo) seedDemo(demo === 'fa' ? 'fa' : 'en');
+  var params = new URLSearchParams(location.search);
+  var demo = params.get('demo');
+  if (demo) seedDemo(demo === 'fa' ? 'fa' : 'en', params.get('view') === 'pac');
 
-  function seedDemo(language) {
+  function seedDemo(language, domainRouting) {
     var now = Date.now();
     var MB = 1024 * 1024;
     var GB = 1024 * MB;
@@ -301,10 +304,15 @@
         version: 1,
         settings: {
           enabled: true,
-          mode: 'fixed_servers',
+          mode: domainRouting ? 'pac_script' : 'fixed_servers',
           activeProfileId: 'demo-frankfurt',
           backgroundProbe: true,
           trafficMeter: true,
+          // The popup's site control reads these lists, so one site is listed in both
+          // views; only the PAC view puts the list itself on screen.
+          proxyDomains: domainRouting ? ['example.com', 'intra.example.net'] : ['example.com'],
+          domainServers: domainRouting ? { 'intra.example.net': 'demo-amsterdam' } : {},
+          domainRouting: domainRouting,
           language: language,
           theme: 'auto',
           accent: 'emerald',
