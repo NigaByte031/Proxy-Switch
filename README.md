@@ -226,15 +226,24 @@ The extension has **no content scripts** and injects nothing into pages.
 
 ## Development
 
-Requirements: Node.js 22+ (only for the tests, the preview generator, the screenshots and
-packaging — the extension itself has zero dependencies and no build step).
+Requirements: Node.js 22+ (only for the tests, the preview generator, the screenshots,
+packaging and the release audit — the extension itself has zero dependencies and no build step).
 
 ```bash
 npm test                 # unit tests (state, proxy config, i18n coverage, manifest, zip writer)
 npm run preview          # regenerate the offline preview pages
 npm run shots           # retake docs/screenshots/*.png (needs the preview server running)
 npm run package          # build dist/proxy-switch-v<version>.zip for the Web Store
+npm run releases         # audit the published release pages (reads GH_TOKEN or GITHUB_TOKEN)
 ```
+
+`npm run releases` reads every release page and flags two kinds of drift: an archive that is not
+the one `proxy-switch-v<tag>.zip`, and notes that still name a browser the project no longer
+builds for. It changes nothing on its own and exits non-zero while anything is open, so it works
+as a check. Adding `-- --prune` deletes the extra archives. `-- --strip-notes` drops only the
+stale lines it can remove without cutting a sentence in half — because the notes wrap mid-line,
+a mention inside a wrapped sentence is reported for a rewrite instead of being deleted — and
+`-- --from <dump.json>` audits a saved releases dump with no token at all.
 
 Project layout:
 

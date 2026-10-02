@@ -12,7 +12,8 @@
     "test": "node --test \"tests/**/*.test.mjs\"",
     "preview": "node tools/build-previews.mjs",
     "shots": "node tools/screenshots.mjs",
-    "package": "node tools/package.mjs"
+    "package": "node tools/package.mjs",
+    "releases": "node tools/releases.mjs"
   },
   "keywords": [
     "chrome-extension",
