@@ -232,7 +232,7 @@ packaging and the release audit — the extension itself has zero dependencies a
 ```bash
 npm test                 # unit tests (state, proxy config, i18n coverage, manifest, zip writer)
 npm run preview          # regenerate the offline preview pages
-npm run shots           # retake docs/screenshots/*.png (needs the preview server running)
+npm run shots            # retake docs/screenshots/*.png (needs the preview server running)
 npm run package          # build dist/proxy-switch-v<version>.zip for the Web Store
 npm run releases         # audit the published release pages (reads GH_TOKEN or GITHUB_TOKEN)
 ```
