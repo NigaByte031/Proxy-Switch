@@ -240,7 +240,8 @@ npm run releases         # audit the published release pages (reads GH_TOKEN or 
 `npm run releases` reads every release page and flags two kinds of drift: an archive that is not
 the one `proxy-switch-v<tag>.zip`, and notes that still name a browser the project no longer
 builds for. It changes nothing on its own and exits non-zero while anything is open, so it works
-as a check. Adding `-- --prune` deletes the extra archives. `-- --strip-notes` drops only the
+as a check. The same audit runs weekly in the **Audit releases** workflow (and on demand), so drift
+is caught without anyone remembering to look. Adding `-- --prune` deletes the extra archives. `-- --strip-notes` drops only the
 stale lines it can remove without cutting a sentence in half — because the notes wrap mid-line,
 a mention inside a wrapped sentence is reported for a rewrite instead of being deleted — and
 `-- --from <dump.json>` audits a saved releases dump with no token at all.

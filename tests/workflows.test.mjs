@@ -77,3 +77,12 @@ test('CI runs the suite on the Node versions the project supports', () => {
   assert.match(ci, /npm run package\b/, 'a manifest that cannot be packaged fails here');
   assert.ok(!ci.includes('firefox'), 'nothing to build for a browser the project does not target');
 });
+
+/** The release pages drift on their own, so the audit has to run without anyone
+ *  remembering to ask for it — and it needs a token to read the releases. */
+test('the release audit runs on a schedule with a token to read the releases', () => {
+  const audit = read(join(WORKFLOW_DIR, 'audit-releases.yml'));
+  assert.match(audit, /npm run releases\b/, 'the same tool the maintainer runs by hand');
+  assert.match(audit, /schedule:/, 'drift has to be caught without a human');
+  assert.match(audit, /GH_TOKEN:\s*\$\{\{\s*secrets\.GITHUB_TOKEN\s*\}\}/, 'reading releases needs a token');
+});

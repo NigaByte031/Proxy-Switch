@@ -1,0 +1,31 @@
+name: Audit releases
+
+# The published release pages can drift on their own: a tag can re-attach an archive
+# that should not be there, and a template can reintroduce a platform the project
+# dropped. Nothing else looks at them, so this checks them on a schedule.
+
+on:
+  schedule:
+    # Mondays at 06:00 UTC
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Audit the release pages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Exits non-zero while any release carries an unexpected asset or stale notes.
+      - name: Audit the release pages
+        run: npm run releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

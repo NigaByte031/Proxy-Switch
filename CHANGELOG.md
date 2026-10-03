@@ -6,7 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **The release pages are audited on a schedule.** The `Audit releases` workflow runs the same
+  audit as `npm run releases` every week (and on demand), so a stray archive or stale browser name
+  on a published release is caught without anyone remembering to look.
+
+### Fixed
+
+- **The version the release workflow packages is pinned in one place.** The tag check compared the
+  pushed tag against a version pinned inside `release.yml`, and nothing kept that value equal to
+  `manifest.json`; a version bump that missed it would have failed the next release for no visible
+  reason. The check now reads the pinned value, and a test keeps the two in step.
 
 ## [1.9.0] — 2026-10-01
 
