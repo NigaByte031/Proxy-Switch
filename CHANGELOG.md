@@ -17,6 +17,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Fixed
 
+- **A listed site could lose the server it was given.** The rule → server map is written with the
+  rule's own spelling, but the popup's *This site* card looked it up case-sensitively, so a rule
+  the user typed as `Example.com` showed the site as using the shared chain even though the
+  generated script still sent it through the named server. The lookup is now case-insensitive, as
+  `sanitizeDomainServers` writes it.
+- **The settings page never recorded what its connection test proved.** `createHealthUi` was handed
+  no `getState`, so `probeObservation` could not attribute the verdict to the active server and the
+  result was discarded — the server list kept showing "never looked at" and the PAC chain was not
+  reordered. The settings page now passes the state, exactly as the popup does.
 - **The version the release workflow packages is pinned in one place.** The tag check compared the
   pushed tag against a version pinned inside `release.yml`, and nothing kept that value equal to
   `manifest.json`; a version bump that missed it would have failed the next release for no visible

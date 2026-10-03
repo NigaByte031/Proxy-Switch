@@ -8,7 +8,7 @@
  * agreeing.
  */
 
-import { effectiveMode, findProfile, sanitizeDomainRules } from './model.js';
+import { domainServerOf, effectiveMode, findProfile, sanitizeDomainRules } from './model.js';
 
 /** The `<local>` rule: every host without a dot (see `lib/pac.js`). */
 export const PLAIN_HOST_RULE = '<local>';
@@ -124,10 +124,11 @@ export function siteRouteOf(state, host) {
   const settings = state?.settings ?? {};
   const listed = listMatchesHost(sanitizeDomainRules(settings.proxyDomains), host);
   const bypassed = listMatchesHost(settings.bypassList, host);
-  // The map is keyed by the rule's canonical spelling (`sanitizeDomainServers`),
-  // so the site's own rule is the key to look under.
+  // The site's own rule is the key the map is read under — looked up the same
+  // way `sanitizeDomainServers` writes it, case-insensitively, so a rule stored
+  // as `Example.com` still names the server it was given.
   const rule = canonicalSiteRule(host);
-  const server = listed ? findProfile(state, rule ? settings.domainServers?.[rule] : null) : null;
+  const server = listed ? findProfile(state, rule ? domainServerOf(settings, rule) : null) : null;
 
   const base = { listed, bypassed, serverId: server?.id ?? null, serverName: server?.name ?? null };
   if (!settings.enabled) return { ...base, effect: 'off' };

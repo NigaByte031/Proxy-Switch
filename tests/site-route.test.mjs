@@ -158,6 +158,24 @@ test('a listed site names its server, and no other effect does', () => {
   assert.equal(siteRouteOf(off, 'example.com').serverName, 'Amsterdam');
 });
 
+/** A rule the user typed with capitals is stored as written, but the map is read
+ *  by rule — so the lookup has to be case-insensitive like `sanitizeDomainServers`.
+ *  A case-sensitive one made a listed site silently lose the server it was given. */
+test('a listed site finds its server even when the rule was typed with capitals', () => {
+  const listed = stateWith({
+    mode: 'pac_script',
+    domainRouting: true,
+    proxyDomains: ['Example.com'],
+    domainServers: { 'Example.com': 'p2' },
+  });
+
+  const route = siteRouteOf(listed, 'example.com');
+  assert.equal(route.listed, true);
+  assert.equal(route.serverId, 'p2');
+  assert.equal(route.serverName, 'Amsterdam');
+  assert.equal(describeSiteRoute(listed, 'www.example.com').key, 'site.effect.proxy.named');
+});
+
 test('the three chips write the two lists, and route the site for real', () => {
   const start = stateWith({ mode: 'direct', bypassList: ['old.test'] });
 

@@ -265,6 +265,9 @@ const healthUi = createHealthUi({
   buttonEl: el('testBtn'),
   resultEl: el('testResult'),
   getLang: () => lang,
+  // so a verdict can be attributed to the server the test went through, exactly
+  // as the popup does.
+  getState: () => state,
 });
 
 // The pass runs in the service worker; this is the narration under the list, the

@@ -36,6 +36,17 @@ test('both pages wire the control through the same shared module', () => {
   }
 });
 
+/** The connection verdict is only attributed to a server when the control is
+ *  handed the state, so a page that forgets `getState` silently records nothing
+ *  and the chain never learns what the test proved. */
+test('both pages hand the health control the state it needs to record a verdict', () => {
+  for (const page of ['src/popup.js', 'src/options.js']) {
+    const source = read(page);
+    const call = source.slice(source.indexOf('createHealthUi('), source.indexOf('});', source.indexOf('createHealthUi(')));
+    assert.match(call, /getState:\s*\(\)\s*=>\s*state/, `${page} must pass getState`);
+  }
+});
+
 test('the shared control exists once and both pages import it', () => {
   const shared = read('src/lib/test-all-ui.js');
   assert.match(shared, /export function createTestAllUi/);
