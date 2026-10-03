@@ -51,8 +51,23 @@ test('the release workflow builds the archive and refuses a mismatched tag', () 
   const release = read(join(WORKFLOW_DIR, 'release.yml'));
   assert.match(release, /npm run package\b/, 'the Chrome/Chromium archive');
   assert.match(release, /files: dist\/\*\.zip/, 'the archive is attached to the release');
-  assert.match(release, /does not match manifest version/, 'the tag has to match what is packaged');
+  assert.match(release, /does not match the packaged version/, 'the tag has to match what is packaged');
   assert.ok(!release.includes('firefox'), 'there is one build, and one archive to carry it');
+});
+
+/** The tag check compares the tag against a version pinned in the workflow, not against
+ *  the manifest at release time, so a version bump that forgets this one line would make
+ *  the next release fail. Keep the two in step. */
+test('the version the release workflow packages matches the manifest', () => {
+  const release = read(join(WORKFLOW_DIR, 'release.yml'));
+  const pinned = release.match(/^\s*EXTENSION_VERSION:\s*['"]?([^'"\s]+)['"]?\s*$/m);
+  assert.ok(pinned, 'release.yml pins the packaged version in EXTENSION_VERSION');
+  const manifest = JSON.parse(read('manifest.json'));
+  assert.equal(
+    pinned[1],
+    manifest.version,
+    'EXTENSION_VERSION in release.yml and manifest.json have to name the same version',
+  );
 });
 
 test('CI runs the suite on the Node versions the project supports', () => {

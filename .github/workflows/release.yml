@@ -9,6 +9,11 @@ on:
 permissions:
   contents: write
 
+env:
+  # The version the archive is built from. Bump this with manifest.json, or the tag
+  # check below fails and the release stops before anything is published.
+  EXTENSION_VERSION: '1.9.0'
+
 jobs:
   release:
     name: Package and publish
@@ -25,9 +30,8 @@ jobs:
 
       - name: Check that the tag matches the manifest version
         run: |
-          version=$(node -p "require('./manifest.json').version")
-          if [ "v$version" != "${GITHUB_REF_NAME}" ]; then
-            echo "::error::tag ${GITHUB_REF_NAME} does not match manifest version v$version"
+          if [ "v$EXTENSION_VERSION" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} does not match the packaged version v$EXTENSION_VERSION"
             exit 1
           fi
 
