@@ -11,6 +11,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - **The release pages are audited on a schedule.** The `Audit releases` workflow runs the same
   audit as `npm run releases` every week (and on demand), so a stray archive or stale browser name
   on a published release is caught without anyone remembering to look.
+- **The first four releases are published.** v1.0.0, v1.1.0, v1.2.0 and v1.2.1 had commits and
+  archives but no tags or releases, so the download page only started at v1.4.0. They are now
+  tagged, released and carry the same one Chrome archive each.
 
 ### Fixed
 
