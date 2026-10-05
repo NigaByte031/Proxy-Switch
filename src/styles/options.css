@@ -192,6 +192,70 @@ body.options {
   transform: scale(1);
 }
 
+/* Custom accent: a native colour input whose tokens are written at runtime. */
+
+.custom-accent {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-block-start: 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.custom-accent.is-active {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+
+.custom-accent-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--fs-11h);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.custom-accent input[type='color'] {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: none;
+  cursor: pointer;
+}
+
+.custom-accent input[type='color']::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.custom-accent input[type='color']::-webkit-color-swatch {
+  border: none;
+  border-radius: 6px;
+}
+
+.custom-accent-hex {
+  width: 96px;
+  font: inherit;
+  font-size: var(--fs-12);
+  font-variant-numeric: tabular-nums;
+}
+
+.custom-accent-note {
+  font-size: var(--fs-11);
+  color: var(--muted);
+}
+
+.custom-accent-note.is-weak {
+  color: var(--warn);
+}
+
 /* Traffic display templates.
  *
  * The readout above the picker restyles itself as soon as a template is chosen, so

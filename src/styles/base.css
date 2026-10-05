@@ -323,6 +323,25 @@
   --brand-contrast: #4a0d20;
 }
 
+/* Custom accent.
+ *
+ * There is no palette to enumerate for a colour the user can change, so the picker
+ * writes the brand hues inline (lib/theme.js) and these two blocks, one per theme,
+ * derive the rest from them — keeping the one-colour promise of every preset. */
+:root[data-accent='custom'] {
+  --glow-1: color-mix(in srgb, var(--accent) 12%, transparent);
+  --glow-2: color-mix(in srgb, var(--accent-2) 10%, transparent);
+  --accent-strong: color-mix(in srgb, var(--accent) 70%, #000000);
+  --accent-soft: color-mix(in srgb, var(--accent) 14%, #ffffff);
+}
+
+:root[data-theme='dark'][data-accent='custom'] {
+  --glow-1: color-mix(in srgb, var(--accent) 14%, transparent);
+  --glow-2: color-mix(in srgb, var(--accent-2) 12%, transparent);
+  --accent-strong: color-mix(in srgb, var(--accent) 55%, #ffffff);
+  --accent-soft: color-mix(in srgb, var(--accent) 24%, #000000);
+}
+
 * {
   box-sizing: border-box;
 }

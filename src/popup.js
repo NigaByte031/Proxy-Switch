@@ -278,7 +278,7 @@ function render() {
   // Written onto <html>, where src/styles/base.css picks the palettes up. The popup
   // has no picker of its own: it wears what the settings page saved.
   applyTheme(state.settings.theme);
-  applyAccent(state.settings.accent);
+  applyAccent(state.settings.accent, document, state.settings.customAccent);
   // Spacing and type scale are the settings page's business to pick and the
   // popup's to wear, exactly like the theme and the accent above.
   applyLayout(state.settings.density, state.settings.textSize);

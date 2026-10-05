@@ -5,7 +5,8 @@
  * stylesheet can never disagree.
  */
 
-import { ACCENTS, DENSITIES, THEMES, TEXT_SIZES } from './model.js';
+import { ACCENTS, CUSTOM_ACCENT, DENSITIES, THEMES, TEXT_SIZES } from './model.js';
+import { customAccentTokens } from './color.js';
 
 /** Default value of `settings.theme`. */
 export const DEFAULT_THEME = 'auto';
@@ -38,7 +39,20 @@ export const ACCENT_KEYS = {
   violet: 'accent.violet',
   amber: 'accent.amber',
   rose: 'accent.rose',
+  custom: 'accent.custom',
 };
+
+/**
+ * The tokens a custom accent writes onto <html> and a preset clears again. Keeping
+ * the list here means the two halves of the swap can never fall out of step.
+ */
+export const CUSTOM_ACCENT_TOKENS = [
+  '--accent',
+  '--accent-2',
+  '--brand-1',
+  '--brand-2',
+  '--brand-contrast',
+];
 
 /** i18n key per theme setting. */
 export const THEME_KEYS = {
@@ -104,19 +118,37 @@ export function applyTheme(setting, doc = globalThis.document, dark = prefersDar
   return theme;
 }
 
-/** Turns a setting into the palette that is actually shown. */
+/**
+ * Turns a setting into the palette that is actually shown. `custom` is a value of
+ * its own rather than a fallback: the settings page wrote a colour to go with it.
+ */
 export function resolveAccent(setting) {
+  if (setting === CUSTOM_ACCENT) return CUSTOM_ACCENT;
   return ACCENTS.includes(setting) ? setting : DEFAULT_ACCENT;
 }
 
 /**
  * Writes the palette onto the document element, next to `data-theme` — the pair
- * `src/styles/base.css` keys its palette blocks off.
+ * `src/styles/base.css` keys its palette blocks off. A custom accent additionally
+ * writes its brand tokens inline, and a preset clears them, so the two can never
+ * show at once.
  * @returns {string} the accent that is now active
  */
-export function applyAccent(setting, doc = globalThis.document) {
+export function applyAccent(setting, doc = globalThis.document, customHex = '') {
   const accent = resolveAccent(setting);
-  if (doc?.documentElement) doc.documentElement.dataset.accent = accent;
+  const element = doc?.documentElement;
+  if (!element) return accent;
+  element.dataset.accent = accent;
+
+  const style = element.style;
+  if (!style) return accent;
+  if (accent === CUSTOM_ACCENT) {
+    for (const [token, value] of Object.entries(customAccentTokens(customHex))) {
+      style.setProperty(token, value);
+    }
+  } else {
+    for (const token of CUSTOM_ACCENT_TOKENS) style.removeProperty(token);
+  }
   return accent;
 }
 

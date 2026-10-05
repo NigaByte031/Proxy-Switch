@@ -48,6 +48,30 @@
             role="radiogroup"
             data-i18n-aria-label="accent.title"
           ></div>
+          <!-- A colour the user picks: lib/theme.js writes its brand tokens at
+               runtime, so no palette block has to exist for it. -->
+          <div id="customAccentRow" class="custom-accent">
+            <label class="custom-accent-pick" for="customAccentColor">
+              <input id="customAccentColor" type="color" />
+              <span data-i18n="accent.custom"></span>
+            </label>
+            <input
+              id="customAccentHex"
+              class="custom-accent-hex"
+              type="text"
+              inputmode="text"
+              spellcheck="false"
+              maxlength="7"
+              data-i18n-aria-label="accent.custom"
+            />
+            <span
+              id="customAccentNote"
+              class="custom-accent-note"
+              role="status"
+              aria-live="polite"
+            ></span>
+          </div>
+          <p class="form-note" data-i18n="accent.customHint"></p>
         </div>
         <!-- Appearance, not behaviour: how much air sits between the cards, and how
              big the type is. Both are written onto <html> (lib/theme.js). -->

@@ -31,6 +31,7 @@ import {
 } from './lib/storage.js';
 import {
   ACCENTS,
+  CUSTOM_ACCENT,
   TRAFFIC_VIEWS,
   createDefaultState,
   parseBypassList,
@@ -38,6 +39,7 @@ import {
   parseImport,
   serializeState,
 } from './lib/model.js';
+import { DEFAULT_CUSTOM_ACCENT, describeCustomAccent, normalizeHex } from './lib/color.js';
 import { describeApplyProblem, requestReapply } from './lib/proxy.js';
 import {
   createRate,
@@ -64,6 +66,10 @@ const els = {
   densitySelect: el('densitySelect'),
   textSizeSelect: el('textSizeSelect'),
   accentSwatches: el('accentSwatches'),
+  customAccentRow: el('customAccentRow'),
+  customAccentColor: el('customAccentColor'),
+  customAccentHex: el('customAccentHex'),
+  customAccentNote: el('customAccentNote'),
   enabledToggle: el('enabledToggle'),
   authToggle: el('authToggle'),
   failoverToggle: el('failoverToggle'),
@@ -162,6 +168,44 @@ function renderAccents() {
     const label = button.querySelector('.swatch-name');
     if (label && label.textContent !== name) label.textContent = name;
   }
+}
+
+/**
+ * Turns the setting over to the colour the user picked, keeping it only when the
+ * text really is a colour. A blank or broken value leaves the state untouched.
+ * @returns {boolean} whether the colour was accepted
+ */
+function pickCustomAccent(value) {
+  const hex = normalizeHex(value);
+  if (!hex) return false;
+  commit((draft) => {
+    draft.settings.accent = CUSTOM_ACCENT;
+    draft.settings.customAccent = hex;
+  });
+  return true;
+}
+
+/** Marks the custom row and states the contrast of the colour it holds. */
+function renderCustomAccent() {
+  const active = resolveAccent(state.settings.accent) === CUSTOM_ACCENT;
+  const hex = normalizeHex(state.settings.customAccent) ?? DEFAULT_CUSTOM_ACCENT;
+
+  els.customAccentRow?.classList.toggle('is-active', active);
+  if (els.customAccentColor && document.activeElement !== els.customAccentColor) {
+    els.customAccentColor.value = hex;
+  }
+  if (els.customAccentHex && document.activeElement !== els.customAccentHex) {
+    els.customAccentHex.value = hex;
+  }
+
+  const report = describeCustomAccent(hex);
+  if (!els.customAccentNote || !report) return;
+  setText(
+    els.customAccentNote,
+    t('accent.customContrast', lang, { ratio: report.onWhite.toFixed(1), text: report.label }),
+  );
+  // A colour neither black nor white can read on is the one the check is for.
+  els.customAccentNote.classList.toggle('is-weak', report.onWhite < 3 && report.onBlack < 3);
 }
 
 /** The buttons of the traffic-template picker, in the order of TRAFFIC_VIEWS. */
@@ -348,11 +392,14 @@ function render() {
 
   // Written onto <html>, where src/styles/base.css picks the palettes up.
   applyTheme(state.settings.theme);
-  applyAccent(state.settings.accent);
+  // A custom accent also writes its brand tokens inline, so the colour picked there
+  // is the one the stylesheet reads.
+  applyAccent(state.settings.accent, document, state.settings.customAccent);
   // Spacing and type scale: the same two attributes the popup wears, so a change
   // here shows on both pages.
   applyLayout(state.settings.density, state.settings.textSize);
   renderAccents();
+  renderCustomAccent();
 
   if (document.activeElement !== els.langSelect) els.langSelect.value = state.settings.language;
   if (document.activeElement !== els.themeSelect) els.themeSelect.value = state.settings.theme;
@@ -477,6 +524,18 @@ function wire() {
     commit((draft) => {
       draft.settings.textSize = textSize;
     });
+  });
+
+  // The picker previews live; the hex field takes whatever people type and says
+  // when it is not a colour.
+  els.customAccentColor?.addEventListener('input', () => {
+    pickCustomAccent(els.customAccentColor.value);
+  });
+
+  els.customAccentHex?.addEventListener('change', () => {
+    if (pickCustomAccent(els.customAccentHex.value)) return;
+    flash(t('accent.customInvalid', lang));
+    if (state) render();
   });
 
   els.enabledToggle.addEventListener('change', () => {

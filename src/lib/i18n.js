@@ -51,6 +51,11 @@ export const MESSAGES = {
     'accent.violet': 'Violet',
     'accent.amber': 'Amber',
     'accent.rose': 'Rose',
+    'accent.custom': 'Custom',
+    'accent.customHint':
+      'Pick your own colour — the palette is built from it, while the mode and status colours stay put.',
+    'accent.customInvalid': 'That is not a colour — use a value like #4c6ef5.',
+    'accent.customContrast': '{ratio}:1 contrast against white · label text {text}',
 
     'mode.title': 'Mode',
     'mode.system': 'System',
@@ -353,6 +358,11 @@ export const MESSAGES = {
     'accent.violet': 'بنفش',
     'accent.amber': 'کهربایی',
     'accent.rose': 'سرخابی',
+    'accent.custom': 'دلخواه',
+    'accent.customHint':
+      'رنگ خودتان را انتخاب کنید — پالت از همان ساخته می‌شود و رنگ حالت‌ها و وضعیت‌ها دست‌نخورده می‌ماند.',
+    'accent.customInvalid': 'این رنگ معتبر نیست — مقداری مثل #4c6ef5 وارد کنید.',
+    'accent.customContrast': 'کنتراست {ratio}:1 با سفید · رنگ متن {text}',
 
     'mode.title': 'حالت',
     'mode.system': 'سیستم',

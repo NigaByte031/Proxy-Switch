@@ -5,6 +5,8 @@
  * imported by the extension pages, the service worker *and* Node's test runner.
  */
 
+import { DEFAULT_CUSTOM_ACCENT, normalizeHex } from './color.js';
+
 /** Schema version of the persisted state. Bump when the shape changes. */
 export const STATE_VERSION = 1;
 
@@ -31,6 +33,12 @@ export const THEMES = ['auto', 'light', 'dark'];
  * palette block in `src/styles/base.css`; "emerald" is the shipped look.
  */
 export const ACCENTS = ['emerald', 'ocean', 'violet', 'amber', 'rose'];
+
+/** Sentinel for an accent the user picked themselves, instead of a preset. */
+export const CUSTOM_ACCENT = 'custom';
+
+/** Every value `settings.accent` may hold: the shipped palettes, then custom. */
+export const ACCENT_CHOICES = [...ACCENTS, CUSTOM_ACCENT];
 
 /**
  * Accepted values of the traffic-view setting: how the meter's readings are laid
@@ -95,6 +103,9 @@ export function createDefaultState() {
       language: 'auto',
       theme: 'auto',
       accent: 'emerald',
+      // The colour a custom accent wears (`accent === 'custom'`). Stored as a
+      // `#rrggbb` so an edited or imported file can never smuggle in anything else.
+      customAccent: DEFAULT_CUSTOM_ACCENT,
       // Appearance, not behaviour: how much air between the cards, and how big
       // the type is. Both are written onto <html> and read by the stylesheet.
       density: 'comfortable',
@@ -600,7 +611,10 @@ export function sanitizeState(raw) {
       domainServers: sanitizeDomainServers(settings.domainServers, proxyDomains, profiles),
       language: LANGUAGES.includes(settings.language) ? settings.language : base.settings.language,
       theme: THEMES.includes(settings.theme) ? settings.theme : base.settings.theme,
-      accent: ACCENTS.includes(settings.accent) ? settings.accent : base.settings.accent,
+      accent: ACCENT_CHOICES.includes(settings.accent)
+        ? settings.accent
+        : base.settings.accent,
+      customAccent: normalizeHex(settings.customAccent) ?? base.settings.customAccent,
       density: DENSITIES.includes(settings.density) ? settings.density : base.settings.density,
       textSize: TEXT_SIZES.includes(settings.textSize) ? settings.textSize : base.settings.textSize,
     },
